@@ -1,0 +1,23 @@
+"Phrases"
+{
+	"Duck"
+	{
+		"nl"			"Bukken"
+	}
+	
+	"Jump"
+	{
+		"nl"			"Sprong"
+	}
+	
+	"Mouse1"
+	{
+		"nl"			"Linker muisknop"
+	}
+	
+	"Mouse2"
+	{
+		"nl"			"Rechter muisknop"
+	}
+	
+}

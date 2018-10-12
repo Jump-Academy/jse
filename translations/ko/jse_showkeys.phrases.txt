@@ -1,0 +1,23 @@
+"Phrases"
+{
+	"Duck"
+	{
+		"ko"			"앉기"
+	}
+	
+	"Jump"
+	{
+		"ko"			"점프"
+	}
+	
+	"Mouse1"
+	{
+		"ko"			"M1"
+	}
+	
+	"Mouse2"
+	{
+		"ko"			"M2"
+	}
+	
+}

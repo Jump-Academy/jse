@@ -1,0 +1,23 @@
+"Phrases"
+{
+	"Duck"
+	{
+		"pt"			"Agachar"
+	}
+	
+	"Jump"
+	{
+		"pt"			"Jump"
+	}
+	
+	"Mouse1"
+	{
+		"pt"			"M1"
+	}
+	
+	"Mouse2"
+	{
+		"pt"			"M2"
+	}
+	
+}

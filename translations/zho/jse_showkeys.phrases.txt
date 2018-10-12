@@ -1,0 +1,23 @@
+"Phrases"
+{
+	"Duck"
+	{
+		"zho"			"蹲伏"
+	}
+	
+	"Jump"
+	{
+		"zho"			"跳躍"
+	}
+	
+	"Mouse1"
+	{
+		"zho"			"左鍵"
+	}
+	
+	"Mouse2"
+	{
+		"zho"			"右鍵"
+	}
+	
+}
