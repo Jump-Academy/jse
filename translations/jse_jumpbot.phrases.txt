@@ -1,0 +1,513 @@
+"Phrases"
+{
+	"Author"
+	{
+		"en"			"Author"
+	}
+	
+	"Bot Locked"
+	{
+		"en"			"Bot access is now locked"
+	}
+	
+	"Bot Unlocked"
+	{
+		"en"			"Bot access is now unlocked"
+	}
+	
+	"Buffer Full"
+	{
+		"en"			"Buffer is full!"
+	}
+	
+	"Cancel"
+	{
+		"en"			"Cancel"
+	}
+	
+	"Cannot Call Air"
+	{
+		"en"			"Cannot call the bot while in mid-air."
+	}
+	
+	"Cannot Create Bot"
+	{
+		"en"			"Cannot create bot"
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"en"			"Cannot delete repository recording"
+	}
+	
+	"Cannot Download Rec"
+	{
+		"en"			"Cannot download recording for playback"
+	}
+	
+	"Cannot File Read"
+	{
+		"en"			"Cannot open file for reading"
+	}
+	
+	"Cannot File Write"
+	{
+		"en"			"Cannot open file for writing"
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"en"			"Cannot load incomplete file"
+	}
+	
+	"Cannot Local Play"
+	{
+		"en"			"Cannot open local file for playback"
+	}
+	
+	"Cannot Open Rec"
+	{
+		"en"			"Cannot open recording file"
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"en"			"Playback checkpoint error above threshold"
+	}
+	
+	"Class"
+	{
+		"en"			"Class"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"en"			"{1} Recording"
+	}
+	
+	"Delete"
+	{
+		"en"			"DELETE"
+	}
+	
+	"Deleted Rec"
+	{
+		"en"			"Trashed recording"
+	}
+	
+	"Demoman"
+	{
+		"en"			"Demoman"
+	}
+	
+	"Distance"
+	{
+		"en"			"Distance"
+	}
+	
+	"Download Fail"
+	{
+		"en"			"Recording download failed"
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"en"			"Downloaded {1} hashes from repo listings"
+	}
+	
+	"Duck"
+	{
+		"en"			"Duck"
+	}
+	
+	"Engineer"
+	{
+		"en"			"Engineer"
+	}
+	
+	"Estimated Time About"
+	{
+		"en"			"ETA"
+	}
+	
+	"File"
+	{
+		"en"			"File"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:d},{2:s}"
+		"en"			"Found {1} recordings for {2}"
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"en"			"Found {1} recordings across {2} maps"
+	}
+	
+	"Frame"
+	{
+		"en"			"Frame"
+	}
+	
+	"Frames"
+	{
+		"en"			"Frames"
+	}
+	
+	"Hash"
+	{
+		"en"			"Hash"
+	}
+	
+	"Heavy"
+	{
+		"en"			"Heavy"
+	}
+	
+	"Illegal Char"
+	{
+		"en"			"Illegal characters in folder name"
+	}
+	
+	"Invalid CC"
+	{
+		"en"			"Invalid control client"
+	}
+	
+	"Invalid ID"
+	{
+		"en"			"Invalid recording ID number"
+	}
+	
+	"Jump"
+	{
+		"en"			"Jump"
+	}
+	
+	"List Nearby"
+	{
+		"en"			"Listing nearby recordings"
+	}
+	
+	"Load"
+	{
+		"en"			"Load"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:d}"
+		"en"			"Loaded {1} recordings from repository index"
+	}
+	
+	"Local"
+	{
+		"en"			"Local"
+	}
+	
+	"Map Name"
+	{
+		"en"			"Map Name"
+	}
+	
+	"Medic"
+	{
+		"en"			"Medic"
+	}
+	
+	"Mouse1"
+	{
+		"en"			"M1"
+	}
+	
+	"Mouse2"
+	{
+		"en"			"M2"
+	}
+	
+	"No CC"
+	{
+		"en"			"No controlled client specified"
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"en"			"No local recordings were found for {1}"
+	}
+	
+	"No Nearby"
+	{
+		"en"			"No nearby records found"
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"en"			"No online recordings were found for: {1}"
+	}
+	
+	"No Rec"
+	{
+		"en"			"No recordings found"
+	}
+	
+	"No Rec Access"
+	{
+		"en"			"Recorder access is denied"
+	}
+	
+	"No Rec Class"
+	{
+		"en"			"No recordings were found for this player class"
+	}
+	
+	"No Rec Map"
+	{
+		"en"			"No recordings were found for this map."
+	}
+	
+	"Playback Queue"
+	{
+		"en"			"Playback Queue"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"en"			"Playback saved {1} frames, attributed to {2}"
+	}
+	
+	"Playback Start"
+	{
+		"en"			"Playback has started"
+	}
+	
+	"Playback Stop"
+	{
+		"en"			"Playback has stopped"
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"en"			"Players ahead in line: {1}"
+	}
+	
+	"Playing Closest"
+	{
+		"en"			"Playing closest record"
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"en"			"Press {1} to review"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"en"			"Press {1} to stop"
+	}
+	
+	"Punt Bot"
+	{
+		"en"			"Punting bot, plugin is terminating"
+	}
+	
+	"Pyro"
+	{
+		"en"			"Pyro"
+	}
+	
+	"Rec Chdir"
+	{
+		"#format"	"{1:s}"
+		"en"			"Changed recording folder to {1}"
+	}
+	
+	"Rec Cleaned"
+	{
+		"en"			"Recordings cleanup completed"
+	}
+	
+	"Rec Folder"
+	{
+		"#format"	"{1:s}"
+		"en"			"Current recording folder is {1}"
+	}
+	
+	"Rec Start"
+	{
+		"en"			"Recording has {GREENYELLOW}started"
+	}
+	
+	"Rec Stop"
+	{
+		"en"			"Recording has {FULLRED}stopped"
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"en"			"Granted recorder access to {1}"
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"en"			"Revoked recorder access from {1}"
+	}
+	
+	"Recorder Active"
+	{
+		"en"			"Recorder Active"
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"en"			"Recorder is currently in use by {1}"
+	}
+	
+	"Recording"
+	{
+		"en"			"Recording"
+	}
+	
+	"Recording No Folder"
+	{
+		"en"			"Recording folder does not exist"
+	}
+	
+	"Replaying"
+	{
+		"en"			"Replaying"
+	}
+	
+	"Repository"
+	{
+		"en"			"Repository"
+	}
+	
+	"Running Upgrade"
+	{
+		"en"			"Running silent upgrade operations in the background"
+	}
+	
+	"Scout"
+	{
+		"en"			"Scout"
+	}
+	
+	"Search Ambiguous"
+	{
+		"en"			"Search term is ambiguous"
+	}
+	
+	"Server Empty"
+	{
+		"en"			"Server is empty"
+	}
+	
+	"Setting Up"
+	{
+		"en"			"Setting up bot.  Please try again in a moment."
+	}
+	
+	"Show Current"
+	{
+		"en"			"Showing playback for current jump"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"en"			"Showing playback to {1}"
+	}
+	
+	"Sniper"
+	{
+		"en"			"Sniper"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:d},{2:d}"
+		"en"			"Socket error {1} (code {2})"
+	}
+	
+	"Soldier"
+	{
+		"en"			"Soldier"
+	}
+	
+	"Source"
+	{
+		"en"			"Source"
+	}
+	
+	"Spy"
+	{
+		"en"			"Spy"
+	}
+	
+	"Terminated"
+	{
+		"en"			"Terminated running operation"
+	}
+	
+	"Time"
+	{
+		"en"			"Time"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"en"			"Type /{1} to review"
+	}
+	
+	"Type Stop"
+	{
+		"en"			"Type /jb_stop to stop"
+	}
+	
+	"Unexpected EOF"
+	{
+		"en"			"Unexpected end of file on frame"
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:c},{2:c},{3:c},{4:s}"
+		"en"			"Unexpected server response ({1}{2}{3}) while retrieving {4}"
+	}
+	
+	"Unknown"
+	{
+		"en"			"Unknown"
+	}
+	
+	"Usage"
+	{
+		"en"			"Usage"
+	}
+	
+	"Usage Chdir"
+	{
+		"en"			"Usage: jb_chdir <folder>"
+	}
+	
+	"Usage Delete"
+	{
+		"en"			"Usage: jb_delete <id>, where <id> is from jb_nearby"
+	}
+	
+}

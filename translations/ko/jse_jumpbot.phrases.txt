@@ -1,0 +1,513 @@
+"Phrases"
+{
+	"Author"
+	{
+		"ko"			"기록자"
+	}
+	
+	"Bot Locked"
+	{
+		"ko"			"이제 봇 접근이 가능합니다."
+	}
+	
+	"Bot Unlocked"
+	{
+		"ko"			"이제 봇 접근이 불가능합니다."
+	}
+	
+	"Buffer Full"
+	{
+		"ko"			"버퍼가 가득찼습니다!"
+	}
+	
+	"Cancel"
+	{
+		"ko"			"취소"
+	}
+	
+	"Cannot Call Air"
+	{
+		"ko"			"공중에서 봇을 부를 수 없습니다."
+	}
+	
+	"Cannot Create Bot"
+	{
+		"ko"			"봇 생성을 할 수 없습니다."
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"ko"			"저장된 기록을 삭제 할 수 없습니다."
+	}
+	
+	"Cannot Download Rec"
+	{
+		"ko"			"재생을 위한 기록 다운로드를 할 수 없습니다."
+	}
+	
+	"Cannot File Read"
+	{
+		"ko"			"읽을려고 하는 파일을 열 수 없습니다."
+	}
+	
+	"Cannot File Write"
+	{
+		"ko"			"기록할려고 하는 파일을 열 수 없습니다."
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"ko"			"불완전한 파일을 읽을 수 없습니다."
+	}
+	
+	"Cannot Local Play"
+	{
+		"ko"			"재생을 위한 로컬 파일을 열 수 없습니다."
+	}
+	
+	"Cannot Open Rec"
+	{
+		"ko"			"녹화 파일 을 열 수없습니다."
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"ko"			"쓰레스홀드를 넘어선 녹화기록 체크포인트 에러가 발생하였습니다."
+	}
+	
+	"Class"
+	{
+		"ko"			"클래스"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"ko"			"{1} 녹화기록"
+	}
+	
+	"Delete"
+	{
+		"ko"			"삭제"
+	}
+	
+	"Deleted Rec"
+	{
+		"ko"			"녹화 삭제"
+	}
+	
+	"Demoman"
+	{
+		"ko"			"데모맨"
+	}
+	
+	"Distance"
+	{
+		"ko"			"거리"
+	}
+	
+	"Download Fail"
+	{
+		"ko"			"점프 녹화 다운로드에 실패하였습니다."
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"ko"			"르포 리스트로부터 {1}개의 해쉬가 다운로드 되었습니다."
+	}
+	
+	"Duck"
+	{
+		"ko"			"앉기"
+	}
+	
+	"Engineer"
+	{
+		"ko"			"엔지니어"
+	}
+	
+	"Estimated Time About"
+	{
+		"ko"			"예상 시간"
+	}
+	
+	"File"
+	{
+		"ko"			"파일"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:s},{2:d}"
+		"ko"			"맵 {1}에서 {2}개의 녹화를 발견하였습니다."
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"ko"			"전체 {1}개의 맵에서 {2}개의 녹화를 발견하였습니다."
+	}
+	
+	"Frame"
+	{
+		"ko"			"프레임"
+	}
+	
+	"Frames"
+	{
+		"ko"			"프레임"
+	}
+	
+	"Hash"
+	{
+		"ko"			"해쉬"
+	}
+	
+	"Heavy"
+	{
+		"ko"			"헤비"
+	}
+	
+	"Illegal Char"
+	{
+		"ko"			"폴더 이름에 맞지 않는 문자가 있습니다."
+	}
+	
+	"Invalid CC"
+	{
+		"ko"			"인식 불가능한 클라이언트 컨트롤"
+	}
+	
+	"Invalid ID"
+	{
+		"ko"			"인식 불가능한 레코딩 ID 넘버"
+	}
+	
+	"Jump"
+	{
+		"ko"			"점프"
+	}
+	
+	"List Nearby"
+	{
+		"ko"			"근처 점프 녹화 리스트"
+	}
+	
+	"Load"
+	{
+		"ko"			"불러오기"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:�}"
+		"ko"			"저장된 인덱스로 부터 {1}��의 녹화 기록을 읽었습니다."
+	}
+	
+	"Local"
+	{
+		"ko"			"로컬"
+	}
+	
+	"Map Name"
+	{
+		"ko"			"맵 이름"
+	}
+	
+	"Medic"
+	{
+		"ko"			"메딕"
+	}
+	
+	"Mouse1"
+	{
+		"ko"			"M1"
+	}
+	
+	"Mouse2"
+	{
+		"ko"			"M2"
+	}
+	
+	"No CC"
+	{
+		"ko"			"특정 클라이언트에 의한 제어가 없습니다."
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"ko"			"{1} 맵의 로컬 녹화가 없습니다."
+	}
+	
+	"No Nearby"
+	{
+		"ko"			"근처에 저장된 녹화가 없습니다."
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"ko"			"{1} 맵의 온라인 녹화가 없습니다."
+	}
+	
+	"No Rec"
+	{
+		"ko"			"녹화를 찾을 수 없습니다."
+	}
+	
+	"No Rec Access"
+	{
+		"ko"			"레코더 권한이 거부되었습니다."
+	}
+	
+	"No Rec Class"
+	{
+		"ko"			"해당 클래스의 녹화기록을 찾지 못했습니다."
+	}
+	
+	"No Rec Map"
+	{
+		"ko"			"해당 맵에서의 녹화기록을 찾지 못했습니다."
+	}
+	
+	"Playback Queue"
+	{
+		"ko"			"재생 대기열"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"ko"			"해당 녹화는 {1} 프레임으로 저장되었으며 {2}님이 제공해주셨습니다."
+	}
+	
+	"Playback Start"
+	{
+		"ko"			"재생이 시작되었습니다."
+	}
+	
+	"Playback Stop"
+	{
+		"ko"			"재생이 중지되었습니다."
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"ko"			"{1} 명의 플레이어가 기다리고 있습니다."
+	}
+	
+	"Playing Closest"
+	{
+		"ko"			"가까운 녹화기록을 재생합니다."
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"ko"			"{1} 키를 누르면 녹화된 점프를 봅니다"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"ko"			"{1} 키를 누르면 정지합니다."
+	}
+	
+	"Punt Bot"
+	{
+		"ko"			"봇이 차단되었습니다.  플러그인을 종료합니다."
+	}
+	
+	"Pyro"
+	{
+		"ko"			"파이로"
+	}
+	
+	"Rec Chdir"
+	{
+		"#format"	"{1:s}"
+		"ko"			"녹화 폴더를 {1}로 변경하였습니다."
+	}
+	
+	"Rec Cleaned"
+	{
+		"ko"			"녹화 파일 삭제가 완료되었습니다."
+	}
+	
+	"Rec Folder"
+	{
+		"#format"	"{1:s}"
+		"ko"			"현재 녹화 폴더는 {1} 입니다."
+	}
+	
+	"Rec Start"
+	{
+		"ko"			"녹화가 {GREENYELLOW}시작{DEFAULT}되었습니다."
+	}
+	
+	"Rec Stop"
+	{
+		"ko"			"녹화가 {FULLRED}정지{DEFAULT}되었습니다."
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"ko"			"레코더 권한이 {1} 부여되었습니다."
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"ko"			"{1}으로 부터 레코더 권한을 취소하였습니다."
+	}
+	
+	"Recorder Active"
+	{
+		"ko"			"레코더 권한이  활성화 되었습니다."
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"ko"			"레코더는 현재 {1}님이 사용하고 있습니다 "
+	}
+	
+	"Recording"
+	{
+		"ko"			"녹화"
+	}
+	
+	"Recording No Folder"
+	{
+		"ko"			"녹화 폴더가 존재하지 않습니다."
+	}
+	
+	"Replaying"
+	{
+		"ko"			"재생"
+	}
+	
+	"Repository"
+	{
+		"ko"			"저장소"
+	}
+	
+	"Running Upgrade"
+	{
+		"ko"			"백그라운드에서 업그레이드 작업을 시작합니다."
+	}
+	
+	"Scout"
+	{
+		"ko"			"스카웃"
+	}
+	
+	"Search Ambiguous"
+	{
+		"ko"			"검색 문구가 애매모호 합니다."
+	}
+	
+	"Server Empty"
+	{
+		"ko"			"서버가 비었습니다."
+	}
+	
+	"Setting Up"
+	{
+		"ko"			"봇을 설정하고 있습니다. 나중에 다시 해주세요."
+	}
+	
+	"Show Current"
+	{
+		"ko"			"현재 점프에 대한 녹화기록 보기"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"ko"			"녹화기록 보기 : {1}"
+	}
+	
+	"Sniper"
+	{
+		"ko"			"스나이퍼"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:d},{2:d}"
+		"ko"			"소켓 에러 {1} (코드 {2})"
+	}
+	
+	"Soldier"
+	{
+		"ko"			"솔져"
+	}
+	
+	"Source"
+	{
+		"ko"			"소스"
+	}
+	
+	"Spy"
+	{
+		"ko"			"스파이"
+	}
+	
+	"Terminated"
+	{
+		"ko"			"진행중인 작업을 종료합니다."
+	}
+	
+	"Time"
+	{
+		"ko"			"시간"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"ko"			"/{1}를 치면 재생됩니다."
+	}
+	
+	"Type Stop"
+	{
+		"ko"			"/jb_stop 을 치면 정지됩니다."
+	}
+	
+	"Unexpected EOF"
+	{
+		"ko"			"예상하지 못한 프레임의 끝"
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:s},{2:c},{3:c},{4:c}"
+		"ko"			"{1}를 검색 하는 도중 예상하지 못한 서버 응답 ({2}{3}{4})"
+	}
+	
+	"Unknown"
+	{
+		"ko"			"알 수 없음"
+	}
+	
+	"Usage"
+	{
+		"ko"			"사용법"
+	}
+	
+	"Usage Chdir"
+	{
+		"ko"			"사용법 : jb_chdir <폴더>"
+	}
+	
+	"Usage Delete"
+	{
+		"ko"			"사용법 : jb_delete <id>, <id> 는 jb_nearby에서 볼 수 있습니다."
+	}
+	
+}

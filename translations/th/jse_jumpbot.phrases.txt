@@ -1,0 +1,513 @@
+"Phrases"
+{
+	"Author"
+	{
+		"th"			"Author"
+	}
+	
+	"Bot Locked"
+	{
+		"th"			"การเข้าถึง bot ได้ถูกล๊อค"
+	}
+	
+	"Bot Unlocked"
+	{
+		"th"			"การเข้าถึง bot ได้ถูกปลดล๊อค"
+	}
+	
+	"Buffer Full"
+	{
+		"th"			"การเรียกใช้เต็ม"
+	}
+	
+	"Cancel"
+	{
+		"th"			"ยกเลิก"
+	}
+	
+	"Cannot Call Air"
+	{
+		"th"			"ไม่สามารถเรียก bot ได้ขณะอยู่กลางอากาศ"
+	}
+	
+	"Cannot Create Bot"
+	{
+		"th"			"ไม่สามารถสร้าง bot ได้"
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"th"			"ไม่สามารถลบบันทึกที่เก็บไว้"
+	}
+	
+	"Cannot Download Rec"
+	{
+		"th"			"ไม่สามารถดาวน์โหลดบันทึกในการเล่นย้อนหลัง"
+	}
+	
+	"Cannot File Read"
+	{
+		"th"			"ไม่สามารถอ่านบันทึกได้"
+	}
+	
+	"Cannot File Write"
+	{
+		"th"			"ไม่สามารถเขียนบันทึกได้"
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"th"			"ไม่สามารถโหลดไฟล์ที่ไม่สมบูรณ์"
+	}
+	
+	"Cannot Local Play"
+	{
+		"th"			"ไม่สามารถเปิดไฟล์ภายในในการเล่นย้อนหลัง"
+	}
+	
+	"Cannot Open Rec"
+	{
+		"th"			"ไม่สามารถเปิดไฟล์ที่บันทึก"
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"th"			"จุดตรวจสอบการเล่นย้อนหลังเกิดความผิดพลาดบนเกณฑ์"
+	}
+	
+	"Class"
+	{
+		"th"			"Class"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"th"			"{1} กำลังบันทึก"
+	}
+	
+	"Delete"
+	{
+		"th"			"ลบ"
+	}
+	
+	"Deleted Rec"
+	{
+		"th"			"ลบบันทึก"
+	}
+	
+	"Demoman"
+	{
+		"th"			"Demoman"
+	}
+	
+	"Distance"
+	{
+		"th"			"ระยะทาง"
+	}
+	
+	"Download Fail"
+	{
+		"th"			"การดาวโหลดบันทึกล้มเหลว"
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"th"			"{1} hashes จาก รายการ repo ได้ถูกดาวน์โหลด"
+	}
+	
+	"Duck"
+	{
+		"th"			"Duck"
+	}
+	
+	"Engineer"
+	{
+		"th"			"Engineer"
+	}
+	
+	"Estimated Time About"
+	{
+		"th"			"เวลาโดยประมาณ"
+	}
+	
+	"File"
+	{
+		"th"			"File"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:d},{2:s}"
+		"th"			"พบ {1} การบันทึกสำหรับ {2}"
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"th"			"พบ {1} การบันทึกข้าม {2} ด่าน"
+	}
+	
+	"Frame"
+	{
+		"th"			"เฟรมภาพ"
+	}
+	
+	"Frames"
+	{
+		"th"			"เฟรมภาพ"
+	}
+	
+	"Hash"
+	{
+		"th"			"Hash"
+	}
+	
+	"Heavy"
+	{
+		"th"			"Heavy"
+	}
+	
+	"Illegal Char"
+	{
+		"th"			"ตัวละครที่ผิดพลาดในชื่อโฟลเดอร์"
+	}
+	
+	"Invalid CC"
+	{
+		"th"			"การควบคุม client ล้มเหลว"
+	}
+	
+	"Invalid ID"
+	{
+		"th"			"การบันทึก ID number ล้มเหลว"
+	}
+	
+	"Jump"
+	{
+		"th"			"Jump"
+	}
+	
+	"List Nearby"
+	{
+		"th"			"รายการข้างเคียงกำลังบันทึกอยู่"
+	}
+	
+	"Load"
+	{
+		"th"			"Load"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:d}"
+		"th"			"{1} ที่บันทึกจากที่เก็บรายการ ไม่ถูกดาวน์โหลด"
+	}
+	
+	"Local"
+	{
+		"th"			"Local"
+	}
+	
+	"Map Name"
+	{
+		"th"			"ชื่อ Map"
+	}
+	
+	"Medic"
+	{
+		"th"			"Medic"
+	}
+	
+	"Mouse1"
+	{
+		"th"			"M1"
+	}
+	
+	"Mouse2"
+	{
+		"th"			"M2"
+	}
+	
+	"No CC"
+	{
+		"th"			"client จำเพาะ ไม่ถูกควบคุม"
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"th"			"ไม่พบไฟล์ภายในที่บันทึกไว้ {1}"
+	}
+	
+	"No Nearby"
+	{
+		"th"			"ไม่พบไฟล์ใกล้เคียงที่บันทึก"
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"th"			"ไม่มีการบันทึกออนไลน์ถูกพบสำหรับ: {1}"
+	}
+	
+	"No Rec"
+	{
+		"th"			"ไม่พบบันทึก"
+	}
+	
+	"No Rec Access"
+	{
+		"th"			"การเข้าถึงของตัวบันทึกถูกปฏิเสธ"
+	}
+	
+	"No Rec Class"
+	{
+		"th"			"ไม่พบบันทึกสำหรับอาชีพนี้"
+	}
+	
+	"No Rec Map"
+	{
+		"th"			"ไม่พบบันทึกในแผนที่นี้"
+	}
+	
+	"Playback Queue"
+	{
+		"th"			"คิวการเล่นย้อนหลัง"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"th"			"บันทึกการเล่นย้อนหลังที่ {1} เฟรมภาพ มารวมกับ {2}"
+	}
+	
+	"Playback Start"
+	{
+		"th"			"เริ่มการดูบันทึกย้อนหลัง"
+	}
+	
+	"Playback Stop"
+	{
+		"th"			"หยุดการดูบันทึกย้อนหลัง"
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"th"			"ผู้เล่นคนต่อไปในไลน์: {1}"
+	}
+	
+	"Playing Closest"
+	{
+		"th"			"เล่นไฟล์ที่อัดล่าสุด"
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"th"			"กด {1} ดูตัวอย่าง"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"th"			"กด {1} หยุด"
+	}
+	
+	"Punt Bot"
+	{
+		"th"			"bot ถูกเตะออกจากเซิฟเวอร์ เนื่องจาก plugin หยุดทำงาน"
+	}
+	
+	"Pyro"
+	{
+		"th"			"Pyro"
+	}
+	
+	"Rec Chdir"
+	{
+		"#format"	"{1:s}"
+		"th"			"โฟลเดอร์ที่บันทึกถูกเปลี่ยนแปลงไปยัง {1}"
+	}
+	
+	"Rec Cleaned"
+	{
+		"th"			"ลบที่อัดทึ้ง"
+	}
+	
+	"Rec Folder"
+	{
+		"#format"	"{1:s}"
+		"th"			"โฟลเดอร์ปัจจุบันที่กำลังบันทึกคือ {1}"
+	}
+	
+	"Rec Start"
+	{
+		"th"			"การบันทึกกำลัง {GREENYELLOW}เริ่ม"
+	}
+	
+	"Rec Stop"
+	{
+		"th"			"การบันทึกกำลัง {FULLRED}หยุด"
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"th"			"การเข้าถึงตัวบันทึกได้ถูกอนุญาตให้ {1}"
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"th"			"การเข้าถึงบันทึกถูกเพิกถอนจาก {1}"
+	}
+	
+	"Recorder Active"
+	{
+		"th"			"เปิดใช้งานตัวบันทึก"
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"th"			"ตัวบันทึกถูกใช้งานโดย {1}"
+	}
+	
+	"Recording"
+	{
+		"th"			"กำลังบันทึก"
+	}
+	
+	"Recording No Folder"
+	{
+		"th"			"โฟลเดอร์บันทึกไม่มีอยู่"
+	}
+	
+	"Replaying"
+	{
+		"th"			"เล่นซ้ำ"
+	}
+	
+	"Repository"
+	{
+		"th"			"ที่เก็บ"
+	}
+	
+	"Running Upgrade"
+	{
+		"th"			"เริ่มดำเนินการอักเกรดแบบเงียบในพื้นหลัง"
+	}
+	
+	"Scout"
+	{
+		"th"			"Scout"
+	}
+	
+	"Search Ambiguous"
+	{
+		"th"			"คำค้นหาที่ไม่ชัดเจน"
+	}
+	
+	"Server Empty"
+	{
+		"th"			"เซิฟเวอร์ว่าง"
+	}
+	
+	"Setting Up"
+	{
+		"th"			"กำลังตั้งค่า bot โปรดรอสักครู่"
+	}
+	
+	"Show Current"
+	{
+		"th"			"แสดงบันทึกย้อนหลังจากจุดที่พึ่งโดด"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"th"			"แสดงบันทึกย้อนหลัง {1}"
+	}
+	
+	"Sniper"
+	{
+		"th"			"Sniper"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:d},{2:d}"
+		"th"			"การรับส่งข้อมูลทางจุดสิ้นสุดขาเข้าผิดพลาด {1} (code {2})"
+	}
+	
+	"Soldier"
+	{
+		"th"			"Soldier"
+	}
+	
+	"Source"
+	{
+		"th"			"Source"
+	}
+	
+	"Spy"
+	{
+		"th"			"Spy"
+	}
+	
+	"Terminated"
+	{
+		"th"			"สิ้นสุดการดำเนินการทำงาน"
+	}
+	
+	"Time"
+	{
+		"th"			"เวลา"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"th"			"พิมพ์ /{1} เพื่อดูตัวอย่าง"
+	}
+	
+	"Type Stop"
+	{
+		"th"			"พิมพ์ /jb_stop เพื่อหยุด"
+	}
+	
+	"Unexpected EOF"
+	{
+		"th"			"ไฟล์บนเฟรมภาพสุดท้ายที่ไม่คาดคิด"
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:c},{2:c},{3:c},{4:s}"
+		"th"			"การตอบสนองของเซิร์ฟเวอร์ที่ไม่คาดคิด ({1}{2}{3}) ในขณะที่เรียกข้อมูล {4}"
+	}
+	
+	"Unknown"
+	{
+		"th"			"Unknown"
+	}
+	
+	"Usage"
+	{
+		"th"			"การใช้"
+	}
+	
+	"Usage Chdir"
+	{
+		"th"			"การใช้: jb_chdir <โฟลเดอร์>"
+	}
+	
+	"Usage Delete"
+	{
+		"th"			"การใช้: jb_delete <id>, ที่ <id> จาก jb_nearby "
+	}
+	
+}

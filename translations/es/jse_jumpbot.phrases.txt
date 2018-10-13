@@ -1,0 +1,513 @@
+"Phrases"
+{
+	"Author"
+	{
+		"es"			"Autor"
+	}
+	
+	"Bot Locked"
+	{
+		"es"			"BOT bloqueado"
+	}
+	
+	"Bot Unlocked"
+	{
+		"es"			"BOT desbloqueado"
+	}
+	
+	"Buffer Full"
+	{
+		"es"			"Memoria llena!"
+	}
+	
+	"Cancel"
+	{
+		"es"			"Cancelar"
+	}
+	
+	"Cannot Call Air"
+	{
+		"es"			"No se puede llamar al BOT en el aire"
+	}
+	
+	"Cannot Create Bot"
+	{
+		"es"			"No se puede crear BOT"
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"es"			"No se puede borrar el repositorio de grabaciones"
+	}
+	
+	"Cannot Download Rec"
+	{
+		"es"			"No se puede descargar la grabación."
+	}
+	
+	"Cannot File Read"
+	{
+		"es"			"No se puede abrir el archivo de lectura"
+	}
+	
+	"Cannot File Write"
+	{
+		"es"			"No se puede abrir el archivo para editarlo"
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"es"			"No carga el archivo, esta incompleto."
+	}
+	
+	"Cannot Local Play"
+	{
+		"es"			"No se puede abrir el archivo local"
+	}
+	
+	"Cannot Open Rec"
+	{
+		"es"			"No se puede abrir el archivo de grabación"
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"es"			"Error en el punto de control"
+	}
+	
+	"Class"
+	{
+		"es"			"Clase"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"es"			"{1} grabando"
+	}
+	
+	"Delete"
+	{
+		"es"			"Borrar"
+	}
+	
+	"Deleted Rec"
+	{
+		"es"			"Grabación borrada"
+	}
+	
+	"Demoman"
+	{
+		"es"			"Demoman"
+	}
+	
+	"Distance"
+	{
+		"es"			"Distancia"
+	}
+	
+	"Download Fail"
+	{
+		"es"			"Descarga de grabación fallida"
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"es"			"Descargadas {1} hashes de la lista de repositorios"
+	}
+	
+	"Duck"
+	{
+		"es"			"Agacharse"
+	}
+	
+	"Engineer"
+	{
+		"es"			"Engineer"
+	}
+	
+	"Estimated Time About"
+	{
+		"es"			"Tiempo estimado"
+	}
+	
+	"File"
+	{
+		"es"			"Archivo"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:d},{2:s}"
+		"es"			"Encontradas {1} grabaciones para {2}"
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"es"			"Archivos {1} grabados en {2} mapas"
+	}
+	
+	"Frame"
+	{
+		"es"			"Marco"
+	}
+	
+	"Frames"
+	{
+		"es"			"Marcos"
+	}
+	
+	"Hash"
+	{
+		"es"			"Funcion de resumen"
+	}
+	
+	"Heavy"
+	{
+		"es"			"Heavy"
+	}
+	
+	"Illegal Char"
+	{
+		"es"			"Carácteres no permitidos en el nombre del archivo"
+	}
+	
+	"Invalid CC"
+	{
+		"es"			"Cliente de control invalido"
+	}
+	
+	"Invalid ID"
+	{
+		"es"			"ID de grabación invalido."
+	}
+	
+	"Jump"
+	{
+		"es"			"Saltar"
+	}
+	
+	"List Nearby"
+	{
+		"es"			"Lista de grabaciones cercanas."
+	}
+	
+	"Load"
+	{
+		"es"			"Cargar"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:d}"
+		"es"			"{1} de grabaciones cargadas desde el repositorio "
+	}
+	
+	"Local"
+	{
+		"es"			"Local"
+	}
+	
+	"Map Name"
+	{
+		"es"			"Nombre del mapa"
+	}
+	
+	"Medic"
+	{
+		"es"			"Medic"
+	}
+	
+	"Mouse1"
+	{
+		"es"			"M1"
+	}
+	
+	"Mouse2"
+	{
+		"es"			"M2"
+	}
+	
+	"No CC"
+	{
+		"es"			"Cliente de control no especificado"
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"es"			"Ninguna grabacion local fue encontrada para {1}"
+	}
+	
+	"No Nearby"
+	{
+		"es"			"Ninguna grabación cercana encontrada"
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"es"			"Ninguna grabación online encontrada para {1}"
+	}
+	
+	"No Rec"
+	{
+		"es"			"Ninguna grabación encontrada."
+	}
+	
+	"No Rec Access"
+	{
+		"es"			"Acceso de grabador denegado"
+	}
+	
+	"No Rec Class"
+	{
+		"es"			"Ninguna grabación encontrada para la clase de este jugador"
+	}
+	
+	"No Rec Map"
+	{
+		"es"			"Ninguna grabación encontrada para este mapa"
+	}
+	
+	"Playback Queue"
+	{
+		"es"			"Repeticion en cola"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"es"			"Reproduccion guardada {1} cuadros, atribuido a {2}"
+	}
+	
+	"Playback Start"
+	{
+		"es"			"Repetición a comenzado"
+	}
+	
+	"Playback Stop"
+	{
+		"es"			"Repetición pausada"
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"es"			"Jugadores en cola: {1}"
+	}
+	
+	"Playing Closest"
+	{
+		"es"			"Reproduciendo grabación mas cercana."
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"es"			"Usar {1} para revisar"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"es"			"Usar {1} para parar"
+	}
+	
+	"Punt Bot"
+	{
+		"es"			"Bot expulsado, plugin cerrando."
+	}
+	
+	"Pyro"
+	{
+		"es"			"Pyro"
+	}
+	
+	"Rec Chdir"
+	{
+		"#format"	"{1:s}"
+		"es"			"Archivo de grabaciones cambiado a {1}"
+	}
+	
+	"Rec Cleaned"
+	{
+		"es"			"Limpieza de grabaciones completa"
+	}
+	
+	"Rec Folder"
+	{
+		"#format"	"{1:s}"
+		"es"			"El archivo de grabaciones actual es {1}"
+	}
+	
+	"Rec Start"
+	{
+		"es"			"La grabación a {GREENYELLOW}empezado"
+	}
+	
+	"Rec Stop"
+	{
+		"es"			"La grabación a {FULLRED}parado"
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"es"			"Acceso a grabaciones permitido a {1}"
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"es"			"Acceso revocado de {1}"
+	}
+	
+	"Recorder Active"
+	{
+		"es"			"Grabador activo"
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"es"			"Grabadora en uso por {1}"
+	}
+	
+	"Recording"
+	{
+		"es"			"Grabando"
+	}
+	
+	"Recording No Folder"
+	{
+		"es"			"Archivo de descargas no existente"
+	}
+	
+	"Replaying"
+	{
+		"es"			"Reproduciendo"
+	}
+	
+	"Repository"
+	{
+		"es"			"Repositorio"
+	}
+	
+	"Running Upgrade"
+	{
+		"es"			"Ejecutando actualizacion"
+	}
+	
+	"Scout"
+	{
+		"es"			"Scout"
+	}
+	
+	"Search Ambiguous"
+	{
+		"es"			"El termino de busqueda es ambiguo"
+	}
+	
+	"Server Empty"
+	{
+		"es"			"Servidor vacio"
+	}
+	
+	"Setting Up"
+	{
+		"es"			"Configurando BOT. Espere un momento"
+	}
+	
+	"Show Current"
+	{
+		"es"			"Mostrando reproducción para el salto actual"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"es"			"Mostrandole reproducción a {1}"
+	}
+	
+	"Sniper"
+	{
+		"es"			"Sniper"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:d},{2:d}"
+		"es"			"Error de socket {1} (codigo {2})"
+	}
+	
+	"Soldier"
+	{
+		"es"			"Soldier"
+	}
+	
+	"Source"
+	{
+		"es"			"Fuente"
+	}
+	
+	"Spy"
+	{
+		"es"			"Spy"
+	}
+	
+	"Terminated"
+	{
+		"es"			"Operación terminada."
+	}
+	
+	"Time"
+	{
+		"es"			"Tiempo"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"es"			"Escribir /{1} para revisar"
+	}
+	
+	"Type Stop"
+	{
+		"es"			"Escribir /jb_stop para parar"
+	}
+	
+	"Unexpected EOF"
+	{
+		"es"			"Fin de archivo inesperado"
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:c},{2:c},{3:c},{4:s}"
+		"es"			"Respuesta inesperada ({1}{2}{3}) intentado recuperar {4}"
+	}
+	
+	"Unknown"
+	{
+		"es"			"Desconocido"
+	}
+	
+	"Usage"
+	{
+		"es"			"Uso"
+	}
+	
+	"Usage Chdir"
+	{
+		"es"			"Uso: jb_chdir <archivo>"
+	}
+	
+	"Usage Delete"
+	{
+		"es"			"Uso: jb_delete <id>, donde <id> es de jb_nearby"
+	}
+	
+}

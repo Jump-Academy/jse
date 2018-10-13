@@ -1,0 +1,513 @@
+"Phrases"
+{
+	"Author"
+	{
+		"fr"			"Auteur"
+	}
+	
+	"Bot Locked"
+	{
+		"fr"			"L'accès au bot est à présent bloqué"
+	}
+	
+	"Bot Unlocked"
+	{
+		"fr"			"L'accès au bot est à présent autorisé"
+	}
+	
+	"Buffer Full"
+	{
+		"fr"			"Mémoire tampon pleine!"
+	}
+	
+	"Cancel"
+	{
+		"fr"			"Annuler"
+	}
+	
+	"Cannot Call Air"
+	{
+		"fr"			"Impossible d'appeler le bot en plein vol"
+	}
+	
+	"Cannot Create Bot"
+	{
+		"fr"			"Impossible de créer le bot"
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"fr"			"Impossible de supprimer le dépôt d'enregistrement"
+	}
+	
+	"Cannot Download Rec"
+	{
+		"fr"			"Le téléchargement de l'enregistrement pour relecture a échoué"
+	}
+	
+	"Cannot File Read"
+	{
+		"fr"			"Impossible d'ouvrir le fichier pour lecture"
+	}
+	
+	"Cannot File Write"
+	{
+		"fr"			"Impossible d'ouvrir le fichier pour écriture"
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"fr"			"Impossible de charger un fichier incomplet"
+	}
+	
+	"Cannot Local Play"
+	{
+		"fr"			"Impossible d'ouvrir le fichier local pour relecture"
+	}
+	
+	"Cannot Open Rec"
+	{
+		"fr"			"Impossible d'ouvrir le fichier d'enregistrement"
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"fr"			"Erreur de point de contrôle dépassant la limite autorisée"
+	}
+	
+	"Class"
+	{
+		"fr"			"Classe"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"fr"			"Enregistrement pour {1}"
+	}
+	
+	"Delete"
+	{
+		"fr"			"SUPPRIMER"
+	}
+	
+	"Deleted Rec"
+	{
+		"fr"			"Enregistrement supprimé"
+	}
+	
+	"Demoman"
+	{
+		"fr"			"Demoman"
+	}
+	
+	"Distance"
+	{
+		"fr"			"Distance"
+	}
+	
+	"Download Fail"
+	{
+		"fr"			"Le téléchargement de l'enregistrement a échoué"
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"fr"			"{1} hashes téléchargées depuis la liste des dépôts"
+	}
+	
+	"Duck"
+	{
+		"fr"			"Accroupi"
+	}
+	
+	"Engineer"
+	{
+		"fr"			"Engineer"
+	}
+	
+	"Estimated Time About"
+	{
+		"fr"			"Temps d'attente estimé"
+	}
+	
+	"File"
+	{
+		"fr"			"Fichier"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:d},{2:s}"
+		"fr"			"{1} enregistrements trouvés pour {2}"
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"fr"			"{1} enregistrements trouvés pour {2} cartes"
+	}
+	
+	"Frame"
+	{
+		"fr"			"Image"
+	}
+	
+	"Frames"
+	{
+		"fr"			"Images"
+	}
+	
+	"Hash"
+	{
+		"fr"			"Hash"
+	}
+	
+	"Heavy"
+	{
+		"fr"			"Heavy"
+	}
+	
+	"Illegal Char"
+	{
+		"fr"			"Caractères non autorisés dans le nom du dossier"
+	}
+	
+	"Invalid CC"
+	{
+		"fr"			"Contrôle client invalide"
+	}
+	
+	"Invalid ID"
+	{
+		"fr"			"ID d'enregistrement invalide"
+	}
+	
+	"Jump"
+	{
+		"fr"			"Saut"
+	}
+	
+	"List Nearby"
+	{
+		"fr"			"Listing des enregistrements proches"
+	}
+	
+	"Load"
+	{
+		"fr"			"Charge"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:d}"
+		"fr"			"{1} enregistrements chargés depuis l'index de dépôt"
+	}
+	
+	"Local"
+	{
+		"fr"			"Local"
+	}
+	
+	"Map Name"
+	{
+		"fr"			"Nom de la carte"
+	}
+	
+	"Medic"
+	{
+		"fr"			"Medic"
+	}
+	
+	"Mouse1"
+	{
+		"fr"			"M1"
+	}
+	
+	"Mouse2"
+	{
+		"fr"			"M2"
+	}
+	
+	"No CC"
+	{
+		"fr"			"Aucun client contrôlé spécifié"
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"fr"			"Aucun enregistrement local trouvé pour {1}"
+	}
+	
+	"No Nearby"
+	{
+		"fr"			"Aucun enregistrement à proximité"
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"fr"			"Aucun enregistrement en ligne trouvé pour {1}"
+	}
+	
+	"No Rec"
+	{
+		"fr"			"Aucun enregistrement n'a été trouvé"
+	}
+	
+	"No Rec Access"
+	{
+		"fr"			"Accès à l'enregistreur refusé"
+	}
+	
+	"No Rec Class"
+	{
+		"fr"			"Aucun enregistrement trouvé pour cette classe de personnage"
+	}
+	
+	"No Rec Map"
+	{
+		"fr"			"Aucun enregistrement trouvé pour cette carte"
+	}
+	
+	"Playback Queue"
+	{
+		"fr"			"Liste de lecture"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"fr"			"La relecture a sauvegardé {1} images, attribuées à {2}"
+	}
+	
+	"Playback Start"
+	{
+		"fr"			"La relecture a démarré"
+	}
+	
+	"Playback Stop"
+	{
+		"fr"			"La relecture a été interrompue"
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"fr"			"Joueurs dans la file d'attente: {1}"
+	}
+	
+	"Playing Closest"
+	{
+		"fr"			"Visionnage de l'enregistrement le plus proche"
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"fr"			"Appuyez sur {1} pour voir"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"fr"			"Appuyez sur {1} pour arrêter"
+	}
+	
+	"Punt Bot"
+	{
+		"fr"			"Éjection du bot, le plugin s'arrête"
+	}
+	
+	"Pyro"
+	{
+		"fr"			"Pyro"
+	}
+	
+	"Rec Chdir"
+	{
+		"#format"	"{1:s}"
+		"fr"			"Le dossier d'enregistrement est à présent {1}"
+	}
+	
+	"Rec Cleaned"
+	{
+		"fr"			"Nettoyage des enregistrements terminé"
+	}
+	
+	"Rec Folder"
+	{
+		"#format"	"{1:s}"
+		"fr"			"Le dossier d'enregistrement est {1}"
+	}
+	
+	"Rec Start"
+	{
+		"fr"			"L'enregistrement a {GREENYELLOW}débuté"
+	}
+	
+	"Rec Stop"
+	{
+		"fr"			"L'enregitremment a été {FULLRED}interrompu"
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"fr"			"Accès à l'enregistreur autorisé à {1}"
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"fr"			"L'accès de {1} à l'enregistreur a été révolu"
+	}
+	
+	"Recorder Active"
+	{
+		"fr"			"Enregistreur actif"
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"fr"			"L'enregistreur est déjà utilisé par {1}"
+	}
+	
+	"Recording"
+	{
+		"fr"			"REC"
+	}
+	
+	"Recording No Folder"
+	{
+		"fr"			"Le fichier d'enregistrement n'existe pas "
+	}
+	
+	"Replaying"
+	{
+		"fr"			"Relecture"
+	}
+	
+	"Repository"
+	{
+		"fr"			"Dépôt"
+	}
+	
+	"Running Upgrade"
+	{
+		"fr"			"Des améliorations du programme sont en cours en tâche de fond"
+	}
+	
+	"Scout"
+	{
+		"fr"			"Scout"
+	}
+	
+	"Search Ambiguous"
+	{
+		"fr"			"Les termes de la recherche sont ambigus"
+	}
+	
+	"Server Empty"
+	{
+		"fr"			"Le serveur est vide"
+	}
+	
+	"Setting Up"
+	{
+		"fr"			"Mise en place du bot. Veuillez réessayer dans un moment."
+	}
+	
+	"Show Current"
+	{
+		"fr"			"Montrer l'enregistrement du saut en cours"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"fr"			"Montrer l'enregistrement à {1}"
+	}
+	
+	"Sniper"
+	{
+		"fr"			"Sniper"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:d},{2:d}"
+		"fr"			"Erreur de socket {1} (code {2})"
+	}
+	
+	"Soldier"
+	{
+		"fr"			"Soldier"
+	}
+	
+	"Source"
+	{
+		"fr"			"Source"
+	}
+	
+	"Spy"
+	{
+		"fr"			"Spy"
+	}
+	
+	"Terminated"
+	{
+		"fr"			"Opération annulée "
+	}
+	
+	"Time"
+	{
+		"fr"			"Temps"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"fr"			"Tapez /{1} pour revoir"
+	}
+	
+	"Type Stop"
+	{
+		"fr"			"Tapez /jb_stop pour arrêter"
+	}
+	
+	"Unexpected EOF"
+	{
+		"fr"			"Fin inattendue du fichier à l'image"
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:c},{2:c},{3:c},{4:s}"
+		"fr"			"Réponse du serveur inattendue ({1}{2}{3}) pendant la récupération de {4}"
+	}
+	
+	"Unknown"
+	{
+		"fr"			"Inconnu"
+	}
+	
+	"Usage"
+	{
+		"fr"			"Utilisation"
+	}
+	
+	"Usage Chdir"
+	{
+		"fr"			"Utilisation : jb_chdir <dossier>"
+	}
+	
+	"Usage Delete"
+	{
+		"fr"			"Utilisation : jb_delete <id>, où <id> viens de jb_nearby"
+	}
+	
+}

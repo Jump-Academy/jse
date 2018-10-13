@@ -1,0 +1,513 @@
+"Phrases"
+{
+	"Author"
+	{
+		"zho"			"作者"
+	}
+	
+	"Bot Locked"
+	{
+		"zho"			"機器人存取已鎖定"
+	}
+	
+	"Bot Unlocked"
+	{
+		"zho"			"機器人存取已解鎖"
+	}
+	
+	"Buffer Full"
+	{
+		"zho"			"緩沖區已滿"
+	}
+	
+	"Cancel"
+	{
+		"zho"			"取消"
+	}
+	
+	"Cannot Call Air"
+	{
+		"zho"			"在空中無法呼叫機器人"
+	}
+	
+	"Cannot Create Bot"
+	{
+		"zho"			"無法創建機器人"
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"zho"			"無法刪除資料庫的紀錄"
+	}
+	
+	"Cannot Download Rec"
+	{
+		"zho"			"無法下載文件進行播放"
+	}
+	
+	"Cannot File Read"
+	{
+		"zho"			"無法打開文件進行讀取"
+	}
+	
+	"Cannot File Write"
+	{
+		"zho"			"無法打開文件進行寫入"
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"zho"			"無法打開未完成的文件"
+	}
+	
+	"Cannot Local Play"
+	{
+		"zho"			"無法打開本地文件進行播放"
+	}
+	
+	"Cannot Open Rec"
+	{
+		"zho"			"無法打開紀錄"
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"zho"			"紀錄重播存取點錯誤超過臨界值"
+	}
+	
+	"Class"
+	{
+		"zho"			"職業"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"zho"			"{1} 錄影中"
+	}
+	
+	"Delete"
+	{
+		"zho"			"刪除"
+	}
+	
+	"Deleted Rec"
+	{
+		"zho"			"刪除的記錄"
+	}
+	
+	"Demoman"
+	{
+		"zho"			"爆破兵"
+	}
+	
+	"Distance"
+	{
+		"zho"			"距離"
+	}
+	
+	"Download Fail"
+	{
+		"zho"			"錄製下載失敗"
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"zho"			"已從資料庫下載 {1} 個哈希"
+	}
+	
+	"Duck"
+	{
+		"zho"			"蹲伏"
+	}
+	
+	"Engineer"
+	{
+		"zho"			"工程師"
+	}
+	
+	"Estimated Time About"
+	{
+		"zho"			"預估完成時間"
+	}
+	
+	"File"
+	{
+		"zho"			"文件"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:s},{2:d}"
+		"zho"			"{1} 中發現 {2} 個紀錄"
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"zho"			"發現 {1} 個紀錄在 {2} 個地圖中"
+	}
+	
+	"Frame"
+	{
+		"zho"			"幀"
+	}
+	
+	"Frames"
+	{
+		"zho"			"幀"
+	}
+	
+	"Hash"
+	{
+		"zho"			"哈希"
+	}
+	
+	"Heavy"
+	{
+		"zho"			"重裝兵"
+	}
+	
+	"Illegal Char"
+	{
+		"zho"			"資料夾名稱中有錯誤字眼"
+	}
+	
+	"Invalid CC"
+	{
+		"zho"			"無效的控制端"
+	}
+	
+	"Invalid ID"
+	{
+		"zho"			"無效的ID"
+	}
+	
+	"Jump"
+	{
+		"zho"			"跳躍"
+	}
+	
+	"List Nearby"
+	{
+		"zho"			"最近紀錄"
+	}
+	
+	"Load"
+	{
+		"zho"			"讀取"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:d}"
+		"zho"			"已從資料庫讀取 {1} 個記錄檔"
+	}
+	
+	"Local"
+	{
+		"zho"			"本地"
+	}
+	
+	"Map Name"
+	{
+		"zho"			"地圖名稱"
+	}
+	
+	"Medic"
+	{
+		"zho"			"醫護兵"
+	}
+	
+	"Mouse1"
+	{
+		"zho"			"左鍵"
+	}
+	
+	"Mouse2"
+	{
+		"zho"			"右鍵"
+	}
+	
+	"No CC"
+	{
+		"zho"			"尚未指定控制端"
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"zho"			"{1} 沒有本地紀錄"
+	}
+	
+	"No Nearby"
+	{
+		"zho"			"沒有附近的記錄"
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"zho"			"{1} 沒有線上記錄"
+	}
+	
+	"No Rec"
+	{
+		"zho"			"沒有紀錄"
+	}
+	
+	"No Rec Access"
+	{
+		"zho"			"紀錄器存取被拒絕"
+	}
+	
+	"No Rec Class"
+	{
+		"zho"			"此職業沒有記錄"
+	}
+	
+	"No Rec Map"
+	{
+		"zho"			"此地圖沒有記錄"
+	}
+	
+	"Playback Queue"
+	{
+		"zho"			"播放佇列"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"zho"			"紀錄重播已儲存 {1} 幀, 歸屬於 {2}"
+	}
+	
+	"Playback Start"
+	{
+		"zho"			"紀錄重播開始"
+	}
+	
+	"Playback Stop"
+	{
+		"zho"			"紀錄重播停止"
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"zho"			"玩家佇列人數: {1}"
+	}
+	
+	"Playing Closest"
+	{
+		"zho"			"正在播放最近的紀錄"
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"zho"			"按下 {1} 鍵查看"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"zho"			"按下 {1} 鍵停止"
+	}
+	
+	"Punt Bot"
+	{
+		"zho"			"踢出機器人，插件即將終止"
+	}
+	
+	"Pyro"
+	{
+		"zho"			"火焰兵"
+	}
+	
+	"Rec Chdir"
+	{
+		"#format"	"{1:s}"
+		"zho"			"錄製資料夾移動至 {1}"
+	}
+	
+	"Rec Cleaned"
+	{
+		"zho"			"錄製已刪除"
+	}
+	
+	"Rec Folder"
+	{
+		"#format"	"{1:s}"
+		"zho"			"錄製資料夾目前在 {1}"
+	}
+	
+	"Rec Start"
+	{
+		"zho"			"錄製已{GREENYELLOW}開始"
+	}
+	
+	"Rec Stop"
+	{
+		"zho"			"錄製已{FULLRED}停止"
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"zho"			"{1} 現在可以存取紀錄器"
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"zho"			"已撤銷 {1} 的紀錄器存取權限"
+	}
+	
+	"Recorder Active"
+	{
+		"zho"			"紀錄器生效"
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"zho"			"{1} 正在使用記錄器"
+	}
+	
+	"Recording"
+	{
+		"zho"			"錄影中"
+	}
+	
+	"Recording No Folder"
+	{
+		"zho"			"錄製資料夾不存在"
+	}
+	
+	"Replaying"
+	{
+		"zho"			"重播"
+	}
+	
+	"Repository"
+	{
+		"zho"			"資料庫"
+	}
+	
+	"Running Upgrade"
+	{
+		"zho"			"更新正在背景運行中"
+	}
+	
+	"Scout"
+	{
+		"zho"			"偵察兵"
+	}
+	
+	"Search Ambiguous"
+	{
+		"zho"			"搜尋重複字眼"
+	}
+	
+	"Server Empty"
+	{
+		"zho"			"伺服器為空"
+	}
+	
+	"Setting Up"
+	{
+		"zho"			"機器人正在啟動中。 請稍後再嘗試"
+	}
+	
+	"Show Current"
+	{
+		"zho"			"播放目前關卡的紀錄"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"zho"			"播放紀錄給 {1}"
+	}
+	
+	"Sniper"
+	{
+		"zho"			"狙擊手"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:d},{2:d}"
+		"zho"			"網路插座錯誤 {1} (代號 {2})"
+	}
+	
+	"Soldier"
+	{
+		"zho"			"火箭兵"
+	}
+	
+	"Source"
+	{
+		"zho"			"來源"
+	}
+	
+	"Spy"
+	{
+		"zho"			"間諜"
+	}
+	
+	"Terminated"
+	{
+		"zho"			"取消作業"
+	}
+	
+	"Time"
+	{
+		"zho"			"時間"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"zho"			"輸入 /{1} 來查看"
+	}
+	
+	"Type Stop"
+	{
+		"zho"			"輸入 /jb_stop 來停止"
+	}
+	
+	"Unexpected EOF"
+	{
+		"zho"			"文件未預期終止"
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:s},{2:c},{3:c},{4:c}"
+		"zho"			"擷取 {1} 時, 得到未預期的回應 ({2}{3}{4})"
+	}
+	
+	"Unknown"
+	{
+		"zho"			"未知"
+	}
+	
+	"Usage"
+	{
+		"zho"			"用法"
+	}
+	
+	"Usage Chdir"
+	{
+		"zho"			"用法: jb_chdir <資料夾>"
+	}
+	
+	"Usage Delete"
+	{
+		"zho"			"刪除用法: jb_delete <id>, 當 <id> 來自 jb_nearby"
+	}
+	
+}

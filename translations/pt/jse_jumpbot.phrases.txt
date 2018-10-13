@@ -1,0 +1,513 @@
+"Phrases"
+{
+	"Author"
+	{
+		"pt"			"Autor"
+	}
+	
+	"Bot Locked"
+	{
+		"pt"			"Acesso ao bot está bloqueado"
+	}
+	
+	"Bot Unlocked"
+	{
+		"pt"			"Acesso ao bot está desbloqueado"
+	}
+	
+	"Buffer Full"
+	{
+		"pt"			"Buffer está cheio!"
+	}
+	
+	"Cancel"
+	{
+		"pt"			"Cancelar"
+	}
+	
+	"Cannot Call Air"
+	{
+		"pt"			"Não é possível chamar o bot no ar"
+	}
+	
+	"Cannot Create Bot"
+	{
+		"pt"			"Não foi possível criar o bot"
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"pt"			"Não foi possível deletar o repositório"
+	}
+	
+	"Cannot Download Rec"
+	{
+		"pt"			"Não foi possível baixar a gravação"
+	}
+	
+	"Cannot File Read"
+	{
+		"pt"			"Não foi possível abrir o arquivo para leitura"
+	}
+	
+	"Cannot File Write"
+	{
+		"pt"			"Não foi possível abrir o arquivo para escrever"
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"pt"			"Não foi possível carregar, arquivo incompleto"
+	}
+	
+	"Cannot Local Play"
+	{
+		"pt"			"Não foi possível abrir o arquivo local para reprodução"
+	}
+	
+	"Cannot Open Rec"
+	{
+		"pt"			"Não foi possível abrir a gravação"
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"pt"			"Erro na reprodução do checkpoint"
+	}
+	
+	"Class"
+	{
+		"pt"			"Classe"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"pt"			"Gravação de {1}"
+	}
+	
+	"Delete"
+	{
+		"pt"			"Delete"
+	}
+	
+	"Deleted Rec"
+	{
+		"pt"			"Gravação deletada"
+	}
+	
+	"Demoman"
+	{
+		"pt"			"Demoman"
+	}
+	
+	"Distance"
+	{
+		"pt"			"Distância"
+	}
+	
+	"Download Fail"
+	{
+		"pt"			"Download de gravação falhou"
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"pt"			"Foram baixadas {1} hashes do repositório"
+	}
+	
+	"Duck"
+	{
+		"pt"			"Agachar"
+	}
+	
+	"Engineer"
+	{
+		"pt"			"Engineer"
+	}
+	
+	"Estimated Time About"
+	{
+		"pt"			"Tempo estimado"
+	}
+	
+	"File"
+	{
+		"pt"			"Arquivo"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:d},{2:s}"
+		"pt"			"Encontrado {1} gravações para {2}"
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"pt"			"Foram encontradas {1} gravações em {2} mapas"
+	}
+	
+	"Frame"
+	{
+		"pt"			"Frame"
+	}
+	
+	"Frames"
+	{
+		"pt"			"Frames"
+	}
+	
+	"Hash"
+	{
+		"pt"			"Hash"
+	}
+	
+	"Heavy"
+	{
+		"pt"			"Heavy"
+	}
+	
+	"Illegal Char"
+	{
+		"pt"			"Caracteres ilegais no nome da pasta"
+	}
+	
+	"Invalid CC"
+	{
+		"pt"			"Controle de client inválido"
+	}
+	
+	"Invalid ID"
+	{
+		"pt"			"ID de gravação inválido"
+	}
+	
+	"Jump"
+	{
+		"pt"			"Jump"
+	}
+	
+	"List Nearby"
+	{
+		"pt"			"Listando as gravações próximas"
+	}
+	
+	"Load"
+	{
+		"pt"			"Carregar"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:d}"
+		"pt"			"Carregado {1} gravações do índice do repositório"
+	}
+	
+	"Local"
+	{
+		"pt"			"Local"
+	}
+	
+	"Map Name"
+	{
+		"pt"			"Nome do mapa"
+	}
+	
+	"Medic"
+	{
+		"pt"			"Medic"
+	}
+	
+	"Mouse1"
+	{
+		"pt"			"M1"
+	}
+	
+	"Mouse2"
+	{
+		"pt"			"M2"
+	}
+	
+	"No CC"
+	{
+		"pt"			"Cliente controlado não especificado"
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"pt"			"Não foram encontradas gravações para {1}"
+	}
+	
+	"No Nearby"
+	{
+		"pt"			"Nenhuma gravação próxima foi encontrada"
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"pt"			"Não foram encontradas gravações online para {1}"
+	}
+	
+	"No Rec"
+	{
+		"pt"			"Não foram encontradas gravações"
+	}
+	
+	"No Rec Access"
+	{
+		"pt"			"Acesso de gravação recusado"
+	}
+	
+	"No Rec Class"
+	{
+		"pt"			"Não foram encontradas gravações para essa classe"
+	}
+	
+	"No Rec Map"
+	{
+		"pt"			"Não foram encontradas gravações para esse mapa"
+	}
+	
+	"Playback Queue"
+	{
+		"pt"			"Fila de Reprodução"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"pt"			"Gravação salva. {1} frames atribuídos para {2}"
+	}
+	
+	"Playback Start"
+	{
+		"pt"			"Reprodução iniciada"
+	}
+	
+	"Playback Stop"
+	{
+		"pt"			"Reprodução pausada"
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"pt"			"Jogadores à frente: {1}"
+	}
+	
+	"Playing Closest"
+	{
+		"pt"			"Reproduzindo a gravação mais próxima"
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"pt"			"Pressione {1} para ver"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"pt"			"Pressione {1} para parar"
+	}
+	
+	"Punt Bot"
+	{
+		"pt"			"Bot expulsado. Terminando plugin"
+	}
+	
+	"Pyro"
+	{
+		"pt"			"Pyro"
+	}
+	
+	"Rec Chdir"
+	{
+		"#format"	"{1:s}"
+		"pt"			"Pasta de gravações trocada para {1}"
+	}
+	
+	"Rec Cleaned"
+	{
+		"pt"			"Limpeza das gravações completa."
+	}
+	
+	"Rec Folder"
+	{
+		"#format"	"{1:s}"
+		"pt"			"Pasta atual de gravação é {1}"
+	}
+	
+	"Rec Start"
+	{
+		"pt"			"Gravação {GREENYELLOW}iniciada"
+	}
+	
+	"Rec Stop"
+	{
+		"pt"			"Gravação {FULLRED}parou"
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"pt"			"Acesso autorizado para gravar {1}"
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"pt"			"Acesso de gravação revogado de {1}"
+	}
+	
+	"Recorder Active"
+	{
+		"pt"			"Gravador ativado"
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"pt"			"Gravador está em uso por {1}"
+	}
+	
+	"Recording"
+	{
+		"pt"			"Gravação"
+	}
+	
+	"Recording No Folder"
+	{
+		"pt"			"Pasta de gravação não existente"
+	}
+	
+	"Replaying"
+	{
+		"pt"			"Reproduzindo"
+	}
+	
+	"Repository"
+	{
+		"pt"			"Repositório"
+	}
+	
+	"Running Upgrade"
+	{
+		"pt"			"Executando operações de upgrade em segundo-plano"
+	}
+	
+	"Scout"
+	{
+		"pt"			"Scout"
+	}
+	
+	"Search Ambiguous"
+	{
+		"pt"			"O termo de procura é ambíguo"
+	}
+	
+	"Server Empty"
+	{
+		"pt"			"Servidor está vazio"
+	}
+	
+	"Setting Up"
+	{
+		"pt"			"Configurando o BOT. Tente denovo em alguns instantes"
+	}
+	
+	"Show Current"
+	{
+		"pt"			"Mostrando gravação do jump atual"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"pt"			"Mostrando gravação para {1}"
+	}
+	
+	"Sniper"
+	{
+		"pt"			"Sniper"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:d},{2:d}"
+		"pt"			"Socket error {1} (código {2})"
+	}
+	
+	"Soldier"
+	{
+		"pt"			"Soldier"
+	}
+	
+	"Source"
+	{
+		"pt"			"Fonte"
+	}
+	
+	"Spy"
+	{
+		"pt"			"Spy"
+	}
+	
+	"Terminated"
+	{
+		"pt"			"Operação terminada"
+	}
+	
+	"Time"
+	{
+		"pt"			"Tempo"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"pt"			"Digite /{1} para ver"
+	}
+	
+	"Type Stop"
+	{
+		"pt"			"Digite /jb_stop para parar"
+	}
+	
+	"Unexpected EOF"
+	{
+		"pt"			"Inesperado final de arquivo no frame"
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:c},{2:c},{3:c},{4:s}"
+		"pt"			"Resposta do servidor inesperada ({1}{2}{3}) recuperando {4}"
+	}
+	
+	"Unknown"
+	{
+		"pt"			"Desconhecido"
+	}
+	
+	"Usage"
+	{
+		"pt"			"Uso"
+	}
+	
+	"Usage Chdir"
+	{
+		"pt"			"Uso: jb_chdir <pasta>"
+	}
+	
+	"Usage Delete"
+	{
+		"pt"			"Uso: jb_delete <id>, onde <id> é de jb_nearby"
+	}
+	
+}

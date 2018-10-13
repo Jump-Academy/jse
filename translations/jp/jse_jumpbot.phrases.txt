@@ -1,0 +1,513 @@
+"Phrases"
+{
+	"Author"
+	{
+		"jp"			"記録者"
+	}
+	
+	"Bot Locked"
+	{
+		"jp"			"ボットへのアクセスを禁止しました。"
+	}
+	
+	"Bot Unlocked"
+	{
+		"jp"			"ボットへのアクセスを解除しました。"
+	}
+	
+	"Buffer Full"
+	{
+		"jp"			"バッファーがいっぱいです！"
+	}
+	
+	"Cancel"
+	{
+		"jp"			"キャンセル"
+	}
+	
+	"Cannot Call Air"
+	{
+		"jp"			"空中にいる間はボットを呼び出せません。"
+	}
+	
+	"Cannot Create Bot"
+	{
+		"jp"			"ボットを作れません。"
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"jp"			"記録を削除できません。"
+	}
+	
+	"Cannot Download Rec"
+	{
+		"jp"			"再生用の記録をダウンロードできません。"
+	}
+	
+	"Cannot File Read"
+	{
+		"jp"			"読み込み先ファイルを開けません。"
+	}
+	
+	"Cannot File Write"
+	{
+		"jp"			"書き込み先ファイルを開けません。"
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"jp"			"不完全なファイルを読み込めません。"
+	}
+	
+	"Cannot Local Play"
+	{
+		"jp"			"再生用のローカルファイルを開けません。"
+	}
+	
+	"Cannot Open Rec"
+	{
+		"jp"			"記録ファイルを開けません。"
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"jp"			"再生チェックポイントエラー (設定値を超えています)"
+	}
+	
+	"Class"
+	{
+		"jp"			"クラス"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"jp"			"{1}の記録"
+	}
+	
+	"Delete"
+	{
+		"jp"			"削除"
+	}
+	
+	"Deleted Rec"
+	{
+		"jp"			"記録を消去しました。"
+	}
+	
+	"Demoman"
+	{
+		"jp"			"デモマン"
+	}
+	
+	"Distance"
+	{
+		"jp"			"距離"
+	}
+	
+	"Download Fail"
+	{
+		"jp"			"記録のダウンロードが失敗しました。"
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"jp"			"リポジトリリストから {1} 件のハッシュをダウンロードしました。"
+	}
+	
+	"Duck"
+	{
+		"jp"			"Duck"
+	}
+	
+	"Engineer"
+	{
+		"jp"			"エンジニア"
+	}
+	
+	"Estimated Time About"
+	{
+		"jp"			"予測時間"
+	}
+	
+	"File"
+	{
+		"jp"			"ファイル"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:s},{2:d}"
+		"jp"			"{1} の記録が {2} 件見つかりました。"
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"jp"			"{1} 件の記録が{2} 個のマップへアクセスしています。"
+	}
+	
+	"Frame"
+	{
+		"jp"			"フレーム"
+	}
+	
+	"Frames"
+	{
+		"jp"			"フレーム"
+	}
+	
+	"Hash"
+	{
+		"jp"			"ハッシュ"
+	}
+	
+	"Heavy"
+	{
+		"jp"			"ヘビー"
+	}
+	
+	"Illegal Char"
+	{
+		"jp"			"フォルダ名が不正です。"
+	}
+	
+	"Invalid CC"
+	{
+		"jp"			"クライアント制御が無効です。"
+	}
+	
+	"Invalid ID"
+	{
+		"jp"			"記録IDが無効です。"
+	}
+	
+	"Jump"
+	{
+		"jp"			"Jump"
+	}
+	
+	"List Nearby"
+	{
+		"jp"			"付近の記録リスト"
+	}
+	
+	"Load"
+	{
+		"jp"			"読み込み"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:d}"
+		"jp"			"リポジトリインデックスから記録を {1} 件読み込みました。"
+	}
+	
+	"Local"
+	{
+		"jp"			"ローカル"
+	}
+	
+	"Map Name"
+	{
+		"jp"			"マップ名"
+	}
+	
+	"Medic"
+	{
+		"jp"			"メディック"
+	}
+	
+	"Mouse1"
+	{
+		"jp"			"M1"
+	}
+	
+	"Mouse2"
+	{
+		"jp"			"M2"
+	}
+	
+	"No CC"
+	{
+		"jp"			"制御クライアントが指定されていません。"
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"jp"			"{1} 用のローカルの記録が見つかりません。"
+	}
+	
+	"No Nearby"
+	{
+		"jp"			"付近の記録が見つかりません。"
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"jp"			"{1} 用のオンラインの記録が見つかりません。"
+	}
+	
+	"No Rec"
+	{
+		"jp"			"記録が見つかりません。"
+	}
+	
+	"No Rec Access"
+	{
+		"jp"			"記録へのアクセスが拒否されました。"
+	}
+	
+	"No Rec Class"
+	{
+		"jp"			"現在のクラスの記録が見つかりません。"
+	}
+	
+	"No Rec Map"
+	{
+		"jp"			"現在のマップの記録が見つかりません。"
+	}
+	
+	"Playback Queue"
+	{
+		"jp"			"再生キュー"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"jp"			"再生が保存されました( フレーム: {1} 記録者: {2} )"
+	}
+	
+	"Playback Start"
+	{
+		"jp"			"再生が開始されました。"
+	}
+	
+	"Playback Stop"
+	{
+		"jp"			"再生が停止されました。"
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"jp"			"{1} 人のプレイヤー待ち"
+	}
+	
+	"Playing Closest"
+	{
+		"jp"			"もっとも近い記録を再生します。"
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"jp"			"{1} キーを押すと記録を再生します。"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"jp"			"{1} キーを押すと停止します。"
+	}
+	
+	"Punt Bot"
+	{
+		"jp"			"ボットがブロックされているためプラグインを停止します。"
+	}
+	
+	"Pyro"
+	{
+		"jp"			"パイロ"
+	}
+	
+	"Rec Chdir"
+	{
+		"#format"	"{1:s}"
+		"jp"			"記録フォルダが {1} に変更されました。 "
+	}
+	
+	"Rec Cleaned"
+	{
+		"jp"			"記録のクリーンアップが完了しました。"
+	}
+	
+	"Rec Folder"
+	{
+		"#format"	"{1:s}"
+		"jp"			"現在の記録フォルダは {1} です。"
+	}
+	
+	"Rec Start"
+	{
+		"jp"			"記録を{GREENYELLOW}開始{DEFAULT}しました。"
+	}
+	
+	"Rec Stop"
+	{
+		"jp"			"記録を{FULLRED}停止{DEFAULT}しました。"
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"jp"			"{1} に記録権限を付与しました。"
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"jp"			"{1} から記録権限を剥奪しました。"
+	}
+	
+	"Recorder Active"
+	{
+		"jp"			"記録を行えます。"
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"jp"			"{1} によって現在記録が行われています。"
+	}
+	
+	"Recording"
+	{
+		"jp"			"記録"
+	}
+	
+	"Recording No Folder"
+	{
+		"jp"			"記録用フォルダが存在しません。"
+	}
+	
+	"Replaying"
+	{
+		"jp"			"再生"
+	}
+	
+	"Repository"
+	{
+		"jp"			"リポジトリ"
+	}
+	
+	"Running Upgrade"
+	{
+		"jp"			"バックグラウンドでアップグレード作業を開始します。"
+	}
+	
+	"Scout"
+	{
+		"jp"			"スカウト"
+	}
+	
+	"Search Ambiguous"
+	{
+		"jp"			"検索用語があいまいです。"
+	}
+	
+	"Server Empty"
+	{
+		"jp"			"サーバに人がいないため"
+	}
+	
+	"Setting Up"
+	{
+		"jp"			"ボットを設定中です。しばらくおまちください。"
+	}
+	
+	"Show Current"
+	{
+		"jp"			"現在のマップの録画を表示します。"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"jp"			"{1} が録画を表示中"
+	}
+	
+	"Sniper"
+	{
+		"jp"			"スナイパー"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:d},{2:d}"
+		"jp"			"ソケットエラー {1} ( コード {2} )"
+	}
+	
+	"Soldier"
+	{
+		"jp"			"ソルジャー"
+	}
+	
+	"Source"
+	{
+		"jp"			"ソース"
+	}
+	
+	"Spy"
+	{
+		"jp"			"スパイ"
+	}
+	
+	"Terminated"
+	{
+		"jp"			"実行中の操作を終了しました。"
+	}
+	
+	"Time"
+	{
+		"jp"			"時間"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"jp"			"/{1} キーを押すと再生します。"
+	}
+	
+	"Type Stop"
+	{
+		"jp"			"/jb_stop を入力すると停止します。"
+	}
+	
+	"Unexpected EOF"
+	{
+		"jp"			"予期しないファイル終わりのフレーム"
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:s},{2:c},{3:c},{4:c}"
+		"jp"			"{1} の取得中に予期しないサーバの応答 ( {2}{3}{4} ) "
+	}
+	
+	"Unknown"
+	{
+		"jp"			"不明"
+	}
+	
+	"Usage"
+	{
+		"jp"			"使用法"
+	}
+	
+	"Usage Chdir"
+	{
+		"jp"			"使用法: jb_chdir <フォルダ>"
+	}
+	
+	"Usage Delete"
+	{
+		"jp"			"使用法: jb_delete <id>、 <id> は jb_nearby から検索できます。"
+	}
+	
+}

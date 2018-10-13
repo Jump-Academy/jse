@@ -1,0 +1,511 @@
+"Phrases"
+{
+	"Author"
+	{
+		"chi"			"作者"
+	}
+	
+	"Bot Locked"
+	{
+		"chi"			"机器人被锁定"
+	}
+	
+	"Bot Unlocked"
+	{
+		"chi"			"机器人已解锁"
+	}
+	
+	"Buffer Full"
+	{
+		"chi"			"缓冲区已满"
+	}
+	
+	"Cancel"
+	{
+		"chi"			"取消"
+	}
+	
+	"Cannot Call Air"
+	{
+		"chi"			"空中无法呼叫机器人"
+	}
+	
+	"Cannot Create Bot"
+	{
+		"chi"			"无法创建机器人"
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"chi"			"无法删除资料库的记录"
+	}
+	
+	"Cannot Download Rec"
+	{
+		"chi"			"无法下载记录"
+	}
+	
+	"Cannot File Read"
+	{
+		"chi"			"无法读取文件"
+	}
+	
+	"Cannot File Write"
+	{
+		"chi"			"无法编辑文件"
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"chi"			"无法完整载入"
+	}
+	
+	"Cannot Local Play"
+	{
+		"chi"			"无法播放本地文件"
+	}
+	
+	"Cannot Open Rec"
+	{
+		"chi"			"无法打开记录"
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"chi"			"存档点阈值错误"
+	}
+	
+	"Class"
+	{
+		"chi"			"兵种"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"chi"			"{1} 录制中"
+	}
+	
+	"Delete"
+	{
+		"chi"			"删除"
+	}
+	
+	"Deleted Rec"
+	{
+		"chi"			"删除记录"
+	}
+	
+	"Demoman"
+	{
+		"chi"			"爆破兵"
+	}
+	
+	"Distance"
+	{
+		"chi"			"距离"
+	}
+	
+	"Download Fail"
+	{
+		"chi"			"下载失败"
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"chi"			"已从资料库下载 {1} 个哈希"
+	}
+	
+	"Duck"
+	{
+		"chi"			"蹲下"
+	}
+	
+	"Engineer"
+	{
+		"chi"			"工程师"
+	}
+	
+	"Estimated Time About"
+	{
+		"chi"			"预估完成时间"
+	}
+	
+	"File"
+	{
+		"chi"			"文件"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:s},{2:d}"
+		"chi"			"{1} 中发现 {2} 个记录"
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"chi"			"发现 {1} 个记录在 {2} 个地图中"
+	}
+	
+	"Frame"
+	{
+		"chi"			"帧"
+	}
+	
+	"Frames"
+	{
+		"chi"			"帧"
+	}
+	
+	"Hash"
+	{
+		"chi"			"哈希"
+	}
+	
+	"Heavy"
+	{
+		"chi"			"机枪手"
+	}
+	
+	"Illegal Char"
+	{
+		"chi"			"非法字符"
+	}
+	
+	"Invalid CC"
+	{
+		"chi"			"无效的控制台"
+	}
+	
+	"Invalid ID"
+	{
+		"chi"			"无效的ID"
+	}
+	
+	"Jump"
+	{
+		"chi"			"跳跃"
+	}
+	
+	"List Nearby"
+	{
+		"chi"			"最近记录"
+	}
+	
+	"Load"
+	{
+		"chi"			"加载"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:d}"
+		"chi"			"已从资料库中读取 {1} 个记录"
+	}
+	
+	"Local"
+	{
+		"chi"			"本地文件"
+	}
+	
+	"Map Name"
+	{
+		"chi"			"地图名称"
+	}
+	
+	"Medic"
+	{
+		"chi"			"医疗兵"
+	}
+	
+	"Mouse1"
+	{
+		"chi"			"左键"
+	}
+	
+	"Mouse2"
+	{
+		"chi"			"右键"
+	}
+	
+	"No CC"
+	{
+		"chi"			"无指定控制台"
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"chi"			"{1} 无本地纪录"
+	}
+	
+	"No Nearby"
+	{
+		"chi"			"无最近记录"
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"chi"			"{1} 无线上记录"
+	}
+	
+	"No Rec"
+	{
+		"chi"			"无记录"
+	}
+	
+	"No Rec Access"
+	{
+		"chi"			"记录存取被拒绝"
+	}
+	
+	"No Rec Class"
+	{
+		"chi"			"无兵种记录"
+	}
+	
+	"No Rec Map"
+	{
+		"chi"			"无地图记录"
+	}
+	
+	"Playback Queue"
+	{
+		"chi"			"回放伫列"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"chi"			"回放已储存 {1} 帧, 隸属于 {2}"
+	}
+	
+	"Playback Start"
+	{
+		"chi"			"回放开始"
+	}
+	
+	"Playback Stop"
+	{
+		"chi"			"回放停止"
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"chi"			"玩家伫列人数: {1}"
+	}
+	
+	"Playing Closest"
+	{
+		"chi"			"播放最近回放"
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"chi"			"按下 {1} 回放"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"chi"			"按下 {1} 停止"
+	}
+	
+	"Punt Bot"
+	{
+		"chi"			"踢出机器人"
+	}
+	
+	"Pyro"
+	{
+		"chi"			"火焰兵"
+	}
+	
+	"Rec Chdir"
+	{
+		"chi"			"更改记录目录"
+	}
+	
+	"Rec Cleaned"
+	{
+		"chi"			"记录已删除"
+	}
+	
+	"Rec Folder"
+	{
+		"chi"			"记录文件夹"
+	}
+	
+	"Rec Start"
+	{
+		"chi"			"录制{GREENYELLOW}开始"
+	}
+	
+	"Rec Stop"
+	{
+		"chi"			"录制{FULLRED}结束"
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"chi"			"{1} 可存取的记录器"
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"chi"			"{1} 记录器存取权限已撤销"
+	}
+	
+	"Recorder Active"
+	{
+		"chi"			"记录器激活"
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"chi"			"{1} 正在使用记录器"
+	}
+	
+	"Recording"
+	{
+		"chi"			"录制中"
+	}
+	
+	"Recording No Folder"
+	{
+		"chi"			"记录文件不存在"
+	}
+	
+	"Replaying"
+	{
+		"chi"			"重播"
+	}
+	
+	"Repository"
+	{
+		"chi"			"资料库"
+	}
+	
+	"Running Upgrade"
+	{
+		"chi"			"更新运行中"
+	}
+	
+	"Scout"
+	{
+		"chi"			"侦察兵"
+	}
+	
+	"Search Ambiguous"
+	{
+		"chi"			"模糊检索"
+	}
+	
+	"Server Empty"
+	{
+		"chi"			"服务器为空"
+	}
+	
+	"Setting Up"
+	{
+		"chi"			"启动中"
+	}
+	
+	"Show Current"
+	{
+		"chi"			"显示当前的回放"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"chi"			"回放展示给 {1}"
+	}
+	
+	"Sniper"
+	{
+		"chi"			"狙击手"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:s}"
+		"chi"			"端口错误 {1}"
+	}
+	
+	"Soldier"
+	{
+		"chi"			"士兵"
+	}
+	
+	"Source"
+	{
+		"chi"			"来源"
+	}
+	
+	"Spy"
+	{
+		"chi"			"间谍"
+	}
+	
+	"Terminated"
+	{
+		"chi"			"终止"
+	}
+	
+	"Time"
+	{
+		"chi"			"时间"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"chi"			"输入 /{1} 回放"
+	}
+	
+	"Type Stop"
+	{
+		"chi"			"输入 /jb_stop 停止"
+	}
+	
+	"Unexpected EOF"
+	{
+		"chi"			"记录文件意外错误"
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:s}"
+		"chi"			"检索 {1} 时服务器意外错误"
+	}
+	
+	"Unknown"
+	{
+		"chi"			"未知"
+	}
+	
+	"Usage"
+	{
+		"chi"			"惯例"
+	}
+	
+	"Usage Chdir"
+	{
+		"chi"			"更改惯例目录"
+	}
+	
+	"Usage Delete"
+	{
+		"chi"			"惯例删除"
+	}
+	
+}

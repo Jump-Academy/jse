@@ -1,0 +1,513 @@
+"Phrases"
+{
+	"Author"
+	{
+		"nl"			"Auteur"
+	}
+	
+	"Bot Locked"
+	{
+		"nl"			"Bot is nu gesloten"
+	}
+	
+	"Bot Unlocked"
+	{
+		"nl"			"Bot is nu geopend"
+	}
+	
+	"Buffer Full"
+	{
+		"nl"			"Buffer is vol!"
+	}
+	
+	"Cancel"
+	{
+		"nl"			"Annuleren"
+	}
+	
+	"Cannot Call Air"
+	{
+		"nl"			"De bot kan niet opgeroepen worden midden in de lucht"
+	}
+	
+	"Cannot Create Bot"
+	{
+		"nl"			"Kan de bot niet creëren"
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"nl"			"Kan de opgeslagen opname niet verwijderen"
+	}
+	
+	"Cannot Download Rec"
+	{
+		"nl"			"Kan opname niet downloaden voor het afspelen"
+	}
+	
+	"Cannot File Read"
+	{
+		"nl"			"Kan het bestand niet openen om te lezen"
+	}
+	
+	"Cannot File Write"
+	{
+		"nl"			"Kan het bestand niet openen om te schrijven"
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"nl"			"Kan onvolledig bestand niet laden"
+	}
+	
+	"Cannot Local Play"
+	{
+		"nl"			"Kan lokaal bestand voor het afspelen niet openen"
+	}
+	
+	"Cannot Open Rec"
+	{
+		"nl"			"Kan een opnemend bestand niet openen"
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"nl"			"Fout bij het afspelen controlepunt; fout boven het drempelbedrag"
+	}
+	
+	"Class"
+	{
+		"nl"			"Klasse / Karakter"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"nl"			"{1} Opname"
+	}
+	
+	"Delete"
+	{
+		"nl"			"VERWIJDEREN"
+	}
+	
+	"Deleted Rec"
+	{
+		"nl"			"Opname verwijderd"
+	}
+	
+	"Demoman"
+	{
+		"nl"			"Demoman"
+	}
+	
+	"Distance"
+	{
+		"nl"			"Afstand"
+	}
+	
+	"Download Fail"
+	{
+		"nl"			"Downloaden mislukt"
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"nl"			"{1} hashes van repo listings gedownload"
+	}
+	
+	"Duck"
+	{
+		"nl"			"Bukken"
+	}
+	
+	"Engineer"
+	{
+		"nl"			"Engineer"
+	}
+	
+	"Estimated Time About"
+	{
+		"nl"			"Geschatte tijd"
+	}
+	
+	"File"
+	{
+		"nl"			"Bestand"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:d},{2:s}"
+		"nl"			"{1} opnames voor {2} gevonden"
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"nl"			"{1} opnames over {2} maps gevonden"
+	}
+	
+	"Frame"
+	{
+		"nl"			"Frame"
+	}
+	
+	"Frames"
+	{
+		"nl"			"Frames"
+	}
+	
+	"Hash"
+	{
+		"nl"			"Hash"
+	}
+	
+	"Heavy"
+	{
+		"nl"			"Heavy"
+	}
+	
+	"Illegal Char"
+	{
+		"nl"			"Illegale karakters in folder naam"
+	}
+	
+	"Invalid CC"
+	{
+		"nl"			"Ongeldige controle-client"
+	}
+	
+	"Invalid ID"
+	{
+		"nl"			"Ongeldige opname ID-nummer"
+	}
+	
+	"Jump"
+	{
+		"nl"			"Sprong"
+	}
+	
+	"List Nearby"
+	{
+		"nl"			"Noteren nabijgelegen opnames"
+	}
+	
+	"Load"
+	{
+		"nl"			"Laden"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:d}"
+		"nl"			"{1} opnamen van repository index geladen"
+	}
+	
+	"Local"
+	{
+		"nl"			"Lokaal"
+	}
+	
+	"Map Name"
+	{
+		"nl"			"Map naam"
+	}
+	
+	"Medic"
+	{
+		"nl"			"Medic"
+	}
+	
+	"Mouse1"
+	{
+		"nl"			"Linker muisknop"
+	}
+	
+	"Mouse2"
+	{
+		"nl"			"Rechter muisknop"
+	}
+	
+	"No CC"
+	{
+		"nl"			"Geen gecontroleerde cliënt opgegeven"
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"nl"			"Geen lokale opnames gevonden voor {1}"
+	}
+	
+	"No Nearby"
+	{
+		"nl"			"Geen nabijgelegen opnames gevonden"
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"nl"			"Geen online opnames gevonden voor: {1}"
+	}
+	
+	"No Rec"
+	{
+		"nl"			"Geen opnames gevonden"
+	}
+	
+	"No Rec Access"
+	{
+		"nl"			"Recorder toegang is geweigerd"
+	}
+	
+	"No Rec Class"
+	{
+		"nl"			"Geen opnames gevonden voor deze speler klasse"
+	}
+	
+	"No Rec Map"
+	{
+		"nl"			"Geen opnames voor deze map gevonden"
+	}
+	
+	"Playback Queue"
+	{
+		"nl"			"Afspeellijst"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"nl"			"Afspelen heeft {1} frames opgeslagen, en toegeschreven aan {2}"
+	}
+	
+	"Playback Start"
+	{
+		"nl"			"Afspelen is begonnen"
+	}
+	
+	"Playback Stop"
+	{
+		"nl"			"Afspelen is gestopt"
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"nl"			"Spelers boven aan de rij: {1}"
+	}
+	
+	"Playing Closest"
+	{
+		"nl"			"Afspelen dichtstbijzijnde opname"
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"nl"			"Druk op {1} om te herzien"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"nl"			"Druk op {1} om te stoppen"
+	}
+	
+	"Punt Bot"
+	{
+		"nl"			"Plugin wordt gestopt, kicking bot"
+	}
+	
+	"Pyro"
+	{
+		"nl"			"Pyro"
+	}
+	
+	"Rec Chdir"
+	{
+		"#format"	"{1:s}"
+		"nl"			"Opname folder veranderd naar {1}"
+	}
+	
+	"Rec Cleaned"
+	{
+		"nl"			"Opschonen opnames voltooid"
+	}
+	
+	"Rec Folder"
+	{
+		"#format"	"{1:s}"
+		"nl"			"De nu gebruikte Opname folder is {1}"
+	}
+	
+	"Rec Start"
+	{
+		"nl"			"Opnemen is {GREENYELLOW}gestart"
+	}
+	
+	"Rec Stop"
+	{
+		"nl"			"Opnemen is {FULLRED}gestopt"
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"nl"			"Opnemer toegang gegeven tot {1}"
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"nl"			"Toegang recorder van {1} teruggetrokken"
+	}
+	
+	"Recorder Active"
+	{
+		"nl"			"Recorder actief"
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"nl"			"Recorder op dit moment in gebruik door {1}"
+	}
+	
+	"Recording"
+	{
+		"nl"			"Opnemen"
+	}
+	
+	"Recording No Folder"
+	{
+		"nl"			"Opname-folder bestaat niet"
+	}
+	
+	"Replaying"
+	{
+		"nl"			"Afspelen"
+	}
+	
+	"Repository"
+	{
+		"nl"			"Opslag"
+	}
+	
+	"Running Upgrade"
+	{
+		"nl"			"Uitvoeren van stille upgrade operaties op de achtergrond"
+	}
+	
+	"Scout"
+	{
+		"nl"			"Scout"
+	}
+	
+	"Search Ambiguous"
+	{
+		"nl"			"Zoekterm is dubbelzinnig"
+	}
+	
+	"Server Empty"
+	{
+		"nl"			"De server is leeg"
+	}
+	
+	"Setting Up"
+	{
+		"nl"			"Bot aan het opzetten. Probeer het later nog eens."
+	}
+	
+	"Show Current"
+	{
+		"nl"			"Opname afspelen voor huidige sprong"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"nl"			"Opname laten zien aan {1}"
+	}
+	
+	"Sniper"
+	{
+		"nl"			"Sniper"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:d},{2:d}"
+		"nl"			"Socket fout {1} (code {2})"
+	}
+	
+	"Soldier"
+	{
+		"nl"			"Soldier"
+	}
+	
+	"Source"
+	{
+		"nl"			"Bron"
+	}
+	
+	"Spy"
+	{
+		"nl"			"Spy"
+	}
+	
+	"Terminated"
+	{
+		"nl"			"Werkende opdracht geannuleerd"
+	}
+	
+	"Time"
+	{
+		"nl"			"Tijd"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"nl"			"Typ /{1} om de opname terug te kijken"
+	}
+	
+	"Type Stop"
+	{
+		"nl"			"Typ /jb_stop om te stoppen"
+	}
+	
+	"Unexpected EOF"
+	{
+		"nl"			"Onverwacht einde van het bestand op het frame"
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:c},{2:c},{3:c},{4:s}"
+		"nl"			"Onverwacht server antwoord ({1}{2}{3}) terwijl {4} opgehaald werd"
+	}
+	
+	"Unknown"
+	{
+		"nl"			"Onbekend"
+	}
+	
+	"Usage"
+	{
+		"nl"			"Gebruik"
+	}
+	
+	"Usage Chdir"
+	{
+		"nl"			"Gebruik: jb_chdir <folder>"
+	}
+	
+	"Usage Delete"
+	{
+		"nl"			"Gebruik: jb_delete <id>, waar <id> van jb_nearby is"
+	}
+	
+}

@@ -1,0 +1,513 @@
+"Phrases"
+{
+	"Author"
+	{
+		"id"			"Pengaturan"
+	}
+	
+	"Bot Locked"
+	{
+		"id"			"Akses bot telah terkunci"
+	}
+	
+	"Bot Unlocked"
+	{
+		"id"			"Akses bot telah terbuka"
+	}
+	
+	"Buffer Full"
+	{
+		"id"			"Antrian penuh"
+	}
+	
+	"Cancel"
+	{
+		"id"			"Batalkan"
+	}
+	
+	"Cannot Call Air"
+	{
+		"id"			"Tidak dapat memanggil bot saat di udara"
+	}
+	
+	"Cannot Create Bot"
+	{
+		"id"			"Tidak dapat membuat bot"
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"id"			"Tidak dapat menghapus rekaman repository"
+	}
+	
+	"Cannot Download Rec"
+	{
+		"id"			"Tidak dapat muat turun rekaman untuk pemutaran"
+	}
+	
+	"Cannot File Read"
+	{
+		"id"			"Tidak dapat membuka berkas lokal untuk membaca"
+	}
+	
+	"Cannot File Write"
+	{
+		"id"			"Tidak dapat membuka berkas untuk penulisan kode"
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"id"			"Tidak dapat memuat berkas yang tidak lengkap"
+	}
+	
+	"Cannot Local Play"
+	{
+		"id"			"Tidak dapat membuka berkas lokal untuk pemutaran"
+	}
+	
+	"Cannot Open Rec"
+	{
+		"id"			"Tidak dapat membuka berkas rekaman"
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"id"			"Cegatan pemutaran eror di atas ambang"
+	}
+	
+	"Class"
+	{
+		"id"			"Kelas"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"id"			"Sedang merekam {1}"
+	}
+	
+	"Delete"
+	{
+		"id"			"MENGHAPUS"
+	}
+	
+	"Deleted Rec"
+	{
+		"id"			"Menghapus rekaman"
+	}
+	
+	"Demoman"
+	{
+		"id"			"Demoman"
+	}
+	
+	"Distance"
+	{
+		"id"			"Jarak"
+	}
+	
+	"Download Fail"
+	{
+		"id"			"Download rekaman gagal"
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"id"			"Sudah memuat {1} hash dari daftar repo"
+	}
+	
+	"Duck"
+	{
+		"id"			"Membungkuk"
+	}
+	
+	"Engineer"
+	{
+		"id"			"Enginner"
+	}
+	
+	"Estimated Time About"
+	{
+		"id"			"Masa yang diperkatakan"
+	}
+	
+	"File"
+	{
+		"id"			"Berkas"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:d},{2:s}"
+		"id"			"Terdapat {1} rekaman untuk {2}"
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"id"			"Terdapat {1} rekaman di {2} peta"
+	}
+	
+	"Frame"
+	{
+		"id"			"Rangkai"
+	}
+	
+	"Frames"
+	{
+		"id"			"Rangkai"
+	}
+	
+	"Hash"
+	{
+		"id"			"Hash"
+	}
+	
+	"Heavy"
+	{
+		"id"			"Heavy"
+	}
+	
+	"Illegal Char"
+	{
+		"id"			"Kata perkataan liar di nama folder"
+	}
+	
+	"Invalid CC"
+	{
+		"id"			"CC Batal"
+	}
+	
+	"Invalid ID"
+	{
+		"id"			"ID Batal"
+	}
+	
+	"Jump"
+	{
+		"id"			"Lompat"
+	}
+	
+	"List Nearby"
+	{
+		"id"			"Daftar"
+	}
+	
+	"Load"
+	{
+		"id"			"Memuat"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:d}"
+		"id"			"Memuat {1} rekaman dari gudang indeks"
+	}
+	
+	"Local"
+	{
+		"id"			"Lokal"
+	}
+	
+	"Map Name"
+	{
+		"id"			"Nama peta"
+	}
+	
+	"Medic"
+	{
+		"id"			"Medic"
+	}
+	
+	"Mouse1"
+	{
+		"id"			"M1"
+	}
+	
+	"Mouse2"
+	{
+		"id"			"M2"
+	}
+	
+	"No CC"
+	{
+		"id"			"Tidak ada CC"
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"id"			"Tidak ditemukan rekaman lokal untuk {1}"
+	}
+	
+	"No Nearby"
+	{
+		"id"			"Tiada arsip-arsip ditemukan"
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"id"			"Tidak ditemukan rekaman online untuk {1}"
+	}
+	
+	"No Rec"
+	{
+		"id"			"Tidak ditemukan rekaman"
+	}
+	
+	"No Rec Access"
+	{
+		"id"			"Akses rekaman ditolak"
+	}
+	
+	"No Rec Class"
+	{
+		"id"			"Tidak ditemukan rekaman untuk kelas ini"
+	}
+	
+	"No Rec Map"
+	{
+		"id"			"Tidak ditemukan rekaman untuk map"
+	}
+	
+	"Playback Queue"
+	{
+		"id"			"Ulangan Antre"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"id"			"Pemutaran sudah disimpan {1} frem, diatributkan ke {2}"
+	}
+	
+	"Playback Start"
+	{
+		"id"			"Pemutaran sudah dimulai"
+	}
+	
+	"Playback Stop"
+	{
+		"id"			"Pemutaran sudah selesai"
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"id"			"Pemain di depan antre: {1}"
+	}
+	
+	"Playing Closest"
+	{
+		"id"			"Memainkan rekor terdekat"
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"id"			"Pencet {1} untuk mengulas"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"id"			"Pencet {1} untuk berhenti"
+	}
+	
+	"Punt Bot"
+	{
+		"id"			"Menyapakkan bot, plugin telah mengakhiri"
+	}
+	
+	"Pyro"
+	{
+		"id"			"Pyro"
+	}
+	
+	"Rec Chdir"
+	{
+		"#format"	"{1:s}"
+		"id"			"Merubah folder rekaman ke {1}"
+	}
+	
+	"Rec Cleaned"
+	{
+		"id"			"Membersihkan rekaman selesai"
+	}
+	
+	"Rec Folder"
+	{
+		"#format"	"{1:s}"
+		"id"			"Folder rekaman sekarang adalah {1}"
+	}
+	
+	"Rec Start"
+	{
+		"id"			"Rekaman telah {GREENYELLOW}dimulai"
+	}
+	
+	"Rec Stop"
+	{
+		"id"			"Rekaman telah [FULLRED]selesai"
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"id"			"Akses terbuka untuk rekaman {1}"
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"id"			"Akses rekaman telah dicabut daripada {1}"
+	}
+	
+	"Recorder Active"
+	{
+		"id"			"Rekaman aktif"
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"id"			"Rekaman sedang digunakan oleh {1}"
+	}
+	
+	"Recording"
+	{
+		"id"			"Rekaman"
+	}
+	
+	"Recording No Folder"
+	{
+		"id"			"Folder rekaman tidak ada"
+	}
+	
+	"Replaying"
+	{
+		"id"			"Mengulang"
+	}
+	
+	"Repository"
+	{
+		"id"			"Gudang"
+	}
+	
+	"Running Upgrade"
+	{
+		"id"			"Menjalankan operasi upgrade di belakang"
+	}
+	
+	"Scout"
+	{
+		"id"			"Scout"
+	}
+	
+	"Search Ambiguous"
+	{
+		"id"			"istilah pencarian tidak jelas"
+	}
+	
+	"Server Empty"
+	{
+		"id"			"Server kosong"
+	}
+	
+	"Setting Up"
+	{
+		"id"			"Sedang mengatur bot. Coba lagi sesaat"
+	}
+	
+	"Show Current"
+	{
+		"id"			"Menunjukkan pemutaran untuk jump ini"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"id"			"Menunjukkan pemutaran ke {1}"
+	}
+	
+	"Sniper"
+	{
+		"id"			"Sniper"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:d},{2:d}"
+		"id"			"Soket eror {1} (code {2})"
+	}
+	
+	"Soldier"
+	{
+		"id"			"Soldier"
+	}
+	
+	"Source"
+	{
+		"id"			"Sumber"
+	}
+	
+	"Spy"
+	{
+		"id"			"Spy"
+	}
+	
+	"Terminated"
+	{
+		"id"			"Sudah berhentikan operasi yang dijalankan"
+	}
+	
+	"Time"
+	{
+		"id"			"Waktu"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"id"			"Mengtip /{1} untuk ulasan"
+	}
+	
+	"Type Stop"
+	{
+		"id"			"Mengetip /jb_stop untuk menghenti"
+	}
+	
+	"Unexpected EOF"
+	{
+		"id"			"Tamat yang tidak terduga di berkas dalam rangkap"
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:c},{2:c},{3:c},{4:s}"
+		"id"			"Respon yang tidak terduga ({1}{2}{3}) semasa mengembali {4}"
+	}
+	
+	"Unknown"
+	{
+		"id"			"Tidak diketahui"
+	}
+	
+	"Usage"
+	{
+		"id"			"Pengunaan"
+	}
+	
+	"Usage Chdir"
+	{
+		"id"			"Pengunaan: jb_chdir <folder>"
+	}
+	
+	"Usage Delete"
+	{
+		"id"			"Pengunaan: jb_delete <id> , manakah <id> adalah dari jb_nearby"
+	}
+	
+}

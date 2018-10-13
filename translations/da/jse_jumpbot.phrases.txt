@@ -1,0 +1,513 @@
+"Phrases"
+{
+	"Author"
+	{
+		"da"			"Ophavsmand"
+	}
+	
+	"Bot Locked"
+	{
+		"da"			"Bot adgang låst"
+	}
+	
+	"Bot Unlocked"
+	{
+		"da"			"Bot adgang åbent"
+	}
+	
+	"Buffer Full"
+	{
+		"da"			"Bufferet er fyldt!"
+	}
+	
+	"Cancel"
+	{
+		"da"			"Annuller"
+	}
+	
+	"Cannot Call Air"
+	{
+		"da"			"Kan ikke fremkalde botten midt i luften"
+	}
+	
+	"Cannot Create Bot"
+	{
+		"da"			"Kunne ikke skabe botten"
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"da"			"Kunne ikke slette depots optagelse"
+	}
+	
+	"Cannot Download Rec"
+	{
+		"da"			"Kunne ikke downloade optagelse for afspilning"
+	}
+	
+	"Cannot File Read"
+	{
+		"da"			"Kunne ikke læse fil"
+	}
+	
+	"Cannot File Write"
+	{
+		"da"			"Kunne ikke skrive fil"
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"da"			"Kunne ikke indlæse ufuldført fil"
+	}
+	
+	"Cannot Local Play"
+	{
+		"da"			"Kunne ikke åbne lokal fil for afspilning"
+	}
+	
+	"Cannot Open Rec"
+	{
+		"da"			"Kunne ikke åbne optagelses fil"
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"da"			"Afspilnings kontrolpunkt fejl over tærskel"
+	}
+	
+	"Class"
+	{
+		"da"			"Karakter"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"da"			"{1} Optagelse"
+	}
+	
+	"Delete"
+	{
+		"da"			"SLET"
+	}
+	
+	"Deleted Rec"
+	{
+		"da"			"Slettet optagelse"
+	}
+	
+	"Demoman"
+	{
+		"da"			"Demoman"
+	}
+	
+	"Distance"
+	{
+		"da"			"Afstand"
+	}
+	
+	"Download Fail"
+	{
+		"da"			"Optagelses download mislykkes"
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"da"			"Downloadet {1} hashes fra depots liste"
+	}
+	
+	"Duck"
+	{
+		"da"			"Duk"
+	}
+	
+	"Engineer"
+	{
+		"da"			"Engineer"
+	}
+	
+	"Estimated Time About"
+	{
+		"da"			"Forvented ventetid"
+	}
+	
+	"File"
+	{
+		"da"			"Fil"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:d},{2:s}"
+		"da"			"Fundet {1} optagelser for {2}"
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"da"			"Fundet {1} optagelser gennem {2} baner"
+	}
+	
+	"Frame"
+	{
+		"da"			"Ramme"
+	}
+	
+	"Frames"
+	{
+		"da"			"Rammer"
+	}
+	
+	"Hash"
+	{
+		"da"			"Hash"
+	}
+	
+	"Heavy"
+	{
+		"da"			"Heavy"
+	}
+	
+	"Illegal Char"
+	{
+		"da"			"Ugyldige symboler i mappe navnet"
+	}
+	
+	"Invalid CC"
+	{
+		"da"			"Ugyldig kontrol klient"
+	}
+	
+	"Invalid ID"
+	{
+		"da"			"Ugyldig optagelses ID nummer"
+	}
+	
+	"Jump"
+	{
+		"da"			"Hop"
+	}
+	
+	"List Nearby"
+	{
+		"da"			"Noterer nærligende optagelser"
+	}
+	
+	"Load"
+	{
+		"da"			"Indlæs"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:d}"
+		"da"			"Indlæste {1} optagelser fra depots indexet"
+	}
+	
+	"Local"
+	{
+		"da"			"Lokal"
+	}
+	
+	"Map Name"
+	{
+		"da"			"Navn på bane"
+	}
+	
+	"Medic"
+	{
+		"da"			"Medic"
+	}
+	
+	"Mouse1"
+	{
+		"da"			"M1"
+	}
+	
+	"Mouse2"
+	{
+		"da"			"M2"
+	}
+	
+	"No CC"
+	{
+		"da"			"Ingen kontrol klient specificeret"
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"da"			"Ingen lokale optagelser var fundet for {1}"
+	}
+	
+	"No Nearby"
+	{
+		"da"			"Ingen nærvligende optagelser fundet"
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"da"			"Ingen online optagelser fundet for {1}"
+	}
+	
+	"No Rec"
+	{
+		"da"			"Ingen optagelser fundet"
+	}
+	
+	"No Rec Access"
+	{
+		"da"			"Optager adgang nægtet"
+	}
+	
+	"No Rec Class"
+	{
+		"da"			"Ingen optagelser fundet for denne karakter"
+	}
+	
+	"No Rec Map"
+	{
+		"da"			"Ingen optagelser fundet på denne bane"
+	}
+	
+	"Playback Queue"
+	{
+		"da"			"Afspilnings kø"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"da"			"Afspilning gemt {1} rammer, tildelt til {2}"
+	}
+	
+	"Playback Start"
+	{
+		"da"			"Afspilning started"
+	}
+	
+	"Playback Stop"
+	{
+		"da"			"Afspilning stoppet"
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"da"			"Spillere foran i køen: {1}"
+	}
+	
+	"Playing Closest"
+	{
+		"da"			"Afspiller tætteste optagelse"
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"da"			"Tryk {1} for at gennemgå"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"da"			"Tryk {1} for at stoppe"
+	}
+	
+	"Punt Bot"
+	{
+		"da"			"Sparker JumpBOT ud, plugin afsluttes"
+	}
+	
+	"Pyro"
+	{
+		"da"			"Pyro"
+	}
+	
+	"Rec Chdir"
+	{
+		"#format"	"{1:s}"
+		"da"			"Ændrede optagelses mappe til {1}"
+	}
+	
+	"Rec Cleaned"
+	{
+		"da"			"Optagelses rengøring fuldført"
+	}
+	
+	"Rec Folder"
+	{
+		"#format"	"{1:s}"
+		"da"			"Nuværende optagelses mappe er {1}"
+	}
+	
+	"Rec Start"
+	{
+		"da"			"Optagelse {GREENYELLOW}startet"
+	}
+	
+	"Rec Stop"
+	{
+		"da"			"Optagelse {FULLRED}stoppet"
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"da"			"Bevilget optager adgang til {1}"
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"da"			"Frataget optager adgang fra {1}"
+	}
+	
+	"Recorder Active"
+	{
+		"da"			"Optager aktiv"
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"da"			"Optageren bruges i øjeblikket af {1}"
+	}
+	
+	"Recording"
+	{
+		"da"			"Optager"
+	}
+	
+	"Recording No Folder"
+	{
+		"da"			"Optagelses mappe findes ikke"
+	}
+	
+	"Replaying"
+	{
+		"da"			"Genspiller"
+	}
+	
+	"Repository"
+	{
+		"da"			"Depot"
+	}
+	
+	"Running Upgrade"
+	{
+		"da"			"Kører stille opgraderinger i baggrunden"
+	}
+	
+	"Scout"
+	{
+		"da"			"Scout"
+	}
+	
+	"Search Ambiguous"
+	{
+		"da"			"Søgnings ordet er tvetydigt"
+	}
+	
+	"Server Empty"
+	{
+		"da"			"Serveren er tom"
+	}
+	
+	"Setting Up"
+	{
+		"da"			"Opsætter botten. Prøv igen senere."
+	}
+	
+	"Show Current"
+	{
+		"da"			"Viser afspilning for nuværende jump"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"da"			"Viser afspilning til {1}"
+	}
+	
+	"Sniper"
+	{
+		"da"			"Sniper"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:d},{2:d}"
+		"da"			"Socket fejl {1} (kode {2})"
+	}
+	
+	"Soldier"
+	{
+		"da"			"Soldier"
+	}
+	
+	"Source"
+	{
+		"da"			"Kilde"
+	}
+	
+	"Spy"
+	{
+		"da"			"Spy"
+	}
+	
+	"Terminated"
+	{
+		"da"			"Afslutter kørende program"
+	}
+	
+	"Time"
+	{
+		"da"			"Tid"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"da"			"Skriv /{1} for at gennemgå"
+	}
+	
+	"Type Stop"
+	{
+		"da"			"Skriv /jb_stop for at stoppe"
+	}
+	
+	"Unexpected EOF"
+	{
+		"da"			"Uventet slutning af fil på ramme"
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:c},{2:c},{3:c},{4:s}"
+		"da"			"Uventet server respons ({1}{2}{3}) mens der hentes {4}"
+	}
+	
+	"Unknown"
+	{
+		"da"			"Ukendt"
+	}
+	
+	"Usage"
+	{
+		"da"			"Anvendelse"
+	}
+	
+	"Usage Chdir"
+	{
+		"da"			"Anvendelse: jb_chdir <mappe>"
+	}
+	
+	"Usage Delete"
+	{
+		"da"			"Anvendelse: jb_delete <id>, hvor <id> kommer fra jb_nearby"
+	}
+	
+}

@@ -1,0 +1,513 @@
+"Phrases"
+{
+	"Author"
+	{
+		"de"			"Autor"
+	}
+	
+	"Bot Locked"
+	{
+		"de"			"Zugriff auf den Bot ist jetzt gesperrt"
+	}
+	
+	"Bot Unlocked"
+	{
+		"de"			"Zugriff auf den Bot ist jetzt entsperrt"
+	}
+	
+	"Buffer Full"
+	{
+		"de"			"Puffer ist voll!"
+	}
+	
+	"Cancel"
+	{
+		"de"			"Abbrechen"
+	}
+	
+	"Cannot Call Air"
+	{
+		"de"			"Auf den Bot kann nicht zugegriffen werden, während man in der Luft ist"
+	}
+	
+	"Cannot Create Bot"
+	{
+		"de"			"Der Bot kann nicht erstellt werden"
+	}
+	
+	"Cannot Delete Repo"
+	{
+		"de"			"Die Aufzeichnung kann nicht gelöscht werden"
+	}
+	
+	"Cannot Download Rec"
+	{
+		"de"			"Die Aufzeichnung kann nicht heruntergeladen werden"
+	}
+	
+	"Cannot File Read"
+	{
+		"de"			"Die Datei kann nicht gelesen werden"
+	}
+	
+	"Cannot File Write"
+	{
+		"de"			"Die Datei kann nicht geschrieben werden"
+	}
+	
+	"Cannot Load Incomplete"
+	{
+		"de"			"Die Datei kann nicht geladen werden"
+	}
+	
+	"Cannot Local Play"
+	{
+		"de"			"Kann lokale Datei nicht zur Wiedergabe öffnen"
+	}
+	
+	"Cannot Open Rec"
+	{
+		"de"			"Kann Aufnahmedatei nicht öffnen"
+	}
+	
+	"Checkpoint Error Threshold"
+	{
+		"de"			"Kontrollpunkt der Aufnahme liegt über dem Grenzwert"
+	}
+	
+	"Class"
+	{
+		"de"			"Klasse"
+	}
+	
+	"Class Recording"
+	{
+		"#format"	"{1:s}"
+		"de"			"{1} Aufnahme"
+	}
+	
+	"Delete"
+	{
+		"de"			"LÖSCHEN"
+	}
+	
+	"Deleted Rec"
+	{
+		"de"			"Aufnahme gelöscht"
+	}
+	
+	"Demoman"
+	{
+		"de"			"Demoman"
+	}
+	
+	"Distance"
+	{
+		"de"			"Distanz"
+	}
+	
+	"Download Fail"
+	{
+		"de"			"Download der Aufnahme fehlgeschlagen"
+	}
+	
+	"Downloaded Repo Hashes"
+	{
+		"#format"	"{1:d}"
+		"de"			"{1} der Hashes aus der Depot-Liste heruntergeladen"
+	}
+	
+	"Duck"
+	{
+		"de"			"Ducken"
+	}
+	
+	"Engineer"
+	{
+		"de"			"Engineer"
+	}
+	
+	"Estimated Time About"
+	{
+		"de"			"Geschätzte Wartezeit"
+	}
+	
+	"File"
+	{
+		"de"			"Datei"
+	}
+	
+	"Found Rec"
+	{
+		"#format"	"{1:d},{2:s}"
+		"de"			"{1} Aufnahmen für {2} gefunden"
+	}
+	
+	"Found Rec Map"
+	{
+		"#format"	"{1:d},{2:d}"
+		"de"			"{1} Aufnahmen auf insgesamt {2} Karten gefunden"
+	}
+	
+	"Frame"
+	{
+		"de"			"Frame"
+	}
+	
+	"Frames"
+	{
+		"de"			"Frames"
+	}
+	
+	"Hash"
+	{
+		"de"			"Hash"
+	}
+	
+	"Heavy"
+	{
+		"de"			"Heavy"
+	}
+	
+	"Illegal Char"
+	{
+		"de"			"Nicht erlaubte Buchstaben im Ordnernamen"
+	}
+	
+	"Invalid CC"
+	{
+		"de"			"Ungültiger Kontroll-Client"
+	}
+	
+	"Invalid ID"
+	{
+		"de"			"Ungültige Aufnahme-ID"
+	}
+	
+	"Jump"
+	{
+		"de"			"Sprung"
+	}
+	
+	"List Nearby"
+	{
+		"de"			"Auflisten nahgelegener Aufnahmen"
+	}
+	
+	"Load"
+	{
+		"de"			"Laden"
+	}
+	
+	"Loaded Repo"
+	{
+		"#format"	"{1:d}"
+		"de"			"{1} der Aufnahmen vom Depot-Index geladen"
+	}
+	
+	"Local"
+	{
+		"de"			"Lokal"
+	}
+	
+	"Map Name"
+	{
+		"de"			"Kartenname"
+	}
+	
+	"Medic"
+	{
+		"de"			"Medic"
+	}
+	
+	"Mouse1"
+	{
+		"de"			"M1"
+	}
+	
+	"Mouse2"
+	{
+		"de"			"M2"
+	}
+	
+	"No CC"
+	{
+		"de"			"Kein Kontroll-Client definiert"
+	}
+	
+	"No Local Rec"
+	{
+		"#format"	"{1:s}"
+		"de"			"Keine lokalen Aufnahmen für {1} gefunden"
+	}
+	
+	"No Nearby"
+	{
+		"de"			"Keine nahgelegenen Aufnahmen gefunden"
+	}
+	
+	"No Online Rec"
+	{
+		"#format"	"{1:s}"
+		"de"			"Keine online Aufnahmen gefunden für: {1}"
+	}
+	
+	"No Rec"
+	{
+		"de"			"Keine Aufnahmen gefunden"
+	}
+	
+	"No Rec Access"
+	{
+		"de"			"Zugriff zum Aufnahmen verweigert"
+	}
+	
+	"No Rec Class"
+	{
+		"de"			"Keine Aufnahmen für diese Klasse gefunden"
+	}
+	
+	"No Rec Map"
+	{
+		"de"			"Keine Aufnahmen für die Map gefunden."
+	}
+	
+	"Playback Queue"
+	{
+		"de"			"Wiedergabe Warteliste"
+	}
+	
+	"Playback Saved"
+	{
+		"#format"	"{1:d},{2:s}"
+		"de"			"Aufnahme hat {1} frames gespeichert die {2} zugewiesen wurden"
+	}
+	
+	"Playback Start"
+	{
+		"de"			"Abspielen gestartet"
+	}
+	
+	"Playback Stop"
+	{
+		"de"			"Abspielen gestoppt"
+	}
+	
+	"Players Ahead"
+	{
+		"#format"	"{1:d}"
+		"de"			"Spieler in der Warteliste: {1}"
+	}
+	
+	"Playing Closest"
+	{
+		"de"			"Abspielen der nächstgelegenen Aufnahme"
+	}
+	
+	"Press Review"
+	{
+		"#format"	"{1:s}"
+		"de"			"Drücke {1} zum überprüfen"
+	}
+	
+	"Press Stop"
+	{
+		"#format"	"{1:s}"
+		"de"			"Drücke {1} zum stoppen"
+	}
+	
+	"Punt Bot"
+	{
+		"de"			"Bot wird verstoßen, Plugin wird beendet"
+	}
+	
+	"Pyro"
+	{
+		"de"			"Pyro"
+	}
+	
+	"Rec Chdir"
+	{
+		"#format"	"{1:s}"
+		"de"			"Aufnahme-Ordner zu {1} gewechselt"
+	}
+	
+	"Rec Cleaned"
+	{
+		"de"			"Aufräumen der Aufnahmen fertiggestellt"
+	}
+	
+	"Rec Folder"
+	{
+		"#format"	"{1:s}"
+		"de"			"Aktueller Aufnahme-Ordner ist {1}"
+	}
+	
+	"Rec Start"
+	{
+		"de"			"Aufnahme wurde {GREENYELLOW}gestartet"
+	}
+	
+	"Rec Stop"
+	{
+		"de"			"Aufnahme wurde {FULLRED}gestoppt"
+	}
+	
+	"Recorder Access Granted"
+	{
+		"#format"	"{1:s}"
+		"de"			"{1} wurde zur Aufnahme bemächtigt"
+	}
+	
+	"Recorder Access Revoked"
+	{
+		"#format"	"{1:s}"
+		"de"			"Befugniss zur Aufnahme von {1} wurde widerrufen"
+	}
+	
+	"Recorder Active"
+	{
+		"de"			"Aufnahme ist aktiv"
+	}
+	
+	"Recorder Using"
+	{
+		"#format"	"{1:s}"
+		"de"			"Aufnahme wird aktuell verwendet von {1}"
+	}
+	
+	"Recording"
+	{
+		"de"			"Am Aufnehmen"
+	}
+	
+	"Recording No Folder"
+	{
+		"de"			"Aufnahme Ordner existiert nicht"
+	}
+	
+	"Replaying"
+	{
+		"de"			"Wiedergabe"
+	}
+	
+	"Repository"
+	{
+		"de"			"Depot"
+	}
+	
+	"Running Upgrade"
+	{
+		"de"			"Durchführen von Upgradoperationen im Hintergrund"
+	}
+	
+	"Scout"
+	{
+		"de"			"Scout"
+	}
+	
+	"Search Ambiguous"
+	{
+		"de"			"Suche ist uneindeutig"
+	}
+	
+	"Server Empty"
+	{
+		"de"			"Server ist leer"
+	}
+	
+	"Setting Up"
+	{
+		"de"			"Bot wird konfiguriert. Bitte einen Moment später erneut versuchen."
+	}
+	
+	"Show Current"
+	{
+		"de"			"Abspielen der Aufnahme für den aktuellen Sprung"
+	}
+	
+	"Show To"
+	{
+		"#format"	"{1:s}"
+		"de"			"Abspielen der Aufnahme für {1}"
+	}
+	
+	"Sniper"
+	{
+		"de"			"Sniper"
+	}
+	
+	"Socket Error"
+	{
+		"#format"	"{1:d},{2:d}"
+		"de"			"Socket error {1} (Code {2})"
+	}
+	
+	"Soldier"
+	{
+		"de"			"Soldier"
+	}
+	
+	"Source"
+	{
+		"de"			"Quelle"
+	}
+	
+	"Spy"
+	{
+		"de"			"Spy"
+	}
+	
+	"Terminated"
+	{
+		"de"			"Laufende Operation abgebrochen"
+	}
+	
+	"Time"
+	{
+		"de"			"Zeit"
+	}
+	
+	"Type Review"
+	{
+		"#format"	"{1:s}"
+		"de"			"Gib /{1} ein zum überprüfen"
+	}
+	
+	"Type Stop"
+	{
+		"de"			"Gib /jb_stop ein um zu stoppen"
+	}
+	
+	"Unexpected EOF"
+	{
+		"de"			"Unerwartetes Ende der Datei "
+	}
+	
+	"Unexpected Response"
+	{
+		"#format"	"{1:C},{2:C},{3:C},{4:s}"
+		"de"			"Unerwartete Antwort vom Server ({1}{2}{3}) während dem Erhalten von {4}"
+	}
+	
+	"Unknown"
+	{
+		"de"			"Unbekannt"
+	}
+	
+	"Usage"
+	{
+		"de"			"Verwendung"
+	}
+	
+	"Usage Chdir"
+	{
+		"de"			"Verwendung: jb_chdir <Ordner>"
+	}
+	
+	"Usage Delete"
+	{
+		"de"			"Verwendung: jb_delete <id>, wobei <id> durch jb_nearby ermittelt wird"
+	}
+	
+}
