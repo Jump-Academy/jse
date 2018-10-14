@@ -161,7 +161,7 @@ methodmap ClientInfo {
 
 	public static void Destroy(ClientInfo iClientInfo) {
 		if (hClientInfo != null) {
-			hClientInfo.Set(iClientInfo.Idx, 0, ClientInfo_bGCFlag);
+			hClientInfo.Set(iClientInfo.Idx, 1, ClientInfo_bGCFlag);
 		}
 	}
 
@@ -320,8 +320,7 @@ methodmap Recording {
 				ClientInfo.Destroy(iClientInfo);
 			}
 			
-			hRecClientInfo.Clear();
-			
+			delete hRecClientInfo;
 		}
 	}
 
@@ -329,16 +328,18 @@ methodmap Recording {
 		if (hRecordings != null) {
 			for (int i=0; i<hRecordings.Length; i++) {
 				Recording iRecording = view_as<Recording>(i);
-				ArrayList hRecClientInfo = iRecording.RecClientInfo;
-				for (int j=0; j<hRecClientInfo.Length; j++) {
-					ClientInfo iClientInfo = hRecClientInfo.Get(j);
-					ClientInfo.Destroy(iClientInfo);
-					delete hRecClientInfo;
-				}
-				ArrayList hFrames = iRecording.Frames;
-				delete hFrames;
 
-				hRecClientInfo.Clear();
+				if (!hRecordings.Get(view_as<int>(iRecording), Recording_bGCFlag)) {
+					ArrayList hRecClientInfo = iRecording.RecClientInfo;
+					for (int j=0; j<hRecClientInfo.Length; j++) {
+						ClientInfo iClientInfo = hRecClientInfo.Get(j);
+						ClientInfo.Destroy(iClientInfo);
+					}
+					delete hRecClientInfo;
+
+					ArrayList hFrames = iRecording.Frames;
+					delete hFrames;
+				}
 			}
 
 			hRecordings.Clear();
