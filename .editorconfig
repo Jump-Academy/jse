@@ -1,0 +1,5 @@
+root = true
+
+[*.{sp, inc}]
+indent_style = tab
+indent_size = 4
