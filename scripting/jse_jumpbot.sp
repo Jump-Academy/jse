@@ -340,8 +340,6 @@ public void OnPluginStart() {
 	RegConsoleCmd(sBuffer, 				cmdOptions,							"Change user options"												);
 	RegConsoleCmd("jb_options", 		cmdOptions,							"Change user options"												);
 	
-	RegConsoleCmd("jb_patch", cmdPatch);
-
 	// Cookies
 	g_hCookieBubble			= RegClientCookie("jse_jb_bubble", 		"Set bot bubble visibility",	 		CookieAccess_Private);
 	g_hCookieTrail			= RegClientCookie("jse_jb_trail",		"Set bot trail visibility", 			CookieAccess_Private);
@@ -983,6 +981,8 @@ public void OnGameFrame() {
 					g_aClientState[iEntity][ClientState_fAng_1] = fAng[1];
 					g_aClientState[iEntity][ClientState_fAng_2] = fAng[2];
 					g_aClientState[iEntity][ClientState_iButtons] = iButtons; // & ~(7 << 26);
+
+					//PrintToChatAll("Frame %d client %N target pos=(%.3f, %.3f, %.3f)", g_iRecBufferFrame, iEntity, fPos[0], fPos[1], fPos[2]);
 				}
 				case ENTITY: {
 					//PrintToServer("Buffer read: ENTITY");
@@ -2279,75 +2279,6 @@ public Action cmdStateDelete(int iClient, int iArgC) {
 			CPrintToChat(iClient, "{dodgerblue}[jb] {white}No such state slot %d", iSaveID);
 		}
 	}
-
-	return Plugin_Handled;
-}
-
-public Action cmdPatch(int iClient, int iArgC) {
-	Recording iRecording = g_hRecordings.Get(0);
-
-	char sFilePath[PLATFORM_MAX_PATH];
-	iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
-
-	File hFile = OpenFile(sFilePath, "r+b");
-	hFile.Seek(0xC, SEEK_SET);
-	int iFrames, iLength;
-	hFile.ReadInt32(iFrames);
-	hFile.ReadInt32(iLength);
-
-	PrintToServer("Patching %s (frames: %d, buffsize:%d)", sFilePath, iFrames, iLength);
-
-	int iPosFrameData;
-	hFile.Seek(0x14, SEEK_SET);
-	hFile.ReadInt32(iPosFrameData);
-	hFile.Seek(iPosFrameData, SEEK_SET);
-
-	//int iFramesCount = 0;
-	int i = 0;
-	int iFrameID = 0;
-	while (i < iLength) {
-		int iAddr = hFile.Position;
-		int iData;
-		hFile.ReadInt32(iData);
-
-		int iTag = iData & 0xFF;
-		switch (iTag) {
-			case FRAME: {
-				//PrintToServer("Found FRAME %d at %d", iFrameID, i);
-				iFrameID = iData >> 8;
-				i++;
-			}
-			case CLIENT: {
-				//PrintToServer("Found CLIENT at %d", i);
-				i += 11;
-				hFile.Seek(10*4, SEEK_CUR);
-			}
-			case ENTITY: {
-				//PrintToServer("Found ENTITY at %d", i);
-				int iRecordingEnt = (iData >> 8) & 0xFF;
-				int iEntType = (iData >> 16) & 0xFF;
-				int iOwner = (iData >> 24) & 0xFF;
-				if (iEntType) {
-					PrintToServer("Found bad ENTITY %d at frame %d", iEntType, iFrameID);
-					hFile.Seek(iAddr, SEEK_SET);
-					iData = view_as<int>(ENTITY) | iRecordingEnt << 8 | iOwner << 24;
-					hFile.WriteInt32(iData);
-				}
-				i += 10;
-				hFile.Seek(9*4, SEEK_CUR);
-			}
-			default: {
-
-				PrintToServer("Found UNKNOWN at %d", i);
-				break;
-			}
-		}
-	}
-
-	PrintToServer("End of file %s (frames: %d, buffsize:%d)", sFilePath, iFrames, iLength);
-
-	FlushFile(hFile);
-	delete hFile;
 
 	return Plugin_Handled;
 }
