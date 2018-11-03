@@ -40,23 +40,23 @@
 #define RecBot_Size				2
 
 #define INST_NOP				 0
-#define INST_PAUSE      		 1
-#define INST_RECD				(1 << 1)	
+#define INST_PAUSE				 1
+#define INST_RECD				(1 << 1)
 #define INST_PLAY				(1 << 2)
 #define INST_PLAYALL			(1 << 3)
 #define INST_REWIND				(1 << 4)
 #define INST_WARMUP				(1 << 5)
-#define INST_RETURN   			(1 << 6)
+#define INST_RETURN				(1 << 6)
 #define INST_WAIT				(1 << 7)
-#define INST_SPEC   			(1 << 8)
+#define INST_SPEC				(1 << 8)
 
 #define BUFFER_SIZE 			6553600
 
-#define MAX_NEARBY_SEARCH_DISTANCE 1000.0
-#define MAX_TARGET_FOLLOW_DISTANCE 4000.0
+#define MAX_NEARBY_SEARCH_DISTANCE	1000.0
+#define MAX_TARGET_FOLLOW_DISTANCE	4000.0
 
 #define WARMUP_FRAMES_DEFAULT	66
-#define RESPAWN_FREEZE_FRAMES 	66 // 1 second
+#define RESPAWN_FREEZE_FRAMES	66 // 1 second
 
 #define QUEUE_CLIENT 			0
 #define QUEUE_RECORDING 		1
@@ -642,7 +642,7 @@ public void OnMapEnd() {
 	ClientInfo.DestroyAll();
 
 	g_hRecordingClients.Clear();
-	g_hRecordingEntities.Clear();
+	cleareRecEntities();
 	g_hRecordingEntTypes.Clear();
 	g_iRecordingEntTotal = 0;
 	//g_hRecEntSpawnList.Clear();
@@ -650,7 +650,6 @@ public void OnMapEnd() {
 	if (g_hRecBufferFrames != null) {
 		g_hRecBufferFrames.Clear();
 	}
-
 	
 	Array_Fill(g_bPlayerGrantAccess, sizeof(g_bPlayerGrantAccess), false);
 	
@@ -683,6 +682,7 @@ public void OnGameFrame() {
 			
 			char sTimeRec[32];
 			char sTimeTotal[32];
+			
 			ToTimeDisplay(sTimeRec, sizeof(sTimeRec), g_iRecBufferFrame/66);
 			ToTimeDisplay(sTimeTotal, sizeof(sTimeTotal), BUFFER_SIZE/66);
 
@@ -825,6 +825,7 @@ public void OnGameFrame() {
 		
 		if (g_iRecBufferIdx >= BUFFER_SIZE || (g_iRecBufferIdx >= g_iRecBufferUsed)) {
 			resetBubbleRotation(g_iRecording);
+			cleareRecEntities();
 			
 			if (g_hPlaybackQueue.Length && g_iClientInstruction & INST_PLAYALL) {
 				g_iRecording = g_hPlaybackQueue.Get(0);
@@ -1191,7 +1192,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 				
 				ToTimeDisplay(sTimePlay, sizeof(sTimePlay), g_iRecBufferFrame/66);
 				ToTimeDisplay(sTimeTotal, sizeof(sTimePlay), g_hRecBufferFrames.Length/66);
-				
+
 				char sRecordingType[32];
 				if (g_iRecording != NULL_RECORDING && g_iRecording.Repo) {
 					FormatEx(sRecordingType, sizeof(sRecordingType), "%T: %T", "Source", iClient, "Repository", iClient);
@@ -4136,6 +4137,18 @@ void clearRecBotData(int iID = -1) {
 	}
 }
 
+void cleareRecEntities() {
+	for (int i=0; i<g_hRecordingEntities.Length; i++) {
+		int iArr[RecEnt_Size];
+		g_hRecordingEntities.GetArray(i, iArr, sizeof(iArr));
+		int iEntity = EntRefToEntIndex(iArr[RecEnt_iRef]);
+		if (IsValidEntity(iEntity)) {
+			AcceptEntityInput(iEntity, "kill");
+		}
+	}
+	g_hRecordingEntities.Clear();
+}
+
 void CPrintToChatList(ArrayList hClients, const char[] sMessage, any ...) {
 	char sBuffer[MAX_MESSAGE_LENGTH];
 	VFormat(sBuffer, sizeof(sBuffer), sMessage, 3);
@@ -4261,11 +4274,7 @@ void doFullStop() {
 		SetEntityMoveType(iRecClient, MOVETYPE_WALK);
 	}
 
-	// FIXME: Stickybombs cannot unfreeze properly
-	for (int j=0; j<g_hRecordingEntities.Length; j++) {
-		int iRecEntIdx = EntRefToEntIndex(g_hRecordingEntities.Get(j, RecEnt_iRef));
-		SetEntityMoveType(iRecEntIdx, g_hRecordingEntities.Get(j, RecEnt_iMoveType));
-	}
+	cleareRecEntities();
 	
 	for (int i=0; i<g_hRecordingBots.Length; i++) {
 		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
@@ -4961,6 +4970,9 @@ bool SaveFile(char[] sFilePath) {
 	// 0x28
 	int iPosMapName = hFile.Position;
 	hFile.Write(view_as<int>({0, 0, 0, 0, 0, 0, 0, 0}), 8, 4);
+
+	// 0x48
+	// TODO: Custom call bubble location
 
 	int iPosClientData = hFile.Position;
 	hFile.Seek(iMetaPosClientData, SEEK_SET);
