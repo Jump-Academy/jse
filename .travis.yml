@@ -1,0 +1,34 @@
+language: sourcepawn
+
+sudo: false
+addons:
+  apt:
+    packages:
+      - lib32stdc++6
+
+env:
+  - SOURCEMOD=1.8
+  - SOURCEMOD=1.9
+  - SOURCEMOD=1.10
+
+before_script:
+  - wget "http://www.sourcemod.net/latest.php?version=$SOURCEMOD&os=linux" -O sourcemod-$SOURCEMOD-linux.tar.gz
+  - tar -xzf sourcemod-$SOURCEMOD-linux.tar.gz
+  - cp -r addons/sourcemod/scripting/* scripting  
+  - wget https://raw.githubusercontent.com/Impact123/AutoExecConfig/development/autoexecconfig.inc -O scripting/include/autoexecconfig.inc
+  - wget https://raw.githubusercontent.com/VoiDeD/sourcemod-botcontroller/master/scripting/botcontroller.inc -O scripting/include/botcontroller.inc
+  - wget https://github.com/Bara/Multi-Colors/archive/master.zip -O multicolors.zip
+  - unzip multicolors.zip
+  - cp -r Multi-Colors-master/addons/sourcemod/scripting/include/* scripting/include/
+  - wget https://raw.githubusercontent.com/nefarius/sm-ext-socket/master/socket.inc -O scripting/include/socket.inc
+  - wget https://raw.githubusercontent.com/FlaminSarge/tf2attributes/master/tf2attributes.inc -O scripting/include/tf2attributes.inc
+  - wget https://raw.githubusercontent.com/asherkin/TF2Items/master/pawn/tf2items.inc -O scripting/include/tf2items.inc
+  - wget https://bitbucket.org/GoD_Tony/updater/raw/default/include/updater.inc -O scripting/include/updater.inc
+  - wget https://github.com/bcserv/smlib/archive/transitional_syntax.zip -O smlib.zip
+  - unzip smlib.zip
+  - cp -r smlib-transitional_syntax/scripting/include/* scripting/include/
+  - cd scripting
+  - chmod +x spcomp
+
+script:
+- ./compile.sh jse_core.sp jse_jumpbot.sp jse_showkeys.sp
