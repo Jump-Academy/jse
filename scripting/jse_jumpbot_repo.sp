@@ -387,7 +387,7 @@ void parseIndex(char[] sPath) {
 		iClientInfo.SetStartPos(fPos);
 		iClientInfo.SetStartAng(fAng);
 		
-		iRecording.RecClientInfo.Push(iClientInfo);
+		iRecording.ClientInfo.Push(iClientInfo);
 
 		iRecording.NodeModel = INVALID_ENT_REFERENCE;
 		iRecording.WeaponModel = INVALID_ENT_REFERENCE;

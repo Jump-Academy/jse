@@ -19,156 +19,217 @@
 static ArrayList hClientInfo = null;
 const ClientInfo NULL_CLIENTINFO = view_as<ClientInfo>(-1);
 
-methodmap ClientInfo {
-	property int Idx {
-		public get() {
-			return view_as<int>(this);
+public void ClientInfo_SetupNatives() {
+	CreateNative("ClientInfo.GetAuthID",			Native_ClientInfo_GetAuthID);
+	CreateNative("ClientInfo.SetAuthID",			Native_ClientInfo_SetAuthID);
+	
+	CreateNative("ClientInfo.GetName",				Native_ClientInfo_GetName);
+	CreateNative("ClientInfo.SetName",				Native_ClientInfo_SetName);
+	
+	CreateNative("ClientInfo.Team.get",				Native_ClientInfo_GetTeam);
+	CreateNative("ClientInfo.Team.set",				Native_ClientInfo_SetTeam);
+	
+	CreateNative("ClientInfo.Class.get",			Native_ClientInfo_GetClass);
+	CreateNative("ClientInfo.Class.set",			Native_ClientInfo_SetClass);
+	
+	CreateNative("ClientInfo.GetStartPos",			Native_ClientInfo_GetStartPos);
+	CreateNative("ClientInfo.SetStartPos",			Native_ClientInfo_SetStartPos);
+	
+	CreateNative("ClientInfo.GetStartAng",			Native_ClientInfo_GetStartAng);
+	CreateNative("ClientInfo.SetStartAng",			Native_ClientInfo_SetStartAng);
+	
+	CreateNative("ClientInfo.GetEquipItemDefIdx",	Native_ClientInfo_GetEquipItemDefIdx);
+	CreateNative("ClientInfo.SetEquipItemDefIdx",	Native_ClientInfo_SetEquipItemDefIdx);
+	
+	CreateNative("ClientInfo.GetEquipClassName",	Native_ClientInfo_GetEquipClassName);
+	CreateNative("ClientInfo.SetEquipClassName",	Native_ClientInfo_SetEquipClassName);
+
+	CreateNative("ClientInfo.Instance",				Native_ClientInfo_Instance);
+	CreateNative("ClientInfo.Destroy",				Native_ClientInfo_Destroy);
+}
+
+public int Native_ClientInfo_GetAuthID(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iLength = GetNativeCell(3);
+
+	int iArr[6];
+	hClientInfo.GetArray(iThis, iArr, sizeof(iArr));
+
+	char sAuthID[24];
+	IntArrayToString(iArr[ClientInfo_sAuthID], 6, sAuthID, sizeof(sAuthID));
+
+	SetNativeString(2, sAuthID, iLength);
+}
+
+public int Native_ClientInfo_SetAuthID(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	
+	char sAuthID[24];
+	GetNativeString(2, sAuthID, sizeof(sAuthID));
+
+	int iArr[ClientInfo_Size];
+	hClientInfo.GetArray(iThis, iArr, sizeof(iArr));
+	
+	StringToIntArray(sAuthID, iArr[ClientInfo_sAuthID], 6);
+	
+	hClientInfo.SetArray(iThis, iArr, sizeof(iArr));
+}
+
+public int Native_ClientInfo_GetName(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iLength = GetNativeCell(3);
+
+	int iArr[14]; // sAuthID + sName
+	hClientInfo.GetArray(iThis, iArr, sizeof(iArr));
+	
+	char sName[32];
+	IntArrayToString(iArr[ClientInfo_sName], 8, sName, sizeof(sName));
+
+	SetNativeString(2, sName, iLength);
+}
+
+public int Native_ClientInfo_SetName(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	char sName[32];
+	GetNativeString(2, sName, sizeof(sName));
+
+	int iArr[ClientInfo_Size];
+	hClientInfo.GetArray(iThis, iArr, sizeof(iArr));
+
+	StringToIntArray(sName, iArr[ClientInfo_sName], 8);
+	
+	hClientInfo.SetArray(iThis, iArr, sizeof(iArr));
+}
+
+public int Native_ClientInfo_GetTeam(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	return hClientInfo.Get(iThis, ClientInfo_iTeam);
+}
+
+public int Native_ClientInfo_SetTeam(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iTeam = GetNativeCell(2);
+	hClientInfo.Set(iThis, iTeam, ClientInfo_iTeam);
+}
+
+public int Native_ClientInfo_GetClass(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	return hClientInfo.Get(iThis, ClientInfo_iClass);
+}
+
+public int Native_ClientInfo_SetClass(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iClass = GetNativeCell(2);
+	hClientInfo.Set(iThis, iClass, ClientInfo_iClass);
+}
+
+public int Native_ClientInfo_GetStartPos(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	float fStartPos[3];
+	fStartPos[0] = hClientInfo.Get(iThis, ClientInfo_fStartPos  );
+	fStartPos[1] = hClientInfo.Get(iThis, ClientInfo_fStartPos+1);
+	fStartPos[2] = hClientInfo.Get(iThis, ClientInfo_fStartPos+2);
+
+	SetNativeArray(2, fStartPos, sizeof(fStartPos));
+}
+
+public int Native_ClientInfo_SetStartPos(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	float fStartPos[3];
+	GetNativeArray(2, fStartPos, sizeof(fStartPos));
+
+	hClientInfo.Set(iThis, fStartPos[0], ClientInfo_fStartPos  );
+	hClientInfo.Set(iThis, fStartPos[1], ClientInfo_fStartPos+1);
+	hClientInfo.Set(iThis, fStartPos[2], ClientInfo_fStartPos+2);
+}
+
+public int Native_ClientInfo_GetStartAng(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	float fStartAng[3];
+	fStartAng[0] = hClientInfo.Get(iThis, ClientInfo_fStartAng  );
+	fStartAng[1] = hClientInfo.Get(iThis, ClientInfo_fStartAng+1);
+
+	SetNativeArray(2, fStartAng, sizeof(fStartAng));
+}
+
+public int Native_ClientInfo_SetStartAng(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	float fStartAng[3];
+	GetNativeArray(2, fStartAng, sizeof(fStartAng));
+
+	hClientInfo.Set(iThis, fStartAng[0], ClientInfo_fStartAng  );
+	hClientInfo.Set(iThis, fStartAng[1], ClientInfo_fStartAng+1);
+}
+
+public int Native_ClientInfo_GetEquipItemDefIdx(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iSlot = GetNativeCell(2);
+
+	return hClientInfo.Get(iThis, ClientInfo_iEquipItemDefIdx + iSlot);
+}
+
+public int Native_ClientInfo_SetEquipItemDefIdx(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iSlot = GetNativeCell(2);
+	int iItemDefIdx = GetNativeCell(3);
+
+	hClientInfo.Set(iThis, iItemDefIdx, ClientInfo_iEquipItemDefIdx + iSlot);
+
+	int iArr[ClientInfo_Size];
+	hClientInfo.GetArray(iThis, iArr, sizeof(iArr));
+}
+
+public int Native_ClientInfo_GetEquipClassName(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iSlot = GetNativeCell(2);
+	int iLength = GetNativeCell(4);
+
+	int iArr[ClientInfo_Size];
+	hClientInfo.GetArray(iThis, iArr, sizeof(iArr));
+
+	char sClassName[128];
+	IntArrayToString(iArr[ClientInfo_sEquipClassName + 32*iSlot], 32, sClassName, iLength);
+
+	SetNativeString(3, sClassName, iLength);
+}
+
+public int Native_ClientInfo_SetEquipClassName(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iSlot = GetNativeCell(2);
+
+	char sClassName[128];
+	GetNativeString(3, sClassName, sizeof(sClassName));
+
+	int iArr[ClientInfo_Size];
+	hClientInfo.GetArray(iThis, iArr, sizeof(iArr));
+
+	StringToIntArray(sClassName, iArr[ClientInfo_sEquipClassName + 32*iSlot], 32);
+	
+	hClientInfo.SetArray(iThis, iArr, sizeof(iArr));
+}
+
+public int Native_ClientInfo_Instance(Handle hPlugin, int iArgC) {
+	if (hClientInfo == null) {
+		hClientInfo = new ArrayList(ClientInfo_Size);
+	}
+
+	static int iEmptyClientInfo[ClientInfo_Size] = { 0, ... };
+
+	for (int i=0; i<hClientInfo.Length; i++) {
+		if (hClientInfo.Get(i, ClientInfo_bGCFlag)) {
+			hClientInfo.SetArray(i, iEmptyClientInfo);
+			return i;
 		}
 	}
 	
-	public void GetAuthID(char[] sAuthID, int iLength) {
-		int iArr[6];
-		hClientInfo.GetArray(view_as<int>(this), iArr, sizeof(iArr));
-		
-		IntArrayToString(iArr[ClientInfo_sAuthID], 6, sAuthID, iLength);
-	}
-	
-	public void SetAuthID(char[] sAuthID) {
-		int iArr[ClientInfo_Size];
-		hClientInfo.GetArray(view_as<int>(this), iArr, sizeof(iArr));
-		
-		StringToIntArray(sAuthID, iArr[ClientInfo_sAuthID], 6);
-		
-		hClientInfo.SetArray(view_as<int>(this), iArr, sizeof(iArr));
-	}
+	hClientInfo.PushArray(iEmptyClientInfo);
+	return hClientInfo.Length-1;
+}
 
-	public void GetName(char[] sName, int iLength) {
-		int iArr[14]; // sAuthID + sName
-		hClientInfo.GetArray(view_as<int>(this), iArr, sizeof(iArr));
-		
-		IntArrayToString(iArr[ClientInfo_sName], 8, sName, iLength);
-	}
-	
-	public void SetName(char[] sName) {
-		int iArr[ClientInfo_Size];
-		hClientInfo.GetArray(view_as<int>(this), iArr, sizeof(iArr));
-
-		StringToIntArray(sName, iArr[ClientInfo_sName], 8);
-		
-		hClientInfo.SetArray(view_as<int>(this), iArr, sizeof(iArr));
-	}
-
-	property TFTeam Team {
-		public get() {
-			return view_as<TFTeam>(hClientInfo.Get(view_as<int>(this), ClientInfo_iTeam));
-		}
-		public set(TFTeam iTeam) {
-			hClientInfo.Set(view_as<int>(this), iTeam, ClientInfo_iTeam);
-		}
-	}
-
-	property TFClassType Class {
-		public get() {
-			return view_as<TFClassType>(hClientInfo.Get(view_as<int>(this), ClientInfo_iClass));
-		}
-		public set(TFClassType iClass) {
-			hClientInfo.Set(view_as<int>(this), iClass, ClientInfo_iClass);
-		}
-	}
-	
-	public void GetStartPos(float fStartPos[3]) {
-		fStartPos[0] = hClientInfo.Get(view_as<int>(this), ClientInfo_fStartPos  );
-		fStartPos[1] = hClientInfo.Get(view_as<int>(this), ClientInfo_fStartPos+1);
-		fStartPos[2] = hClientInfo.Get(view_as<int>(this), ClientInfo_fStartPos+2);
-	}
-	
-	public void SetStartPos(float fStartPos[3]) {
-		hClientInfo.Set(view_as<int>(this), fStartPos[0], ClientInfo_fStartPos  );
-		hClientInfo.Set(view_as<int>(this), fStartPos[1], ClientInfo_fStartPos+1);
-		hClientInfo.Set(view_as<int>(this), fStartPos[2], ClientInfo_fStartPos+2);
-	}
-	
-	public void GetStartAng(float fStartAng[3]) {
-		fStartAng[0] = hClientInfo.Get(view_as<int>(this), ClientInfo_fStartAng  );
-		fStartAng[1] = hClientInfo.Get(view_as<int>(this), ClientInfo_fStartAng+1);
-		fStartAng[2] = 0.0;
-	}
-	
-	public void SetStartAng(float fStartAng[3]) {
-		hClientInfo.Set(view_as<int>(this), fStartAng[0], ClientInfo_fStartAng  );
-		hClientInfo.Set(view_as<int>(this), fStartAng[1], ClientInfo_fStartAng+1);
-	}
-
-	public int GetEquipItemDefIdx(int iSlot) {
-		return hClientInfo.Get(view_as<int>(this), ClientInfo_iEquipItemDefIdx + iSlot);
-	}
-
-	public void SetEquipItemDefIdx(int iSlot, int iItemDefIdx) {
-		hClientInfo.Set(view_as<int>(this), iItemDefIdx, ClientInfo_iEquipItemDefIdx + iSlot);
-
-		int iArr[ClientInfo_Size];
-		hClientInfo.GetArray(view_as<int>(this), iArr, sizeof(iArr));
-
-		/*
-		PrintToServer("SetEquipItemDefIdx(%d, %d):", iSlot, iItemDefIdx);
-		for (int i=0; i<8; i++) {
-			PrintToServer("\tiEquipItemDefIdx[%d]=%d", i, iArr[ClientInfo_iEquipItemDefIdx + i]);
-		}
-		*/
-	}
-
-	public void GetEquipClassName(int iSlot, char[] sClassName, int iLength) {
-		int iArr[ClientInfo_Size];
-		hClientInfo.GetArray(view_as<int>(this), iArr, sizeof(iArr));
-
-		IntArrayToString(iArr[ClientInfo_sEquipClassName + 32*iSlot], 32, sClassName, iLength);
-	}
-
-	public void SetEquipClassName(int iSlot, char[] sClassName) {
-		int iArr[ClientInfo_Size];
-		hClientInfo.GetArray(view_as<int>(this), iArr, sizeof(iArr));
-
-		StringToIntArray(sClassName, iArr[ClientInfo_sEquipClassName + 32*iSlot], 32);
-		
-		hClientInfo.SetArray(view_as<int>(this), iArr, sizeof(iArr));
-		/*
-		PrintToServer("SetEquipClassName(%d, %s):", iSlot, sClassName);
-		for (int i=0; i<8; i++) {
-			char sClassName0[128];
-			IntArrayToString(iArr[ClientInfo_sEquipClassName + 32*i], 32, sClassName0, 128);
-			PrintToServer("\tsEquipClassName[%d]=%s", i, sClassName0);
-		}
-		*/
-	}
-
-	public static ClientInfo Instance() {
-		if (hClientInfo == null) {
-			hClientInfo = new ArrayList(ClientInfo_Size);
-		}
-
-		static int iEmptyClientInfo[ClientInfo_Size] = { 0, ... };
-
-		for (int i=0; i<hClientInfo.Length; i++) {
-			if (hClientInfo.Get(i, ClientInfo_bGCFlag)) {
-				hClientInfo.SetArray(i, iEmptyClientInfo);
-				return view_as<ClientInfo>(i);
-			}
-		}
-		
-		hClientInfo.PushArray(iEmptyClientInfo);
-		return view_as<ClientInfo>(hClientInfo.Length-1);
-	}
-
-	public static void Destroy(ClientInfo iClientInfo) {
-		if (hClientInfo != null) {
-			hClientInfo.Set(iClientInfo.Idx, 1, ClientInfo_bGCFlag);
-		}
-	}
-
-	public static void DestroyAll() {
-		if (hClientInfo != null) {
-			hClientInfo.Clear();
-		}
+public int Native_ClientInfo_Destroy(Handle hPlugin, int iArgC) {
+	if (hClientInfo != null) {
+		int iClientInfo = GetNativeCell(1);
+		hClientInfo.Set(iClientInfo, 1, ClientInfo_bGCFlag);
 	}
 }
 
@@ -190,169 +251,192 @@ methodmap ClientInfo {
 static ArrayList hRecordings = null;
 const Recording NULL_RECORDING = view_as<Recording>(-1);
 
-methodmap Recording {
-	public void GetFilePath(char[] sFilePath, int iLength) {
-		hRecordings.GetString(view_as<int>(this), sFilePath, iLength);
-	}
+public void Recording_SetupNatives() {
+	CreateNative("Recording.GetFilePath",		Native_Recording_GetFilePath);
+	CreateNative("Recording.SetFilePath",		Native_Recording_SetFilePath);
+	
+	CreateNative("Recording.Repo.get",			Native_Recording_GetRepo);
+	CreateNative("Recording.Repo.set",			Native_Recording_SetRepo);
+	
+	CreateNative("Recording.Downloading.get",	Native_Recording_GetDownloading);
+	CreateNative("Recording.Downloading.set",	Native_Recording_SetDownloading);
+	
+	CreateNative("Recording.FileSize.get",		Native_Recording_GetFileSize);
+	CreateNative("Recording.FileSize.set",		Native_Recording_SetFileSize);
+	
+	CreateNative("Recording.Timestamp.get",		Native_Recording_GetTimestamp);
+	CreateNative("Recording.Timestamp.set",		Native_Recording_SetTimestamp);
+	
+	CreateNative("Recording.Frames.get",		Native_Recording_GetFrames);
+	
+	CreateNative("Recording.Length.get",		Native_Recording_GetLength);
+	CreateNative("Recording.Length.set",		Native_Recording_SetLength);
+	
+	CreateNative("Recording.ClientInfo.get",	Native_Recording_GetClientInfo);
+	
+	CreateNative("Recording.NodeModel.get",		Native_Recording_GetNodeModel);
+	CreateNative("Recording.NodeModel.set",		Native_Recording_SetNodeModel);
+	
+	CreateNative("Recording.WeaponModel.get",	Native_Recording_GetWeaponModel);
+	CreateNative("Recording.WeaponModel.set",	Native_Recording_SetWeaponModel);
+	
+	CreateNative("Recording.Instance",			Native_Recording_Instance);
+	CreateNative("Recording.Destroy",			Native_Recording_Destroy);
+}
 
-	public void SetFilePath(char[] sFilePath) {
-		int iArr[Recording_Size];
-		hRecordings.GetArray(view_as<int>(this), iArr, sizeof(iArr));
-		
-		StringToIntArray(sFilePath, iArr[Recording_sFilePath], 64);
-		
-		hRecordings.SetArray(view_as<int>(this), iArr, sizeof(iArr));
-	}
-		
-	property bool Repo {
-		public get() {
-			return view_as<bool>(hRecordings.Get(view_as<int>(this), Recording_bRepo));
-		}
-		public set(bool bRepo) {
-			hRecordings.Set(view_as<int>(this), view_as<int>(bRepo), Recording_bRepo);
-		}
+public int Native_Recording_GetFilePath(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iLength = GetNativeCell(3);
+
+	char sFilePath[256];
+	hRecordings.GetString(iThis, sFilePath, iLength);
+	
+	SetNativeString(2, sFilePath, iLength);
+}
+
+public int Native_Recording_SetFilePath(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+
+	char sFilePath[256];
+	GetNativeString(2, sFilePath, sizeof(sFilePath));
+
+	int iArr[Recording_Size];
+	hRecordings.GetArray(iThis, iArr, sizeof(iArr));
+	
+	StringToIntArray(sFilePath, iArr[Recording_sFilePath], 64);
+	
+	hRecordings.SetArray(iThis, iArr, sizeof(iArr));
+}
+
+public int Native_Recording_GetRepo(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	return hRecordings.Get(iThis, Recording_bRepo);
+}
+
+public int Native_Recording_SetRepo(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iRepo = GetNativeCell(2) ? 1 : 0;
+
+	hRecordings.Set(iThis, iRepo, Recording_bRepo);
+}
+
+public int Native_Recording_GetDownloading(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	return hRecordings.Get(iThis, Recording_iDownloading);
+}
+
+public int Native_Recording_SetDownloading(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iDownloading = GetNativeCell(2);
+	hRecordings.Set(iThis, iDownloading, Recording_iDownloading);
+}
+
+public int Native_Recording_GetFileSize(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	return hRecordings.Get(iThis, Recording_iFileSize);
+}
+
+public int Native_Recording_SetFileSize(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iFileSize = GetNativeCell(2);
+	hRecordings.Set(iThis, iFileSize, Recording_iFileSize);
+}
+
+public int Native_Recording_GetTimestamp(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	return hRecordings.Get(iThis, Recording_iTimestamp);
+}
+
+public int Native_Recording_SetTimestamp(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iTimestamp = GetNativeCell(2);
+	hRecordings.Set(iThis, iTimestamp, Recording_iTimestamp);
+}
+
+public int Native_Recording_GetFrames(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	return hRecordings.Get(iThis, Recording_hFrames);
+}
+
+public int Native_Recording_GetLength(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	return hRecordings.Get(iThis, Recording_iLength);
+}
+
+public int Native_Recording_SetLength(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iLength = GetNativeCell(2);
+	hRecordings.Set(iThis, iLength, Recording_iLength);
+}
+
+public int Native_Recording_GetClientInfo(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	return hRecordings.Get(iThis, Recording_hClientInfo);
+}
+
+public int Native_Recording_GetNodeModel(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	return hRecordings.Get(iThis, Recording_iNodeModel);
+}
+
+public int Native_Recording_SetNodeModel(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iNodeModel = GetNativeCell(2);
+	hRecordings.Set(iThis, iNodeModel, Recording_iNodeModel);
+}
+
+public int Native_Recording_GetWeaponModel(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	return hRecordings.Get(iThis, Recording_iWeaponModel);
+}
+
+public int Native_Recording_SetWeaponModel(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iWeaponModel = GetNativeCell(2);
+	hRecordings.Set(iThis, iWeaponModel, Recording_iWeaponModel);
+}
+
+public int Native_Recording_Instance(Handle hPlugin, int iArgC) {
+	if (hRecordings == null) {
+		hRecordings = new ArrayList(Recording_Size);
 	}
 	
-	property int Downloading {
-		public get() {
-			return hRecordings.Get(view_as<int>(this), Recording_iDownloading);
-		}
-		public set(int iDownloading) {
-			hRecordings.Set(view_as<int>(this), iDownloading, Recording_iDownloading);
-		}
-	}
-	
-	property int FileSize {
-		public get() {
-			return hRecordings.Get(view_as<int>(this), Recording_iFileSize);
-		}
-		public set(int iFileSize) {
-			hRecordings.Set(view_as<int>(this), iFileSize, Recording_iFileSize);
-		}
-	}
+	static int iEmptyRecording[Recording_Size] =  { 0, ... };
 
-	property int Timestamp {
-		public get() {
-			return hRecordings.Get(view_as<int>(this), Recording_iTimestamp);
-		}
-		public set(int iTimestamp) {
-			hRecordings.Set(view_as<int>(this), iTimestamp, Recording_iTimestamp);
-		}
-	}
-	
-	property ArrayList Frames {
-		public get() {
-			return hRecordings.Get(view_as<int>(this), Recording_hFrames);
-		}
-	}
-
-	property int Length {
-		public get() {
-			return hRecordings.Get(view_as<int>(this), Recording_iLength);
-		}
-		public set(int iLength) {
-			hRecordings.Set(view_as<int>(this), iLength, Recording_iLength);
-		}
-	}
-
-	property ArrayList RecClientInfo {
-		public get() {
-			return hRecordings.Get(view_as<int>(this), Recording_hClientInfo);
-		}
-	}
-	
-	property int NodeModel {
-		public get() {
-			return hRecordings.Get(view_as<int>(this), Recording_iNodeModel);
-		}
-		
-		public set(int iNodeModel) {
-			hRecordings.Set(view_as<int>(this), iNodeModel, Recording_iNodeModel);
-		}
-	}
-	
-	property int WeaponModel {
-		public get() {
-			return hRecordings.Get(view_as<int>(this), Recording_iWeaponModel);
-		}
-		
-		public set(int iWeaponModel) {
-			hRecordings.Set(view_as<int>(this), iWeaponModel, Recording_iWeaponModel);
-		}
-	}
-
-	// public static class functions
-	
-	public static Recording Instance() {
-		if (hRecordings == null) {
-			hRecordings = new ArrayList(Recording_Size);
-		}
-		
-		static int iEmptyRecording[Recording_Size] =  { 0, ... };
-
-		for (int i=0; i<hRecordings.Length; i++) {
-			if (hRecordings.Get(i, Recording_bGCFlag)) {
-				hRecordings.SetArray(i, iEmptyRecording);
-				hRecordings.Set(i, new ArrayList(ClientInfo_Size), Recording_hClientInfo);
-				hRecordings.Set(i, new ArrayList(), Recording_hFrames);
-				
-				return view_as<Recording>(i);
-			}
-		}
-		
-		hRecordings.PushArray(iEmptyRecording);
-		hRecordings.Set(hRecordings.Length-1, new ArrayList(ClientInfo_Size), Recording_hClientInfo);
-		hRecordings.Set(hRecordings.Length-1, new ArrayList(), Recording_hFrames);
-
-		return view_as<Recording>(hRecordings.Length-1);
-	}
-
-	public static void Destroy(Recording iRecording) {
-		if (hRecordings != null) {
-			hRecordings.Set(view_as<int>(iRecording), 1, Recording_bGCFlag);
+	for (int i=0; i<hRecordings.Length; i++) {
+		if (hRecordings.Get(i, Recording_bGCFlag)) {
+			hRecordings.SetArray(i, iEmptyRecording);
+			hRecordings.Set(i, new ArrayList(ClientInfo_Size), Recording_hClientInfo);
+			hRecordings.Set(i, new ArrayList(), Recording_hFrames);
 			
-			ArrayList hRecClientInfo = iRecording.RecClientInfo;
-			ArrayList hFrames = hRecordings.Get(view_as<int>(iRecording), Recording_hFrames);
-			delete hFrames;
-
-			for (int i=0; i<hRecClientInfo.Length; i++) {
-				ClientInfo iClientInfo = hRecClientInfo.Get(i);
-				ClientInfo.Destroy(iClientInfo);
-			}
-			
-			delete hRecClientInfo;
+			return i;
 		}
 	}
+	
+	hRecordings.PushArray(iEmptyRecording);
+	hRecordings.Set(hRecordings.Length-1, new ArrayList(ClientInfo_Size), Recording_hClientInfo);
+	hRecordings.Set(hRecordings.Length-1, new ArrayList(), Recording_hFrames);
 
-	public static void DestroyAll() {
-		if (hRecordings != null) {
-			for (int i=0; i<hRecordings.Length; i++) {
-				Recording iRecording = view_as<Recording>(i);
+	return hRecordings.Length-1;
+}
 
-				if (!hRecordings.Get(view_as<int>(iRecording), Recording_bGCFlag)) {
-					ArrayList hRecClientInfo = iRecording.RecClientInfo;
-					for (int j=0; j<hRecClientInfo.Length; j++) {
-						ClientInfo iClientInfo = hRecClientInfo.Get(j);
-						ClientInfo.Destroy(iClientInfo);
-					}
-					delete hRecClientInfo;
+public int Native_Recording_Destroy(Handle hPlugin, int iArgC) {
+	if (hRecordings != null) {
+		Recording iRecording = GetNativeCell(1);
 
-					ArrayList hFrames = iRecording.Frames;
-					delete hFrames;
-				}
-			}
+		hRecordings.Set(view_as<int>(iRecording), 1, Recording_bGCFlag);
+		
+		ArrayList hRecClientInfo = iRecording.ClientInfo;
+		ArrayList hFrames = hRecordings.Get(view_as<int>(iRecording), Recording_hFrames);
+		delete hFrames;
 
-			hRecordings.Clear();
+		for (int i=0; i<hRecClientInfo.Length; i++) {
+			ClientInfo iClientInfo = hRecClientInfo.Get(i);
+			ClientInfo.Destroy(iClientInfo);
 		}
+		
+		delete hRecClientInfo;
 	}
-	/*
-	public static void Sort() {
-		if (hRecordings != null) {
-			SortADTArrayCustom(hRecordings, Sort_Recordings);
-		}
-	}
-
-	*/
 }
 
 public int Sort_Recordings(int iIdx1, int iIdx2, Handle hArray, Handle hParam) {
