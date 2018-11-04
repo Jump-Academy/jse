@@ -1,0 +1,20 @@
+"Games"
+{
+	"tf"
+	{
+		"Offsets"
+		{
+      "CObjectSentrygun::FinishedBuilding"
+			{
+				"windows"	"336"
+				"linux"		"338"
+			}
+			
+			"CObjectSentrygun::FinishUpgrading"
+			{
+				"windows"	"376"
+				"linux"		"378"
+			}
+		}
+	}
+}

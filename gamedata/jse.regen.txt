@@ -1,0 +1,20 @@
+"Games"
+{
+	"tf"
+	{
+		"Offsets"
+		{
+			"CTFWeaponBase::GetMaxClip1"
+			{
+				"windows"	"317"
+				"linux"		"323"
+			}
+			
+			"CTFWeaponBase::GetMaxClip2"
+			{
+				"windows"	"318"
+				"linux"		"324"
+			}
+		}
+	}
+}
