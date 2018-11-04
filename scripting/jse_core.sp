@@ -24,7 +24,6 @@
 
 #undef REQUIRE_PLUGIN
 #include <updater>
-#include <jse_api>
 
 #define UPDATE_URL	"http://jumpacademy.tf/plugins/jse/core/updatefile.txt"
 
