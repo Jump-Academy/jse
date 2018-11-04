@@ -20,7 +20,7 @@ before_script:
   - wget https://github.com/Bara/Multi-Colors/archive/master.zip -O multicolors.zip
   - unzip multicolors.zip
   - cp -r Multi-Colors-master/addons/sourcemod/scripting/include/* scripting/include/
-  - wget https://raw.githubusercontent.com/nefarius/sm-ext-socket/master/socket.inc -O scripting/include/socket.inc
+  - wget https://raw.githubusercontent.com/JoinedSenses/sm-ext-socket/master/socket.inc -O scripting/include/socket.inc
   - wget https://raw.githubusercontent.com/FlaminSarge/tf2attributes/master/tf2attributes.inc -O scripting/include/tf2attributes.inc
   - wget https://raw.githubusercontent.com/asherkin/TF2Items/master/pawn/tf2items.inc -O scripting/include/tf2items.inc
   - wget https://bitbucket.org/GoD_Tony/updater/raw/default/include/updater.inc -O scripting/include/updater.inc
