@@ -258,11 +258,11 @@ public void OnPluginStart() {
 	g_hDebug				= AutoExecConfig_CreateConVar("jse_jb_debug", 			"0", 				"Toggle debug mode", 																	FCVAR_DONTRECORD, 					true, 0.0, true, 1.0);
 	
 	g_hOutline	 			= AutoExecConfig_CreateConVar("jse_jb_outline", 		"1", 				"Toggle JumpBOT glow outline", 															FCVAR_NONE, 						true, 0.0, true, 1.0);
-	g_hTrail 				= AutoExecConfig_CreateConVar("jse_jb_trail", 			"0", 				"Toggle JumpBOT path trail", 															FCVAR_NONE, 						true, 0.0, true, 1.0);
+	g_hTrail 				= AutoExecConfig_CreateConVar("jse_jb_trail", 			"1", 				"Toggle JumpBOT path trail", 															FCVAR_NONE, 						true, 0.0, true, 1.0);
 	g_hTrailLife 			= AutoExecConfig_CreateConVar("jse_jb_trailtime", 		"5.0",				"Bot trail visible duration", 															FCVAR_NONE,							true, 0.0, true, 25.6);
 	g_hTrailColor	 		= AutoExecConfig_CreateConVar("jse_jb_trailcolor", 		"1E90FFFF",			"Bot travel path trail color (hex RGBA)", 												FCVAR_NONE												);
 
-	g_hProjTrail 			= AutoExecConfig_CreateConVar("jse_jb_projtrail", 		"0", 				"Toggle projectile trail", 																FCVAR_NONE, 						true, 0.0, true, 1.0);
+	g_hProjTrail 			= AutoExecConfig_CreateConVar("jse_jb_projtrail", 		"1", 				"Toggle projectile trail", 																FCVAR_NONE, 						true, 0.0, true, 1.0);
 	g_hProjTrailColor		= AutoExecConfig_CreateConVar("jse_jb_projcolor", 		"800080FF", 		"Bot launched projectiles trail color (hex RGBA)", 										FCVAR_NONE												);
 
 	g_hMapMatch 			= AutoExecConfig_CreateConVar("jse_jb_match_exact", 	"0", 				"Map/recording name matching method (0 for prefix, 1 for exact)", 						FCVAR_NONE												);
@@ -674,7 +674,6 @@ public void OnMapEnd() {
 public void OnGameFrame() {
 	if (g_iClientInstruction == INST_RECD) {
 		if (!g_hRecordingClients.Length || (g_iRecBufferIdx+1+g_hRecordingClients.Length*11) >= BUFFER_SIZE) {
-			PrintToServer("RECD early kill");
 			doFullStop();
 
 			CPrintToChatList(g_hRecordingClients, "{dodgerblue}[jb] {white}%t", "Buffer Full");
@@ -1028,16 +1027,20 @@ public void OnGameFrame() {
 						}
 
 						if (iRecEntIdx == -1) {
+							#if defined DEBUG
 							PrintToServer("Got iRecEnt[%d] block but found no usable entity", iRecordingEnt);
+							#endif
 							iRecEntFailCount++;
 						}
 					} else {
 						iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iRef));
 					}
 				}
+				#if defined DEBUG
 				default: {
 					PrintToServer("Buffer read: UNKNOWN");
 				}
+				#endif
 			}
 
 			if (iEntity == INVALID_ENT_REFERENCE) {
@@ -4120,9 +4123,8 @@ public void Hook_ProjVPhysics(int iEntity) {
 	g_hProjMap.GetArray(sKey, fPosPrev, sizeof(fPosPrev));
 	g_hProjMap.SetArray(sKey, fPos, sizeof(fPos));
 	
-	// TODO: Re-enable trails
-	//TE_SetupBeamPoints(fPosPrev, fPos, g_iLaserModel, g_iHaloModel, 0, 66, g_fTrailLife, 5.0, 5.0, 1, 1.0, g_iProjTrailColor, 0);
-	//TE_SendToAllInRangeVisible(fPos);
+	TE_SetupBeamPoints(fPosPrev, fPos, g_iLaserModel, g_iHaloModel, 0, 66, g_fTrailLife, 5.0, 5.0, 1, 1.0, g_iProjTrailColor, 0);
+	TE_SendToAllInRangeVisible(fPos);
 }
 
 // Adapted from BeTheRobot: https://forums.alliedmods.net/showthread.php?t=193067
@@ -4947,6 +4949,8 @@ void loadRecordings(bool bUseCachedRepoIndex = false) {
 		}
 	}
 	delete hDir;
+
+	SortADTArrayCustom(g_hRecordings, Sort_Recordings);
 }
 
 ArrayList GetSaveStates() {
@@ -5231,11 +5235,16 @@ void setBubbleAlpha(Recording iRecording, int iAlpha) {
 
 void setProjectileGlow(int iEntity) {
 	char sTargetName[32];
-	FormatEx(sTargetName, sizeof(sTargetName), "proj%i", iEntity);
-	DispatchKeyValue(iEntity, "targetname", sTargetName);
+	Entity_GetName(iEntity, sTargetName, sizeof(sTargetName));
+	if (!sTargetName[0]) {
+		FormatEx(sTargetName, sizeof(sTargetName), "proj%i", iEntity);
+		Entity_SetName(iEntity, sTargetName);
+	}
 
 	int iGlowEntity = CreateEntityByName("tf_glow");
-	Entity_SetParent(iGlowEntity, iEntity);
+
+	SetVariantString("!activator");
+	AcceptEntityInput(iGlowEntity, "SetParent", iEntity, iGlowEntity); 
 
 	DispatchKeyValue(iGlowEntity, "targetname", "ProjectileGlow");
 	DispatchKeyValue(iGlowEntity, "target", sTargetName);
