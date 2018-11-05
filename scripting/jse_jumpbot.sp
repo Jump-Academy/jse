@@ -163,7 +163,6 @@ Handle g_hCookiePerspective;
 bool g_bBCExtension;
 bool g_bSocketExtension;
 
-//int g_iClientControl;
 int g_iClientInstruction;
 int g_iClientInstructionPost;
 int g_iClientOfInterest;
@@ -785,11 +784,12 @@ public void OnGameFrame() {
 				g_aRecBuffer[g_iRecBufferIdx++] = fAng[0];
 				g_aRecBuffer[g_iRecBufferIdx++] = fAng[1];
 				g_aRecBuffer[g_iRecBufferIdx++] = fAng[2];
-			} else {
+			}
+			#if defined DEBUG
+			else {
 				PrintToServer("Entity %d has owner=%d, but owneridx=%d", iEntity, Entity_GetOwner(iEntity), iOwner);
 			}
-
-			
+			#endif
 		}
 
 		if (g_iClientInstruction & INST_PAUSE) {
@@ -821,7 +821,6 @@ public void OnGameFrame() {
 	} else if (g_iClientInstruction & (INST_PLAY | INST_REWIND)) {
 		static float fPos[3];
 		static float fPosNow[3];
-		//static float fPosEstim[3];
 		static float fVel[3];
 		static float fAng[3];
 		static int iButtons;
@@ -926,12 +925,6 @@ public void OnGameFrame() {
 				Entity_SetAbsAngles(iBubble, fBubbleAng);
 			}
 		}
-
-		/*
-		if (!(g_iClientInstruction & INST_PAUSE)) {
-			PrintToServer("Playing buffer idx=%d/%d, frame=%d/%d", g_iRecBufferIdx+1, g_iRecBufferUsed, g_iRecBufferFrame+1, g_iRecBufferFramesTotal);
-		}
-		*/
 		
 		int iRecBufferIdxBackup = g_iRecBufferIdx;
 
@@ -955,11 +948,9 @@ public void OnGameFrame() {
 
 			switch (g_aRecBuffer[g_iRecBufferIdx] & 0xFF) {
 				case FRAME: {
-					//PrintToServer("Buffer read: FRAME");
 					break;
 				}
 				case CLIENT: {
-					//PrintToServer("Buffer read: CLIENT");
 					if (g_iClientInstruction & INST_REWIND && g_iClientInstruction & INST_RECD) {
 						iEntity = g_hRecordingClients.Get((g_aRecBuffer[g_iRecBufferIdx++] >> 8) & 0xFF, RecBot_iEnt);
 					} else {
@@ -1003,12 +994,8 @@ public void OnGameFrame() {
 							TE_SendToAllInRangeVisible(fPos);
 						}
 					}
-
-					//PrintToChatAll("Frame %d client %N target pos=(%.3f, %.3f, %.3f)", g_iRecBufferFrame, iEntity, fPos[0], fPos[1], fPos[2]);
 				}
 				case ENTITY: {
-					//PrintToServer("Buffer read: ENTITY");
-
 					iRecordingEnt	= (g_aRecBuffer[g_iRecBufferIdx  ] >>  8) & 0xFF;
 
 					iEntType 		= (g_aRecBuffer[g_iRecBufferIdx  ] >> 16) & 0xFF;
@@ -1023,7 +1010,6 @@ public void OnGameFrame() {
 					fAng[0] = g_aRecBuffer[g_iRecBufferIdx++];
 					fAng[1] = g_aRecBuffer[g_iRecBufferIdx++];
 					fAng[2] = g_aRecBuffer[g_iRecBufferIdx++];
-
 
 					int iRecEntIdx = g_hRecordingEntities.FindValue(iRecordingEnt, RecEnt_iAssign);
 					if (iRecEntIdx == -1) {
@@ -1657,7 +1643,6 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 	return Plugin_Continue;
 }
 
-
 public void OnClientCookiesCached(int iClient) {
 	if (IsFakeClient(iClient)) {
 		return;
@@ -1709,7 +1694,9 @@ public void OnClientPostAdminCheck(int iClient) {
 			aArr[RecBot_hEquip] = new DataPack();
 			g_hRecordingBots.PushArray(aArr);
 
+			#if defined DEBUG
 			PrintToServer("%N added go RecBots list, len=%d", iClient, g_hRecordingBots.Length);
+			#endif
 
 			CreateTimer(5.0, Timer_BotJoinExecute, iClient, TIMER_FLAG_NO_MAPCHANGE);
 		}			
@@ -2166,10 +2153,11 @@ public Action cmdPlay(int iClient, int iArgC) {
 		}
 	}
 		
-	if(g_hDebug.BoolValue)
+	if (g_hDebug.BoolValue) {
 		CPrintToChatAll("{dodgerblue}[jb] {white}%t", "Playback Start");
-	else
+	} else {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Playback Start");
+	}
 
 	return Plugin_Handled;
 }
@@ -2182,16 +2170,6 @@ public Action cmdSave(int iClient, int iArgC) {
 	
 	if (!g_hRecordingBots.Length) {
 		 return Plugin_Handled;
-	}
-
-	char sArg1[24];
-	if (iArgC == 1) {
-		GetCmdArg(1, sArg1, sizeof(sArg1));
-		
-		if (SimpleRegexMatch(sArg1, "^STEAM_\\d:[01]:\\d+$", PCRE_ANCHORED) != 1) {
-			CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t: jb_save [\"SteamID\"]", "Usage");
-			return Plugin_Handled;
-		}
 	}
 	
 	if (g_iClientInstruction != INST_NOP) {
@@ -2230,10 +2208,11 @@ public Action cmdSave(int iClient, int iArgC) {
 	char sSteamID[32];
 	GetClientAuthId(iClient, AuthId_Steam3, sSteamID, sizeof(sSteamID));
 	
-	if (g_hDebug.BoolValue)
+	if (g_hDebug.BoolValue) {
 		CPrintToChatAll("{dodgerblue}[jb] {white}%t", "Playback Saved", g_hRecBufferFrames.Length, sSteamID);
-	else
+	} else {
 		CPrintToChat(iClient, "{dodgerblue}[jb] {white}%t", "Playback Saved", g_hRecBufferFrames.Length, sSteamID);
+	}
 		
 	// Refresh recordings
 	removeModels();
@@ -2442,218 +2421,67 @@ public Action cmdStateDelete(int iClient, int iArgC) {
 }
 
 public Action cmdList(int iClient, int iArgC) {
-	if (!checkAccess(iClient)) {
-		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "No Access");
-		return Plugin_Handled;
-	}
-	
-	// TODO: Searchable list
-	/*
-	char sRecFolder[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sRecFolder, sizeof(sRecFolder), g_sRecSubDir);
-	
-	if(!DirExists(sRecFolder)) {
-		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t: %s", "Recording No Folder", sRecFolder);
-		return Plugin_Handled;
-	}
-	
-	char sFile[PLATFORM_MAX_PATH];
-	FileType iFileType;
-	
-	char sMapName[PLATFORM_MAX_PATH];
-	char sSearchTerm[PLATFORM_MAX_PATH];
-	
-	bool bListMap = false;
-	switch (iArgC) {
-		case 0: {
-			bListMap = true;
-			GetCurrentMap(sSearchTerm, sizeof(sSearchTerm));
-		}
-		case 1: {
-			char sArg1[32];
-			GetCmdArg(1, sArg1, sizeof(sArg1));
-			
-			if (sArg1[0] == '*') {
-				ArrayList hFileNames = new ArrayList(ByteCountToCells(PLATFORM_MAX_PATH));
-				DirectoryListing hDir = OpenDirectory(sRecFolder);
-				while (hDir.GetNext(sFile, sizeof(sFile), iFileType)) {
-					int iExt = FindCharInString(sFile, '.', true);
-					if (iFileType == FileType_File && iExt != -1 && StrEqual(sFile[iExt], ".jmp", false)) {
-						hFileNames.PushString(sFile);
-					}
-				}
-				delete hDir;
-				
-				ArrayList hMapNames = new ArrayList(ByteCountToCells(PLATFORM_MAX_PATH));
-				StringMap hMapCounts = new StringMap();
-				
-				for (int i=0; i<hFileNames.Length; i++) {
-					hFileNames.GetString(i, sFile, sizeof(sFile));
-					int iMap = FindCharInString(sFile, '-');
-					if (iMap != -1) {
-						strcopy(sMapName, iMap+1, sFile);
-						
-						int iCount=1;
-						if (hMapCounts.SetValue(sMapName, iCount, false)) {
-							hMapNames.PushString(sMapName);
-						} else {/
-							hMapCounts.GetValue(sMapName, iCount);
-							hMapCounts.SetValue(sMapName, iCount+1);
-						}
-					}
-				}
-				
-				CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t:", "Found Rec Map", GetArraySize(hFileNames), GetArraySize(hMapNames));
-				CReplyToCommand(iClient, "{white}   %25t\t#\n  ------------------------------------", "Map Name");
-				
-				SortADTArray(hMapNames, Sort_Ascending, Sort_String);
-				for (int i=0; i<hMapNames.Length; i++) {
-					hMapNames.GetString(i, sMapName, sizeof(sMapName));
-					int iCount;
-					hMapCounts.GetValue(sMapName, iCount);
-					CReplyToCommand(iClient, "{white}	 %25s\t%d", sMapName, iCount);
-				}
-				
-				delete hFileNames;
-				delete hMapNames;
-				delete hMapCounts;
-			} else {
-				bListMap = true;
-				strcopy(sSearchTerm, sizeof(sSearchTerm), sArg1);
-			}
-		}
-		default: {
-			CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t: jb_list [	 | * | %t ]", "Usage", "Map Name");
-		}
-	}
-	
-	if (bListMap) {
-		ArrayList hFileNames = new ArrayList(ByteCountToCells(PLATFORM_MAX_PATH));
-		DirectoryListing hDir = OpenDirectory(sRecFolder);
-		
-		char sArg1[32];
-		GetCmdArg(1, sArg1, sizeof(sArg1));
-		
-		bool bFoundExact = false;
-		char sMapMatched[32];
-		
-		while (hDir.GetNext(sFile, sizeof(sFile), iFileType)) {
-			int iExt = FindCharInString(sFile, '.', true);
-			int iMap = FindCharInString(sFile, '-');
-			int iName = StrContains(sFile, sSearchTerm, false);
-			
-			if (iFileType == FileType_File && iExt != -1 && StrEqual(sFile[iExt], ".jmp", false) && iMap != -1 && iName != -1) {
-				strcopy(sMapName, iMap+1, sFile);
-				if (!bFoundExact && StrEqual(sMapName, sSearchTerm)) {
-					bFoundExact = true;
-					hFileNames.Clear();
-				} else if (!StrEqual(sMapName, sMapMatched)) {
-					if (bFoundExact) {
-						continue;
-					} else if (sMapMatched[0] != 0) {
-						CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Search Ambiguous");
-						delete hFileNames;
-						delete hDir;
-						return Plugin_Handled;
-					}
-					
-				}
-				
-				hFileNames.PushString(sFile);
-				strcopy(sMapMatched, sizeof(sMapMatched), sMapName);
-			}
-		}
-		delete hDir;
-		
-		if (!hFileNames.Length) {
-			CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "No Local Rec", sSearchTerm);
-		} else {
-			CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t:", "Found Rec", GetArraySize(hFileNames), sMapMatched);
-			
-			ArrayList hSteamIDs = new ArrayList(ByteCountToCells(24));
-			StringMap hSteamIDCount = new StringMap();
-			char sSteamID[32];
-			
-			for (int i=0; i<hFileNames.Length; i++) {
-				hFileNames.GetString(i, sMapName, sizeof(sMapName));
-				BuildPath(Path_SM, sFile, sizeof(sFile), "%s/%s", g_sRecSubDir, sMapName);
-				File hFile = OpenFile(sFile, "rb");
-				
-				int iFrames;
-				hFile.ReadInt32(iFrames);
-				hFile.Seek(10*4*iFrames, SEEK_CUR);
-				
-				
-				int iBytes = hFile.ReadString(sSteamID, sizeof(sSteamID));
-				if (iBytes < 1) {
-					sSteamID = "			 <?>	";
-				}
-				
-				if (hSteamIDCount.SetValue(sSteamID, 1, false)) {
-					hSteamIDs.PushString(sSteamID);
-				} else {
-					int iCount;
-					hSteamIDCount.GetValue(sSteamID, iCount);
-					hSteamIDCount.SetValue(sSteamID, iCount+1);
-				}
-				
-				delete hFile;
-			}
-			
-			CReplyToCommand(iClient, "        SteamID                 #\n  ------------------------------------");
-			
-			SortADTArray(hSteamIDs, Sort_Ascending, Sort_String);
-			for (int i=0; i<hSteamIDs.Length; i++) {
-				hSteamIDs.GetString(i, sSteamID, sizeof(sSteamID));
-				int iCount;
-				hSteamIDCount.GetValue(sSteamID, iCount);
-				CReplyToCommand(iClient, "	 %25s\t%d", sSteamID, iCount);
-			}
-			
-			delete hSteamIDs;
-		}
-		
-		delete hFileNames;
-	}
-	*/
+	// TODO: Translate
+	CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Found %d recordings.%s", g_hRecordings.Length, GetCmdReplySource() == SM_REPLY_TO_CHAT ? "  See console for output." : NULL_STRING);
 
-	char sSearchTerm[32];
-	GetCurrentMap(sSearchTerm, sizeof(sSearchTerm));
 	if (g_hRecordings.Length) {
-		//CReplyToCommand(iClient, "ID\t%20s\t%20s\t%5s", "Frames", "Length", "Bots");
+		DataPack hPack = new DataPack();
+		hPack.WriteCell(iClient);
+		hPack.WriteCell(0);
+		Timer_RecList(null, hPack);
+	}
 
-		PrintToServer("Found %d recordings", g_hRecordings.Length);
+	return Plugin_Handled;
+}
 
-		for (int i=0; i<g_hRecordings.Length; i++) {
-			Recording iRecording = g_hRecordings.Get(i);
+public Action Timer_RecList(Handle hTimer, any aData) {
+	DataPack hPack = view_as<DataPack>(aData);
+	hPack.Reset(false);
+	int iClient = hPack.ReadCell();
+	DataPackPos iPos = hPack.Position;
+	int iIdx = hPack.ReadCell();
 
-			ArrayList hClientInfo = iRecording.ClientInfo;
-			PrintToServer("Rec %d, frames=%d, length=%d, clients=%d", i, iRecording.Frames.Length, iRecording.Length, hClientInfo.Length);
-			for (int j=0; j<hClientInfo.Length; j++) {
-				ClientInfo iClientInfo = hClientInfo.Get(j);
-				char sName[32];
-				char sAuthID[24];
+	Recording iRecording = g_hRecordings.Get(iIdx);
 
-				iClientInfo.GetName(sName, sizeof(sName));
-				iClientInfo.GetAuthID(sAuthID, sizeof(sAuthID));
+	ArrayList hClientInfo = iRecording.ClientInfo;
 
-				PrintToServer("\tClient %d, name=%s, authid=%s, team=%d, class=%d", j, sName, sAuthID, iClientInfo.Team, iClientInfo.Class);
+	static char sBuffer[4096];
+	FormatEx(sBuffer, sizeof(sBuffer), "\t[%d] frames: %d, buffer: %d, clients: %d", iIdx, iRecording.Frames.Length, iRecording.Length, hClientInfo.Length);
 
-				float fPos[3], fAng[3];
-				iClientInfo.GetStartPos(fPos);
-				iClientInfo.GetStartAng(fAng);
-				PrintToServer("\t\tStart pos=(%.1f, %.1f, %.1f) ang: (%.1f, %.1f)", fPos[0], fPos[1], fPos[2], fAng[0], fAng[1]);
-				PrintToServer("\t\tEquipments:");
+	for (int i=0; i<hClientInfo.Length; i++) {
+		ClientInfo iClientInfo = hClientInfo.Get(i);
+		char sName[32];
+		char sAuthID[24];
 
-				for (int k=TFWeaponSlot_Primary; k<=TFWeaponSlot_Item2; k++) {
-					char sClassName[128];
-					iClientInfo.GetEquipClassName(k, sClassName, sizeof(sClassName));
-					PrintToServer("\t\t\tSlot %d, itemdefidx=%3d, class=%s", k, iClientInfo.GetEquipItemDefIdx(k), sClassName);
-				}
+		iClientInfo.GetName(sName, sizeof(sName));
+		iClientInfo.GetAuthID(sAuthID, sizeof(sAuthID));
+
+		Format(sBuffer, sizeof(sBuffer), "%s\n\t\tClient %d, team: %d, class: %d, authid: %24s name: %s", sBuffer, i, iClientInfo.Team, iClientInfo.Class, sAuthID, sName);
+
+		float fPos[3], fAng[3];
+		iClientInfo.GetStartPos(fPos);
+		iClientInfo.GetStartAng(fAng);
+		Format(sBuffer, sizeof(sBuffer), "%s\n\t\t\tStart pos: (%.1f, %.1f, %.1f) ang: (%.1f, %.1f)\n\t\t\tEquipment:", sBuffer, fPos[0], fPos[1], fPos[2], fAng[0], fAng[1]);
+
+		for (int j=TFWeaponSlot_Primary; j<=TFWeaponSlot_Item2; j++) {
+			int iItemDefIdx = iClientInfo.GetEquipItemDefIdx(j);
+			if (iItemDefIdx) {
+				char sClassName[128];
+				iClientInfo.GetEquipClassName(j, sClassName, sizeof(sClassName));
+				Format(sBuffer, sizeof(sBuffer), "%s\n\t\t\t\tSlot %d, item: %5d, class: %s", sBuffer, j, iItemDefIdx, sClassName);
 			}
 		}
+	}
+
+	PrintToConsole(iClient, sBuffer);
+
+	if (iIdx+1 < g_hRecordings.Length) {
+		hPack.Position = iPos;
+		hPack.WriteCell(iIdx+1);
+
+		CreateTimer(0.01, Timer_RecList, aData, TIMER_FLAG_NO_MAPCHANGE);
 	} else {
-		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "No Local Rec", sSearchTerm);
+		delete hPack;
 	}
 
 	return Plugin_Handled;
