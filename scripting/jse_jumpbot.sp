@@ -182,8 +182,6 @@ bool g_bPlayerGrantAccess[MAXPLAYERS+1];
 
 char g_sRecSubDir[32];
 
-// any g_aShadowBuffer[BUFFER_SIZE][Snapshot_Size];
-
 ArrayList g_hRecordingBots;
 ArrayList g_hRecordingClients;
 ArrayList g_hRecordingEntities;
@@ -509,23 +507,23 @@ public void OnConfigsExecuted() {
 	
 	g_hTrailColor.GetString(sColor, sizeof(sColor));
 	int iTrailColor = StringToInt(sColor, 16);
-	g_iTrailColor[0] = (iTrailColor      ) & 0xFF;
-	g_iTrailColor[1] = (iTrailColor >>  8) & 0xFF;
-	g_iTrailColor[2] = (iTrailColor >> 16) & 0xFF;
-	g_iTrailColor[3] = (iTrailColor >> 24) & 0xFF;
+	g_iTrailColor[0] = (iTrailColor >> 24) & 0xFF;
+	g_iTrailColor[1] = (iTrailColor >> 16) & 0xFF;
+	g_iTrailColor[2] = (iTrailColor >>  8) & 0xFF;
+	g_iTrailColor[3] = (iTrailColor      ) & 0xFF;
 	
 	g_hProjTrailColor.GetString(sColor, sizeof(sColor));
 	int iProjColor = StringToInt(sColor, 16);
-	g_iProjTrailColor[0] = (iProjColor      ) & 0xFF;
-	g_iProjTrailColor[1] = (iProjColor >>  8) & 0xFF;
-	g_iProjTrailColor[2] = (iProjColor >> 16) & 0xFF;
-	g_iProjTrailColor[3] = (iProjColor >> 24) & 0xFF;
+	g_iProjTrailColor[0] = (iProjColor >> 24) & 0xFF;
+	g_iProjTrailColor[1] = (iProjColor >> 16) & 0xFF;
+	g_iProjTrailColor[2] = (iProjColor >>  8) & 0xFF;
+	g_iProjTrailColor[3] = (iProjColor      ) & 0xFF;
 	
 	g_hLocalRecColor.GetString(sColor, sizeof(sColor));
 	int iLocalRecColor = StringToInt(sColor, 16);
-	g_iLocalRecColor[0] = (iLocalRecColor      ) & 0xFF;
+	g_iLocalRecColor[0] = (iLocalRecColor >> 16) & 0xFF;
 	g_iLocalRecColor[1] = (iLocalRecColor >>  8) & 0xFF;
-	g_iLocalRecColor[2] = (iLocalRecColor >> 16) & 0xFF;
+	g_iLocalRecColor[2] = (iLocalRecColor      ) & 0xFF;
 
 	g_fTrailLife = g_hTrailLife.FloatValue;
 }
@@ -987,6 +985,24 @@ public void OnGameFrame() {
 					g_aClientState[iEntity][ClientState_fAng_1] = fAng[1];
 					g_aClientState[iEntity][ClientState_fAng_2] = fAng[2];
 					g_aClientState[iEntity][ClientState_iButtons] = iButtons; // & ~(7 << 26);
+
+					if (g_hTrail.BoolValue) {
+						GetClientAbsOrigin(iEntity, fPosNow);
+						if (GetVectorDistance(fPosNow, fPos) < 100.0) {
+							float fEyePos[3];
+							GetClientEyePosition(iEntity, fEyePos);
+							float fZOffset = (fEyePos[2] - fPosNow[2])/2;
+
+							fPosNow[2] += fZOffset;
+							float fPosNext[3];
+							fPosNext[0] = fPos[0];
+							fPosNext[1] = fPos[1];
+							fPosNext[2] = fPos[2] + fZOffset;
+
+							TE_SetupBeamPoints(fPosNow, fPosNext, g_iLaserModel, g_iHaloModel, 0, 66, g_fTrailLife, 25.0, 25.0, 1, 1.0, g_iTrailColor, 0);
+							TE_SendToAllInRangeVisible(fPos);
+						}
+					}
 
 					//PrintToChatAll("Frame %d client %N target pos=(%.3f, %.3f, %.3f)", g_iRecBufferFrame, iEntity, fPos[0], fPos[1], fPos[2]);
 				}
