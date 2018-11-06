@@ -1811,17 +1811,16 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 	for (int i=0; i<hClientInfo.Length; i++) {
 		ClientInfo iClientInfo = hClientInfo.Get(i);
 
-		//doEquipRec(i, iRecording);
-
 		TFClassType iRecClass = iClientInfo.Class;
 		TFTeam iRecTeam = iClientInfo.Team;
 
 		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-		PrintToServer("Native_PlayRecording, iRecBot=%d", iRecBot);
 		if (!IsClientInGame(iRecBot)) {
 			LogError("Native_PlayRecording tried using iRecBot=%d but the client is not in-game", i);
 			return 0;
 		}
+
+		doEquipRec(i, iRecording);
 
 		if (TF2_GetPlayerClass(iRecBot) != iRecClass) {
 			TF2_SetPlayerClass(iRecBot, iRecClass);
@@ -4321,16 +4320,12 @@ void doEquip(int iBotID) {
 		return;
 	}
 
-	PrintToServer("Start killing all previous wearables for %N", iClient);
-	
 	int iEntity = INVALID_ENT_REFERENCE;
 	while ((iEntity = FindEntityByClassname(iEntity, "tf_wearable")) != INVALID_ENT_REFERENCE) {
 		if (Entity_GetOwner(iEntity) == iClient) {
 			AcceptEntityInput(iEntity, "Kill");
 		}
 	}
-
-	PrintToServer("Done killing all previous wearables for %N", iClient);
 
 	int iWeaponAvailable = 0;
 	char sClassName[128];
@@ -4340,19 +4335,13 @@ void doEquip(int iBotID) {
 			AcceptEntityInput(iCurrentWeapon, "Kill");
 		}
 
-		PrintToServer("Killed previous slot %d weapon for %N", iSlot, iClient);
-
 		int iItemDefIndex = hEquip.ReadCell();
-		PrintToServer("Equipping slot %d, iItemDefIndex=%d", iSlot, iItemDefIndex);
-
 		if (iItemDefIndex) {
 			hEquip.ReadString(sClassName, sizeof(sClassName));
 			
 			Handle hWeapon = TF2Items_CreateItem(OVERRIDE_ALL | PRESERVE_ATTRIBUTES | FORCE_GENERATION);
 			TF2Items_SetClassname(hWeapon, sClassName);
 			TF2Items_SetItemIndex(hWeapon, iItemDefIndex);
-			
-			PrintToServer("%N slot %d equip item %d type %s", iClient, iSlot, iItemDefIndex, sClassName);
 			//TF2Items_SetQuality(hWeapon, GetEntProp(iWeapon, Prop_Send, "m_iEntityQuality"));
 			//TF2Items_SetLevel(hWeapon, GetEntProp(iWeapon, Prop_Send, "m_iEntityLevel"));
 			
@@ -4361,8 +4350,6 @@ void doEquip(int iBotID) {
 			
 			EquipPlayerWeapon(iClient, iWeapon);
 
-			PrintToServer("%N slot %d equip completed", iClient, iSlot);
-			
 			if (!iWeaponAvailable) {
 				iWeaponAvailable = iWeapon;
 			}
@@ -4383,7 +4370,7 @@ void doEquipRec(int iBotID, Recording iRecording) {
 	hEquip.Reset(true);
 	
 	ClientInfo iClientInfo = iRecording.ClientInfo.Get(iBotID);
-	
+
 	char sClassName[128];
 	for (int iSlot = TFWeaponSlot_Primary; iSlot <= TFWeaponSlot_Item2; iSlot++) {
 		int iItemDefIdx = iClientInfo.GetEquipItemDefIdx(iSlot);
