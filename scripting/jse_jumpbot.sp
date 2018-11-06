@@ -580,7 +580,7 @@ public void OnMapStart() {
 	g_iWarmupFrames = 2 * WARMUP_FRAMES_DEFAULT;
 	
 	g_iLaserModel = PrecacheModel("sprites/laser.vmt");
-	g_iHaloModel = PrecacheModel("materials/sprites/halo01.vmt");
+	g_iHaloModel = PrecacheModel("sprites/halo01.vmt");
 	PrecacheModel(HINT_MARKER_MODEL);
 	PrecacheModel(HINT_ROCKET_MODEL);
 	PrecacheModel(HINT_STICKY_MODEL);
@@ -1099,7 +1099,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 	if (!IsFakeClient(iClient) && !g_bShowKeysAvailable) {
 		showKeys(iClient);
 	}
-	
+
 	if (g_aSpawnFreeze[iClient][0] > 0 && GetClientTeam(iClient) == g_aSpawnFreeze[iClient][1]) {
 		float fPos[3];
 		fPos[0] = g_aSpawnFreeze[iClient][2];
@@ -1807,22 +1807,22 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 	clearRecEntities();
 	g_iRecordingEntTotal = 0;
 
-	g_iClientInstruction = INST_PLAY;
-	g_iClientOfInterest = iClient;
-	g_iClientInstructionPost = INST_NOP;
-	
-	setAllBubbleAlpha(50);
-
 	ArrayList hClientInfo = iRecording.ClientInfo;
 	for (int i=0; i<hClientInfo.Length; i++) {
 		ClientInfo iClientInfo = hClientInfo.Get(i);
 
-		doEquipRec(i, iRecording);
+		//doEquipRec(i, iRecording);
 
 		TFClassType iRecClass = iClientInfo.Class;
 		TFTeam iRecTeam = iClientInfo.Team;
 
 		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+		PrintToServer("Native_PlayRecording, iRecBot=%d", iRecBot);
+		if (!IsClientInGame(iRecBot)) {
+			LogError("Native_PlayRecording tried using iRecBot=%d but the client is not in-game", i);
+			return 0;
+		}
+
 		if (TF2_GetPlayerClass(iRecBot) != iRecClass) {
 			TF2_SetPlayerClass(iRecBot, iRecClass);
 			RequestFrame(Respawn, iRecBot);
@@ -1873,6 +1873,12 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 			FakeClientCommand(iClient, "spec_mode %d", iMode);
 		}
 	}
+
+	g_iClientInstruction = INST_PLAY;
+	g_iClientOfInterest = iClient;
+	g_iClientInstructionPost = INST_NOP;
+	
+	setAllBubbleAlpha(50);
 
 	return 1;
 }
@@ -3447,7 +3453,7 @@ public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroa
 			setRobotModel(iClient);
 		}
 		
-		doEquip(iBotID);
+		doEquipRec(iBotID, g_iRecording);
 	} else {
 		// Have bots join a team after a player joins one
 		if (!IsFakeClient(iClient) && g_hRecordingBots.Length) {
@@ -3482,7 +3488,7 @@ public Action Event_PlayerChangeClass(Event hEvent, const char[] sName, bool bDo
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
 	int iBotID = -1;
 	if ((iBotID = g_hRecordingBots.FindValue(iClient, RecBot_iEnt)) != -1) {
-		doEquip(iBotID);
+		doEquipRec(iBotID, g_iRecording);
 	}
 	
 	return Plugin_Continue;
@@ -3974,6 +3980,8 @@ public void Hook_ProjVPhysics(int iEntity) {
 // Adapted from BeTheRobot: https://forums.alliedmods.net/showthread.php?t=193067
 public Action Hook_NormalSound(int iClients[64], int &iNumClients, char sSound[PLATFORM_MAX_PATH], int &iEnt, int &iChannel, float &fVolume, int &iLevel, int &iPitch, int &iFlags) {
 	if (g_hRobot.BoolValue && g_hRecordingBots.FindValue(iEnt, RecBot_iEnt) != -1) {
+		// FIXME: Precache robot sounds
+		/*
 		TFClassType iClass = TF2_GetPlayerClass(iEnt);
 		
 		if (StrContains(sSound, "player/footsteps/", false) != -1 && iClass != TFClass_Medic) {
@@ -3998,6 +4006,7 @@ public Action Hook_NormalSound(int iClients[64], int &iNumClients, char sSound[P
 			PrecacheSound(sSound);
 			return Plugin_Changed;
 		}
+		*/
 	}
 	
 	return Plugin_Continue;
@@ -4156,7 +4165,10 @@ void CPrintToChatList(ArrayList hClients, const char[] sMessage, any ...) {
 }
 
 void doPlayerQueueAdd(int iClient, Recording iRecording, Obs_Mode iMode) {
-	
+	if (g_hQueue == null) {
+		return;
+	}
+
 	any aQueueData[QUEUE_BLOCKSIZE];
 	aQueueData[QUEUE_CLIENT] = iClient;
 	aQueueData[QUEUE_RECORDING] = iRecording;
@@ -4167,6 +4179,10 @@ void doPlayerQueueAdd(int iClient, Recording iRecording, Obs_Mode iMode) {
 }
 
 void doPlayerQueueRemove(int iClient) {
+	if (g_hQueue == null) {
+		return;
+	}
+
 	int iIdx;
 	while ((iIdx = g_hQueue.FindValue(iClient)) != -1) {
 		if (g_hQueuePanel[iClient] != null) {
@@ -4178,6 +4194,10 @@ void doPlayerQueueRemove(int iClient) {
 }
 
 void doPlayerQueueClear() {
+	if (g_hQueue == null) {
+		return;
+	}
+
 	for (int i = 0; i < g_hQueue.Length; i++) {
 		any aQueueData[QUEUE_BLOCKSIZE];
 		g_hQueue.GetArray(i, aQueueData, sizeof(aQueueData));
@@ -4288,11 +4308,20 @@ void doFullStop() {
 
 void doEquip(int iBotID) {
 	int iClient = g_hRecordingBots.Get(iBotID, RecBot_iEnt);
+	PrintToServer("doEquip(iBotID=%d), iClient=%d (%N)", iBotID, iClient, iClient);
+	if (!Client_IsValid(iClient) || !IsClientInGame(iClient)) {
+		LogError("Cannot equip for client not in game: bot %d, client %d", iBotID, iClient);
+		return;
+	}
+
 	DataPack hEquip = g_hRecordingBots.Get(iBotID, RecBot_hEquip);
 	hEquip.Reset(false);
 	if (!hEquip.IsReadable(4)) {
+		LogError("doEquip(iBotID=%d) DataPack is unreadable.", iBotID); 
 		return;
 	}
+
+	PrintToServer("Start killing all previous wearables for %N", iClient);
 	
 	int iEntity = INVALID_ENT_REFERENCE;
 	while ((iEntity = FindEntityByClassname(iEntity, "tf_wearable")) != INVALID_ENT_REFERENCE) {
@@ -4300,6 +4329,8 @@ void doEquip(int iBotID) {
 			AcceptEntityInput(iEntity, "Kill");
 		}
 	}
+
+	PrintToServer("Done killing all previous wearables for %N", iClient);
 
 	int iWeaponAvailable = 0;
 	char sClassName[128];
@@ -4309,8 +4340,10 @@ void doEquip(int iBotID) {
 			AcceptEntityInput(iCurrentWeapon, "Kill");
 		}
 
+		PrintToServer("Killed previous slot %d weapon for %N", iSlot, iClient);
+
 		int iItemDefIndex = hEquip.ReadCell();
-		//PrintToServer("Equipping slot %d, iItemDefIndex=%d", iSlot, iItemDefIndex);
+		PrintToServer("Equipping slot %d, iItemDefIndex=%d", iSlot, iItemDefIndex);
 
 		if (iItemDefIndex) {
 			hEquip.ReadString(sClassName, sizeof(sClassName));
@@ -4319,7 +4352,7 @@ void doEquip(int iBotID) {
 			TF2Items_SetClassname(hWeapon, sClassName);
 			TF2Items_SetItemIndex(hWeapon, iItemDefIndex);
 			
-			//PrintToServer("%N slot %d equip item %d type %s", iClient, iSlot, iItemDefIndex, sClassName);
+			PrintToServer("%N slot %d equip item %d type %s", iClient, iSlot, iItemDefIndex, sClassName);
 			//TF2Items_SetQuality(hWeapon, GetEntProp(iWeapon, Prop_Send, "m_iEntityQuality"));
 			//TF2Items_SetLevel(hWeapon, GetEntProp(iWeapon, Prop_Send, "m_iEntityLevel"));
 			
@@ -4327,6 +4360,8 @@ void doEquip(int iBotID) {
 			delete hWeapon;
 			
 			EquipPlayerWeapon(iClient, iWeapon);
+
+			PrintToServer("%N slot %d equip completed", iClient, iSlot);
 			
 			if (!iWeaponAvailable) {
 				iWeaponAvailable = iWeapon;
@@ -4340,11 +4375,15 @@ void doEquip(int iBotID) {
 }
 
 void doEquipRec(int iBotID, Recording iRecording) {
+	if (iRecording == NULL_RECORDING) {
+		return;
+	}
+
 	DataPack hEquip = g_hRecordingBots.Get(iBotID, RecBot_hEquip);
 	hEquip.Reset(true);
 	
 	ClientInfo iClientInfo = iRecording.ClientInfo.Get(iBotID);
-
+	
 	char sClassName[128];
 	for (int iSlot = TFWeaponSlot_Primary; iSlot <= TFWeaponSlot_Item2; iSlot++) {
 		int iItemDefIdx = iClientInfo.GetEquipItemDefIdx(iSlot);
@@ -4357,6 +4396,7 @@ void doEquipRec(int iBotID, Recording iRecording) {
 	}
 
 	doEquip(iBotID);
+	delete hEquip;
 }
 
 void doTeamClassMatch(int iClientToMatch, int iClient) {
@@ -4594,6 +4634,11 @@ Recording loadRecording(char[] sFilePath) {
 	hFile.ReadInt32(iFrames);
 	hFile.ReadInt32(iLength);
 	iRecording.Length = iLength;
+
+	if (iLength > BUFFER_SIZE) {
+		LogError("Recording exceeds recording buffer size (%d / max %d cells): %s", iLength, BUFFER_SIZE, sFilePath);
+		return NULL_RECORDING;
+	}
 
 	if (!iFrames || !iLength) {
 		LogError("Recording has no frames: %s", sFilePath);
