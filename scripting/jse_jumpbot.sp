@@ -314,6 +314,7 @@ public void OnPluginStart() {
 
 	RegConsoleCmd(	"jb_pause", 		cmdPause, 							"Pause recording or playback"										);
 	RegConsoleCmd(	"jb_skip", 			cmdSkip,							"Skips to a recording frame"										);
+	RegConsoleCmd(	"jb_skiptime", 		cmdSkipTime,						"Skips to a recording timestamp"										);
 
 	RegConsoleCmd(	"jb_rewind", 		cmdRewind, 							"Rewind to an earlier frame of the recording"						);
 	RegConsoleCmd(	"jb_state_load", 	cmdStateLoad, 						"Load recording state"												);
@@ -2817,11 +2818,6 @@ public Action cmdSkip(int iClient, int iArgC) {
 		return Plugin_Handled;
 	}
 
-	if (!checkAccess(iClient)) {
-		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "No Access");
-		return Plugin_Handled;
-	}
-
 	if (!(g_iClientInstruction & INST_PLAY)) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Cannot use outside of playback");
 		return Plugin_Handled;
@@ -2855,6 +2851,74 @@ public Action cmdSkip(int iClient, int iArgC) {
 
 	return Plugin_Handled;
 }
+
+public Action cmdSkipTime(int iClient, int iArgC) {
+	if (!checkAccess(iClient)) {
+		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "No Access");
+		return Plugin_Handled;
+	}
+
+	if (!(g_iClientInstruction & INST_PLAY)) {
+		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Cannot use outside of playback");
+		return Plugin_Handled;
+	}
+
+	if (iArgC < 1 || iArgC > 3) {
+		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t: jb_skiptime <hours> <minutes> <seconds>", "Usage");
+		return Plugin_Handled;
+	}
+
+	char sArg1[32];
+	char sArg2[32];
+	char sArg3[32];
+	GetCmdArg(1, sArg1, sizeof(sArg1));
+
+	int iFrame = 0;
+	switch (iArgC) {
+		case 1: {
+			int iSeconds = StringToInt(sArg1);
+			iFrame = RoundToFloor(float(iSeconds) * 66);
+		}
+		case 2: {
+			GetCmdArg(2, sArg2, sizeof(sArg2));
+
+			int iMinutes = StringToInt(sArg1);
+			int iSeconds = StringToInt(sArg2);
+
+			iFrame = RoundToFloor(float(iMinutes*60 + iSeconds) * 66);
+		}
+		case 3: {
+			GetCmdArg(2, sArg2, sizeof(sArg2));
+			GetCmdArg(3, sArg3, sizeof(sArg3));
+
+			int iHours = StringToInt(sArg1);
+			int iMinutes = StringToInt(sArg2);
+			int iSeconds = StringToInt(sArg3);
+
+			iFrame = RoundToFloor(float(iHours*3600 + iMinutes*60 + iSeconds) * 66);
+		}
+	}
+
+	char sTimeRec[32];
+
+	// TODO: Translate
+	if (iFrame >= g_hRecBufferFrames.Length) {
+		ToTimeDisplay(sTimeRec, sizeof(sTimeRec), g_hRecBufferFrames.Length /66);
+
+		CPrintToChat(iClient, "{dodgerblue}[jb] {white}Frame number exceeds buffer (%s)", sTimeRec);
+		return Plugin_Handled;
+	}
+
+	g_iRecBufferIdx = g_hRecBufferFrames.Get(iFrame);
+	RespawnFrameRecEnt(iFrame);
+
+	ToTimeDisplay(sTimeRec, sizeof(sTimeRec), iFrame/66);
+
+	CPrintToChat(iClient, "{dodgerblue}[jb] {white}Skipped to %s", sTimeRec);
+
+	return Plugin_Handled;
+}
+
 
 /*
 public Action cmdTrim(int iClient, int iArgC) {
@@ -5475,7 +5539,16 @@ void TF2_GetClassName(TFClassType iClass, char[] sName, int iLength) {
 }
 
 void ToTimeDisplay(char[] sBuffer, int iLength, int iTime) {
-	FormatEx(sBuffer, iLength, "%02d:%02d", iTime / 60, iTime % 60);
+	if (iTime >= 3600) {
+		int iMinutes = iTime / 60;
+		int iSeconds = iTime % 60;
+		int iHours = iTime / 3600;
+		iMinutes %= 60;
+
+		FormatEx(sBuffer, iLength, "%d:%02d:%02d", iHours, iMinutes, iSeconds);
+	} else {
+		FormatEx(sBuffer, iLength, "%02d:%02d", iTime / 60, iTime % 60);
+	}
 }
 
 int GetItemDefIndex(int iItem) {
