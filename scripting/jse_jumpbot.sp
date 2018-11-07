@@ -2864,7 +2864,7 @@ public Action cmdSkipTime(int iClient, int iArgC) {
 	}
 
 	if (iArgC < 1 || iArgC > 3) {
-		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t: jb_skiptime <hours> <minutes> <seconds>", "Usage");
+		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t: jb_skiptime [hours] [minutes] <seconds>", "Usage");
 		return Plugin_Handled;
 	}
 
