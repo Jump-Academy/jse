@@ -50,7 +50,7 @@
 #define INST_WAIT				(1 << 7)
 #define INST_SPEC				(1 << 8)
 
-#define BUFFER_SIZE 			6553600
+//#define BUFFER_SIZE 			6553600
 
 #define MAX_NEARBY_SEARCH_DISTANCE	1000.0
 #define MAX_TARGET_FOLLOW_DISTANCE	4000.0
@@ -186,7 +186,8 @@ ArrayList g_hRecordingClients;
 ArrayList g_hRecordingEntities;
 ArrayList g_hRecordingEntTypes;
 int g_iRecordingEntTotal;
-any g_aRecBuffer[BUFFER_SIZE];
+
+ArrayList g_hRecBuffer;
 int g_iRecBufferIdx;
 int g_iRecBufferUsed;
 int g_iRecBufferFrame;
@@ -348,6 +349,7 @@ public void OnPluginStart() {
 	g_hBotName.GetString(sBuffer, sizeof(sBuffer));
 	SetCookieMenuItem(CookieMenuHandler_Options, 0, sBuffer);
 	
+	g_hRecBuffer = new ArrayList();
 	g_iRecording = NULL_RECORDING;
 	g_hRecordings = new ArrayList();
 	g_hPlaybackQueue = new ArrayList();
@@ -568,6 +570,7 @@ public void OnMapStart() {
 	g_iClientFollow = -1;
 	g_iTargetFollow = -1;
 
+	g_hRecBuffer.Clear();
 	g_iRecBufferIdx = 0;
 	g_iRecBufferUsed = 0;
 	g_iRecBufferFrame = 0;
@@ -670,28 +673,21 @@ public void OnMapEnd() {
 
 public void OnGameFrame() {
 	if (g_iClientInstruction == INST_RECD) {
-		if (!g_hRecordingClients.Length || (g_iRecBufferIdx+1+g_hRecordingClients.Length*11) >= BUFFER_SIZE) {
+		if (!g_hRecordingClients.Length) {
 			doFullStop();
-
-			CPrintToChatList(g_hRecordingClients, "{dodgerblue}[jb] {white}%t", "Buffer Full");
-			g_hRecordingClients.Clear();
 			return;
 		}
 
 		if (g_iRecBufferFrame % 10 == 0) {
 			char sFrameInfo[64];
-			float fBuffPercent = (100.0*g_iRecBufferFrame)/BUFFER_SIZE;
-			
 			char sTimeRec[32];
-			char sTimeTotal[32];
 			
 			ToTimeDisplay(sTimeRec, sizeof(sTimeRec), g_iRecBufferFrame/66);
-			ToTimeDisplay(sTimeTotal, sizeof(sTimeTotal), BUFFER_SIZE/66);
 
 			for (int i=0; i<g_hRecordingClients.Length; i++) {
 				int iClient = g_hRecordingClients.Get(i);
 			
-				FormatEx(sFrameInfo, sizeof(sFrameInfo), "%T\n%T: %d / %d (%.1f%)\n%T: %s/%s", "Recorder Active", iClient, "Frame", iClient, g_iRecBufferFrame, BUFFER_SIZE, fBuffPercent, "Time", iClient, sTimeRec, sTimeTotal);
+				FormatEx(sFrameInfo, sizeof(sFrameInfo), "%T\n%T: %d\n%T: %s", "Recorder Active", iClient, "Frame", iClient, g_iRecBufferFrame, "Time", iClient, sTimeRec);
 				Handle hBuffer = StartMessageOne("KeyHintText", g_iClientOfInterest);
 				BfWriteByte(hBuffer, 1); // Channel
 				BfWriteString(hBuffer, sFrameInfo);
@@ -702,7 +698,8 @@ public void OnGameFrame() {
 		int iRecBufferIdxBackup  = g_iRecBufferIdx;
 
 		g_hRecBufferFrames.Push(g_iRecBufferIdx);
-		g_aRecBuffer[g_iRecBufferIdx++] = view_as<int>(FRAME) | (g_iRecBufferFrame++ << 8);
+		g_hRecBuffer.Push(view_as<int>(FRAME) | (g_iRecBufferFrame++ << 8));
+		g_iRecBufferIdx++;
 
 		static float fPos[3];
 		static float fVel[3];
@@ -724,20 +721,22 @@ public void OnGameFrame() {
 				}
 			}
 
-			g_aRecBuffer[g_iRecBufferIdx++] = view_as<int>(CLIENT) | (iRec << 8);
-			g_aRecBuffer[g_iRecBufferIdx++] = fPos[0];
-			g_aRecBuffer[g_iRecBufferIdx++] = fPos[1];
-			g_aRecBuffer[g_iRecBufferIdx++] = fPos[2];
-			g_aRecBuffer[g_iRecBufferIdx++] = fVel[0];
-			g_aRecBuffer[g_iRecBufferIdx++] = fVel[1];
-			g_aRecBuffer[g_iRecBufferIdx++] = fVel[2];
-			g_aRecBuffer[g_iRecBufferIdx++] = fAng[0];
-			g_aRecBuffer[g_iRecBufferIdx++] = fAng[1];
-			g_aRecBuffer[g_iRecBufferIdx++] = fAng[2];
-			g_aRecBuffer[g_iRecBufferIdx++] = iButtons;
+			g_hRecBuffer.Push(view_as<int>(CLIENT) | (iRec << 8));
+			g_hRecBuffer.Push(fPos[0]);
+			g_hRecBuffer.Push(fPos[1]);
+			g_hRecBuffer.Push(fPos[2]);
+			g_hRecBuffer.Push(fVel[0]);
+			g_hRecBuffer.Push(fVel[1]);
+			g_hRecBuffer.Push(fVel[2]);
+			g_hRecBuffer.Push(fAng[0]);
+			g_hRecBuffer.Push(fAng[1]);
+			g_hRecBuffer.Push(fAng[2]);
+			g_hRecBuffer.Push(iButtons);
+
+			g_iRecBufferIdx += 11;
 		}
 
-
+		/*
 		if (g_iRecBufferIdx+10*g_hRecordingEntities.Length >= BUFFER_SIZE) {
 			doFullStop();
 
@@ -745,6 +744,7 @@ public void OnGameFrame() {
 			g_hRecordingClients.Clear();
 			return;
 		}
+		*/
 
 		for (int i=0; i<g_hRecordingEntities.Length; i++) {
 			int iArr[RecEnt_Size];
@@ -756,34 +756,22 @@ public void OnGameFrame() {
 
 			int iOwner = g_hRecordingClients.FindValue(iArr[RecEnt_iOwner]);
 			if (iOwner != -1 && iEntity != INVALID_ENT_REFERENCE) {
-				g_aRecBuffer[g_iRecBufferIdx++] = view_as<int>(ENTITY) | iArr[RecEnt_iID] << 8 | iArr[RecEnt_iType] << 16 | iOwner << 24;
-
-				/*
-				if (g_iClientInstruction & INST_PAUSE) {
-					fPos[0] = g_aRecBuffer[g_iRecBufferIdx++];
-					fPos[1] = g_aRecBuffer[g_iRecBufferIdx++];
-					fPos[2] = g_aRecBuffer[g_iRecBufferIdx++];
-					g_iRecBufferIdx += 3;
-
-					Entity_SetAbsOrigin(iEntity, fPos);
-					Entity_SetAbsVelocity(iEntity, view_as<float>({0.0, 0.0, 0.0}));
-				} else {
-					
-				}*/
+				g_hRecBuffer.Push(view_as<int>(ENTITY) | iArr[RecEnt_iID] << 8 | iArr[RecEnt_iType] << 16 | iOwner << 24);
 
 				Entity_GetAbsOrigin(iEntity, fPos);
 				Entity_GetAbsVelocity(iEntity, fVel);
 				Entity_GetAbsAngles(iEntity, fAng);
-				g_aRecBuffer[g_iRecBufferIdx++] = fPos[0];
-				g_aRecBuffer[g_iRecBufferIdx++] = fPos[1];
-				g_aRecBuffer[g_iRecBufferIdx++] = fPos[2];
-				g_aRecBuffer[g_iRecBufferIdx++] = fVel[0];
-				g_aRecBuffer[g_iRecBufferIdx++] = fVel[1];
-				g_aRecBuffer[g_iRecBufferIdx++] = fVel[2];
-				
-				g_aRecBuffer[g_iRecBufferIdx++] = fAng[0];
-				g_aRecBuffer[g_iRecBufferIdx++] = fAng[1];
-				g_aRecBuffer[g_iRecBufferIdx++] = fAng[2];
+				g_hRecBuffer.Push(fPos[0]);
+				g_hRecBuffer.Push(fPos[1]);
+				g_hRecBuffer.Push(fPos[2]);
+				g_hRecBuffer.Push(fVel[0]);
+				g_hRecBuffer.Push(fVel[1]);
+				g_hRecBuffer.Push(fVel[2]);
+				g_hRecBuffer.Push(fAng[0]);
+				g_hRecBuffer.Push(fAng[1]);
+				g_hRecBuffer.Push(fAng[2]);
+
+				g_iRecBufferIdx += 10;
 			}
 			#if defined DEBUG
 			else {
@@ -824,8 +812,8 @@ public void OnGameFrame() {
 		static float fVel[3];
 		static float fAng[3];
 		static int iButtons;
-		
-		if (g_iRecBufferIdx >= BUFFER_SIZE || (g_iRecBufferIdx >= g_iRecBufferUsed)) {
+
+		if (g_iRecBufferIdx >= g_hRecBuffer.Length || (g_iRecBufferIdx >= g_iRecBufferUsed)) {
 			resetBubbleRotation(g_iRecording);
 			clearRecEntities();
 			
@@ -853,7 +841,7 @@ public void OnGameFrame() {
 				} else if(!loadFile(g_iRecording)) {
 					if(g_hDebug.BoolValue)
 						CPrintToChatAll("{dodgerblue}[jb] \0x1%t", "Cannot File Read");
-					g_iRecBufferIdx = BUFFER_SIZE;
+					g_iRecBufferIdx = 0;
 					g_iRecording = NULL_RECORDING;
 					return;
 				}
@@ -930,8 +918,8 @@ public void OnGameFrame() {
 
 		//g_hRecBufferFrames.Push(g_iRecBufferIdx);
 
-		if (view_as<RecBlockType>(g_aRecBuffer[g_iRecBufferIdx] & 0xFF) == FRAME) {
-			g_iRecBufferFrame = g_aRecBuffer[g_iRecBufferIdx] >> 8;
+		if (view_as<RecBlockType>(g_hRecBuffer.Get(g_iRecBufferIdx) & 0xFF) == FRAME) {
+			g_iRecBufferFrame = g_hRecBuffer.Get(g_iRecBufferIdx) >> 8;
 			g_iRecBufferIdx++;
 		} else {
 			LogError("Cannot find start of frame at buffer index: %d", g_iRecBufferIdx);
@@ -940,33 +928,33 @@ public void OnGameFrame() {
 		}
 
 		int iRecEntFailCount = 0;
-		while (g_iRecBufferIdx < g_iRecBufferUsed && g_iRecBufferIdx < BUFFER_SIZE) {
+		while (g_iRecBufferIdx < g_iRecBufferUsed && g_iRecBufferIdx < g_hRecBuffer.Length) {
 			int iEntity = INVALID_ENT_REFERENCE;
 			int iEntType;
 			int iOwner = -1;
 			int iRecordingEnt = -1;
 
-			switch (g_aRecBuffer[g_iRecBufferIdx] & 0xFF) {
+			switch (g_hRecBuffer.Get(g_iRecBufferIdx) & 0xFF) {
 				case FRAME: {
 					break;
 				}
 				case CLIENT: {
 					if (g_iClientInstruction & INST_REWIND && g_iClientInstruction & INST_RECD) {
-						iEntity = g_hRecordingClients.Get((g_aRecBuffer[g_iRecBufferIdx++] >> 8) & 0xFF, RecBot_iEnt);
+						iEntity = g_hRecordingClients.Get((g_hRecBuffer.Get(g_iRecBufferIdx++) >> 8) & 0xFF, RecBot_iEnt);
 					} else {
-						iEntity = g_hRecordingBots.Get((g_aRecBuffer[g_iRecBufferIdx++] >> 8) & 0xFF, RecBot_iEnt);
+						iEntity = g_hRecordingBots.Get((g_hRecBuffer.Get(g_iRecBufferIdx++) >> 8) & 0xFF, RecBot_iEnt);
 					}
 
-					fPos[0] = g_aRecBuffer[g_iRecBufferIdx++];
-					fPos[1] = g_aRecBuffer[g_iRecBufferIdx++];
-					fPos[2] = g_aRecBuffer[g_iRecBufferIdx++];
-					fVel[0] = g_aRecBuffer[g_iRecBufferIdx++];
-					fVel[1] = g_aRecBuffer[g_iRecBufferIdx++];
-					fVel[2] = g_aRecBuffer[g_iRecBufferIdx++];
-					fAng[0] = g_aRecBuffer[g_iRecBufferIdx++];
-					fAng[1] = g_aRecBuffer[g_iRecBufferIdx++];
-					fAng[2] = g_aRecBuffer[g_iRecBufferIdx++];
-					iButtons = g_aRecBuffer[g_iRecBufferIdx++];
+					fPos[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fPos[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fPos[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fVel[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fVel[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fVel[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fAng[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fAng[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fAng[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					iButtons = g_hRecBuffer.Get(g_iRecBufferIdx++);
 
 					if (g_iClientInstruction & INST_PAUSE) {
 						iButtons &= ~(IN_ATTACK | IN_ATTACK2 | IN_ATTACK3);
@@ -996,20 +984,20 @@ public void OnGameFrame() {
 					}
 				}
 				case ENTITY: {
-					iRecordingEnt	= (g_aRecBuffer[g_iRecBufferIdx  ] >>  8) & 0xFF;
+					iRecordingEnt	= (g_hRecBuffer.Get(g_iRecBufferIdx  ) >>  8) & 0xFF;
 
-					iEntType 		= (g_aRecBuffer[g_iRecBufferIdx  ] >> 16) & 0xFF;
-					iOwner			= (g_aRecBuffer[g_iRecBufferIdx++] >> 24) & 0xFF;
+					iEntType 		= (g_hRecBuffer.Get(g_iRecBufferIdx  ) >> 16) & 0xFF;
+					iOwner			= (g_hRecBuffer.Get(g_iRecBufferIdx++) >> 24) & 0xFF;
 					
-					fPos[0] = g_aRecBuffer[g_iRecBufferIdx++];
-					fPos[1] = g_aRecBuffer[g_iRecBufferIdx++];
-					fPos[2] = g_aRecBuffer[g_iRecBufferIdx++];
-					fVel[0] = g_aRecBuffer[g_iRecBufferIdx++];
-					fVel[1] = g_aRecBuffer[g_iRecBufferIdx++];
-					fVel[2] = g_aRecBuffer[g_iRecBufferIdx++];
-					fAng[0] = g_aRecBuffer[g_iRecBufferIdx++];
-					fAng[1] = g_aRecBuffer[g_iRecBufferIdx++];
-					fAng[2] = g_aRecBuffer[g_iRecBufferIdx++];
+					fPos[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fPos[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fPos[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fVel[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fVel[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fVel[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fAng[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fAng[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+					fAng[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
 
 					int iRecEntIdx = g_hRecordingEntities.FindValue(iRecordingEnt, RecEnt_iAssign);
 					if (iRecEntIdx == -1) {
@@ -4307,7 +4295,6 @@ void doFullStop() {
 
 void doEquip(int iBotID) {
 	int iClient = g_hRecordingBots.Get(iBotID, RecBot_iEnt);
-	PrintToServer("doEquip(iBotID=%d), iClient=%d (%N)", iBotID, iClient, iClient);
 	if (!Client_IsValid(iClient) || !IsClientInGame(iClient)) {
 		LogError("Cannot equip for client not in game: bot %d, client %d", iBotID, iClient);
 		return;
@@ -4383,7 +4370,6 @@ void doEquipRec(int iBotID, Recording iRecording) {
 	}
 
 	doEquip(iBotID);
-	delete hEquip;
 }
 
 void doTeamClassMatch(int iClientToMatch, int iClient) {
@@ -4621,11 +4607,6 @@ Recording loadRecording(char[] sFilePath) {
 	hFile.ReadInt32(iFrames);
 	hFile.ReadInt32(iLength);
 	iRecording.Length = iLength;
-
-	if (iLength > BUFFER_SIZE) {
-		LogError("Recording exceeds recording buffer size (%d / max %d cells): %s", iLength, BUFFER_SIZE, sFilePath);
-		return NULL_RECORDING;
-	}
 
 	if (!iFrames || !iLength) {
 		LogError("Recording has no frames: %s", sFilePath);
@@ -5069,7 +5050,9 @@ bool SaveFile(char[] sFilePath) {
 	hFile.Seek(iPosFrameData, SEEK_SET);
 
 	// Lookup 0x14 for this address 
-	hFile.Write(g_aRecBuffer, g_iRecBufferUsed, 4);
+	for (int i=0; i<g_iRecBufferUsed; i++) {
+		hFile.WriteInt32(g_hRecBuffer.Get(i));
+	}
 	
 	int iPosFrameIndex = hFile.Position;
 	hFile.Seek(iMetaPosFrameIndex, SEEK_SET);
@@ -5421,10 +5404,15 @@ bool loadFile(Recording iRecording) {
 		return false;
 	}
 	
-	int iReadSize = hFile.Read(g_aRecBuffer, iRecBufferUsed, 4);
-	if (!iReadSize || iReadSize != iRecBufferUsed) {
-		LogError("%T (%d/%d B): %s", "Unexpected EOF", LANG_SERVER, iReadSize, iRecBufferUsed, sFilePath);
-		return false;
+	g_hRecBuffer.Clear();
+	any aFrameData;
+	for (int i=0; i<iRecBufferUsed; i++) {
+		if (!hFile.ReadInt32(aFrameData)) {
+			LogError("%T (%d/%d B): %s", "Unexpected EOF", LANG_SERVER, i, iRecBufferUsed, sFilePath);
+			return false;
+		}
+
+		g_hRecBuffer.Push(aFrameData);
 	}
 
 	int iPosEntData;
@@ -5573,20 +5561,19 @@ int RespawnFrameRecEnt(int iFrame) {
 	int iEntType;
 	int iOwner = -1;
 	//int iRecordingEnt = -1;
-	while (view_as<RecBlockType>(g_aRecBuffer[iRecBufferIdx] & 0xFF) == ENTITY) {
-		//iRecordingEnt	= (g_aRecBuffer[iRecBufferIdx  ] >>  8) & 0xFF;
-		iEntType 		= (g_aRecBuffer[iRecBufferIdx  ] >> 16) & 0xFF;
-		iOwner			= (g_aRecBuffer[iRecBufferIdx++] >> 24) & 0xFF;
+	while (view_as<RecBlockType>(g_hRecBuffer.Get(iRecBufferIdx) & 0xFF) == ENTITY) {
+		iEntType 		= (g_hRecBuffer.Get(iRecBufferIdx  ) >> 16) & 0xFF;
+		iOwner			= (g_hRecBuffer.Get(iRecBufferIdx++) >> 24) & 0xFF;
 		
-		fPos[0] = g_aRecBuffer[iRecBufferIdx++];
-		fPos[1] = g_aRecBuffer[iRecBufferIdx++];
-		fPos[2] = g_aRecBuffer[iRecBufferIdx++];
-		fVel[0] = g_aRecBuffer[iRecBufferIdx++];
-		fVel[1] = g_aRecBuffer[iRecBufferIdx++];
-		fVel[2] = g_aRecBuffer[iRecBufferIdx++];
-		fAng[0] = g_aRecBuffer[iRecBufferIdx++];
-		fAng[1] = g_aRecBuffer[iRecBufferIdx++];
-		fAng[2] = g_aRecBuffer[iRecBufferIdx++];
+		fPos[0] = g_hRecBuffer.Get(iRecBufferIdx++);
+		fPos[1] = g_hRecBuffer.Get(iRecBufferIdx++);
+		fPos[2] = g_hRecBuffer.Get(iRecBufferIdx++);
+		fVel[0] = g_hRecBuffer.Get(iRecBufferIdx++);
+		fVel[1] = g_hRecBuffer.Get(iRecBufferIdx++);
+		fVel[2] = g_hRecBuffer.Get(iRecBufferIdx++);
+		fAng[0] = g_hRecBuffer.Get(iRecBufferIdx++);
+		fAng[1] = g_hRecBuffer.Get(iRecBufferIdx++);
+		fAng[2] = g_hRecBuffer.Get(iRecBufferIdx++);
 
 		iOwner = hClients.Get(iOwner);
 		if (iEntType >= g_hRecordingEntTypes.Length) {
