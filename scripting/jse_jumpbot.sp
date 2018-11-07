@@ -2438,9 +2438,12 @@ public Action Timer_RecList(Handle hTimer, any aData) {
 	Recording iRecording = g_hRecordings.Get(iIdx);
 
 	ArrayList hClientInfo = iRecording.ClientInfo;
+	
+	char sTimeTotal[32];
+	ToTimeDisplay(sTimeTotal, sizeof(sTimeTotal), iRecording.Frames.Length/66);
 
 	static char sBuffer[4096];
-	FormatEx(sBuffer, sizeof(sBuffer), "\t[%d] frames: %d, buffer: %d, clients: %d", iIdx, iRecording.Frames.Length, iRecording.Length, hClientInfo.Length);
+	FormatEx(sBuffer, sizeof(sBuffer), "\t[%d] duration: %s, frames: %d, buffer: %d, clients: %d", iIdx, sTimeTotal, iRecording.Frames.Length, iRecording.Length, hClientInfo.Length);
 
 	for (int i=0; i<hClientInfo.Length; i++) {
 		ClientInfo iClientInfo = hClientInfo.Get(i);
@@ -5547,7 +5550,7 @@ void ToTimeDisplay(char[] sBuffer, int iLength, int iTime) {
 
 		FormatEx(sBuffer, iLength, "%d:%02d:%02d", iHours, iMinutes, iSeconds);
 	} else {
-		FormatEx(sBuffer, iLength, "%02d:%02d", iTime / 60, iTime % 60);
+		FormatEx(sBuffer, iLength, "%2d:%02d", iTime / 60, iTime % 60);
 	}
 }
 
