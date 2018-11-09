@@ -440,8 +440,8 @@ public int Native_Recording_Destroy(Handle hPlugin, int iArgC) {
 }
 
 public int Sort_Recordings(int iIdx1, int iIdx2, Handle hArray, Handle hParam) {
-	Recording iRecording1 = view_as<Recording>(iIdx1);
-	Recording iRecording2 = view_as<Recording>(iIdx2);
+	Recording iRecording1 = view_as<Recording>(view_as<ArrayList>(hArray).Get(iIdx1));
+	Recording iRecording2 = view_as<Recording>(view_as<ArrayList>(hArray).Get(iIdx2));
 	
 	if (iRecording1.Repo && !iRecording2.Repo) {
 		return -1;

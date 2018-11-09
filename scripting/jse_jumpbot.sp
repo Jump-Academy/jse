@@ -70,10 +70,11 @@
 #define TRASH_FOLDER 			"data/jse/jumpbot/.trash"
 #define CACHE_FOLDER 			"data/jse/jumpbot/.cache"
 
-#define HINT_MARKER_MODEL		"models/extras/info_speech.mdl"
-#define HINT_ROCKET_MODEL		"models/weapons/w_models/w_rocket.mdl"
-#define HINT_STICKY_MODEL		"models/weapons/w_models/w_stickybomb.mdl"
-#define TRAIL_MATERIAL			"materials/sprites/bluelaser1.vmt"
+#define HINT_MODEL_MARKER		"models/extras/info_speech.mdl"
+#define HINT_MODEL_ROCKET		"models/weapons/w_models/w_rocket.mdl"
+#define HINT_MODEL_STICKY		"models/weapons/w_models/w_stickybomb.mdl"
+#define TRAIL_MATERIAL_LASER	"sprites/laser.vmt"
+#define TRAIL_MATERIAL_HALO		"sprites/halo01.vmt"
 
 #include <sourcemod>
 #include <sdkhooks>
@@ -203,8 +204,8 @@ float g_fPlaybackSpeed;
 any g_aSpawnFreeze[MAXPLAYERS+1][8];
 StringMap g_hProjMap;
 ArrayList g_hSpecList;
-int g_iLaserModel;
-int g_iHaloModel;
+int g_iTrailLaser;
+int g_iTrailHalo;
 
 ArrayList g_hQueue;
 Panel g_hQueuePanel[MAXPLAYERS+1] = {null, ...};
@@ -577,12 +578,11 @@ public void OnMapStart() {
 	g_iRecording = NULL_RECORDING;
 	g_iWarmupFrames = 2 * WARMUP_FRAMES_DEFAULT;
 	
-	g_iLaserModel = PrecacheModel("sprites/laser.vmt");
-	g_iHaloModel = PrecacheModel("sprites/halo01.vmt");
-	PrecacheModel(HINT_MARKER_MODEL);
-	PrecacheModel(HINT_ROCKET_MODEL);
-	PrecacheModel(HINT_STICKY_MODEL);
-	PrecacheMaterial(TRAIL_MATERIAL);
+	g_iTrailLaser = PrecacheModel(TRAIL_MATERIAL_LASER);
+	g_iTrailHalo = PrecacheModel(TRAIL_MATERIAL_HALO);
+	PrecacheModel(HINT_MODEL_MARKER);
+	PrecacheModel(HINT_MODEL_ROCKET);
+	PrecacheModel(HINT_MODEL_STICKY);
 	
 	char sModel[64];
 	char sClassName[10];
@@ -786,13 +786,9 @@ public void OnGameFrame() {
 
 			// TODO: Bot count vs. RecClient count mismatch
 			ClientInfo iClientInfo = g_iRecording.ClientInfo.Get(i);
-			float fPos[3], fAng[3];
+			float fPos[3];
 			iClientInfo.GetStartPos(fPos);
-			iClientInfo.GetStartPos(fAng);
 			Entity_SetAbsOrigin(iClient, fPos);
-			Entity_SetAbsAngles(iClient, fAng);
-
-			Client_SetActiveWeapon(iClient, GetPlayerWeaponSlot(iClient, TFWeaponSlot_Primary));
 		}
 
 		if (g_iClientInstruction & INST_WARMUP && g_iRecBufferFrame++ > g_iWarmupFrames) {
@@ -974,7 +970,7 @@ public void OnGameFrame() {
 							fPosNext[1] = fPos[1];
 							fPosNext[2] = fPos[2] + fZOffset;
 
-							TE_SetupBeamPoints(fPosNow, fPosNext, g_iLaserModel, g_iHaloModel, 0, 66, g_fTrailLife, 25.0, 25.0, 1, 1.0, g_iTrailColor, 0);
+							TE_SetupBeamPoints(fPosNow, fPosNext, g_iTrailLaser, g_iTrailHalo, 0, 66, g_fTrailLife, 25.0, 25.0, 1, 1.0, g_iTrailColor, 0);
 							TE_SendToAllInRangeVisible(fPos);
 						}
 					}
@@ -1512,7 +1508,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 				fPtCurr[2] = view_as<float>(g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPosZ]) + fZOffset;
 
 				if (GetVectorDistance(fPtPrev, fPtCurr) < 100.0) {
-					TE_SetupBeamPoints(fPtPrev, fPtCurr, g_iLaserModel, g_iHaloModel, 0, 66, g_fTrailLife, 25.0, 25.0, 1, 1.0, g_iTrailColor, 0);
+					TE_SetupBeamPoints(fPtPrev, fPtCurr, g_iTrailLaser, g_iTrailHalo, 0, 66, g_fTrailLife, 25.0, 25.0, 1, 1.0, g_iTrailColor, 0);
 					TE_SendToAllInRangeVisible(fPtCurr);
 				}
 			}
@@ -1895,7 +1891,7 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 
 	g_iRecording = iRecording;
 
-	g_iClientInstruction = INST_PLAY;
+	g_iClientInstruction = INST_WARMUP;
 	g_iClientOfInterest = iClient;
 	g_iClientInstructionPost = INST_NOP;
 	
@@ -2119,6 +2115,7 @@ public Action cmdPlay(int iClient, int iArgC) {
 			}
 
 			if (iRecID >= g_hRecordings.Length) {
+				// TODO: Translate
 				CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Invalid recording ID");
 				return Plugin_Handled;
 			}
@@ -2181,7 +2178,7 @@ public Action cmdPlay(int iClient, int iArgC) {
 
 	g_iRecording = iRecording;
 
-	g_iClientInstruction = INST_PLAY;
+	g_iClientInstruction = INST_WARMUP;
 	g_iClientOfInterest = iClient;
 	g_iClientInstructionPost = INST_NOP;
 	
@@ -2658,22 +2655,32 @@ public Action cmdPlayAll(int iClient, int iArgC) {
 
 	loadRecordings(true);
 	
-	int iStart = 0;
+	int iRecID = 0;
 	if (iArgC == 1) {
 		char sArg1[8];
 		GetCmdArg(1, sArg1, sizeof(sArg1));
-		iStart = Math_Min(StringToInt(sArg1), 0);
+		iRecID = StringToInt(sArg1);
+
+		if (iRecID < 0) {
+			iRecID = g_hRecordings.Length+iRecID;
+		}
+
+		if (iRecID >= g_hRecordings.Length) {
+			// TODO: Translate
+			CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Invalid recording ID");
+			return Plugin_Handled;
+		}
 	}
 
-	Recording iRecording = g_hRecordings.Get(iStart);
+	Recording iRecording = g_hRecordings.Get(iRecID);
 	
 	g_hPlaybackQueue.Clear();
-	for (int i=iStart; i<g_hRecordings.Length; i++) {
+	for (int i=iRecID+1; i<g_hRecordings.Length; i++) {
 		g_hPlaybackQueue.Push(g_hRecordings.Get(i));
 	}
-	
+
 	// TODO: Bot count vs RecBot count mismatch
-	ArrayList hClientInfo = g_iRecording.ClientInfo;
+	ArrayList hClientInfo = iRecording.ClientInfo;
 	for (int i=0; i<hClientInfo.Length; i++) {
 		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
 		if (!IsClientInGame(iRecBot)) {
@@ -2720,11 +2727,11 @@ public Action cmdPlayAll(int iClient, int iArgC) {
 	char sFilePath[PLATFORM_MAX_PATH];
 	iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
 
-	if (g_iRecording.Repo && !FileExists(sFilePath)) {
+	if (iRecording.Repo && !FileExists(sFilePath)) {
 		g_iClientInstruction = INST_NOP | INST_PLAYALL; // Wait for download completion
 		fetchRecording(iRecording);
 	} else {
-		g_iClientInstruction = INST_PLAY | INST_PLAYALL;
+		g_iClientInstruction = INST_WARMUP | INST_PLAYALL;
 		loadFile(iRecording);
 	}
 
@@ -3973,7 +3980,7 @@ public Action Hook_RocketSpawn(int iEntity) {
 				float fPosAhead[3];
 				TR_GetEndPosition(fPosAhead, hTr);
 				
-				TE_SetupBeamPoints(fPos, fPosAhead, g_iLaserModel, g_iHaloModel, 0, 66, g_fTrailLife, 5.0, 5.0, 1, 1.0, g_iProjTrailColor, 0);
+				TE_SetupBeamPoints(fPos, fPosAhead, g_iTrailLaser, g_iTrailHalo, 0, 66, g_fTrailLife, 5.0, 5.0, 1, 1.0, g_iProjTrailColor, 0);
 				TE_SendToAllInRangeVisible(fPos);
 			}
 			delete hTr;
@@ -4059,7 +4066,7 @@ public void Hook_ProjVPhysics(int iEntity) {
 	g_hProjMap.GetArray(sKey, fPosPrev, sizeof(fPosPrev));
 	g_hProjMap.SetArray(sKey, fPos, sizeof(fPos));
 	
-	TE_SetupBeamPoints(fPosPrev, fPos, g_iLaserModel, g_iHaloModel, 0, 66, g_fTrailLife, 5.0, 5.0, 1, 1.0, g_iProjTrailColor, 0);
+	TE_SetupBeamPoints(fPosPrev, fPos, g_iTrailLaser, g_iTrailHalo, 0, 66, g_fTrailLife, 5.0, 5.0, 1, 1.0, g_iProjTrailColor, 0);
 	TE_SendToAllInRangeVisible(fPos);
 }
 
@@ -5335,7 +5342,7 @@ void spawnModels() {
 		
 		int iEntity = CreateEntityByName("prop_dynamic");
 		if (IsValidEntity(iEntity)) {
-			SetEntityModel(iEntity, HINT_MARKER_MODEL);
+			SetEntityModel(iEntity, HINT_MODEL_MARKER);
 			SetEntPropFloat(iEntity, Prop_Data, "m_flModelScale", 0.5);
 			SetEntProp(iEntity, Prop_Data, "m_CollisionGroup", COLLISION_GROUP_PLAYER);
 			SetEntProp(iEntity, Prop_Data, "m_usSolidFlags", FSOLID_NOT_SOLID | FSOLID_TRIGGER);
@@ -5377,9 +5384,9 @@ void spawnModels() {
 		TFClassType iClass = iClientInfo.Class;
 		if ((iClass == TFClass_Soldier || iClass == TFClass_DemoMan) && (iEntity = CreateEntityByName("prop_dynamic")) != INVALID_ENT_REFERENCE) {
 			if (iClass == TFClass_Soldier) {
-				SetEntityModel(iEntity, HINT_ROCKET_MODEL);
+				SetEntityModel(iEntity, HINT_MODEL_ROCKET);
 			} else {
-				SetEntityModel(iEntity, HINT_STICKY_MODEL);
+				SetEntityModel(iEntity, HINT_MODEL_STICKY);
 			}
 			
 			DispatchKeyValue(iEntity, "Solid", "0");
