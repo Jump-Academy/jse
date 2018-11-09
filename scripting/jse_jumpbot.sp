@@ -2588,6 +2588,8 @@ public Action cmdDelete(int iClient, int iArgC) {
 			CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Cannot Delete Repo");
 			return Plugin_Handled;
 		}
+
+		doFullStop();
 		
 		char sFilePath[PLATFORM_MAX_PATH];
 		iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
