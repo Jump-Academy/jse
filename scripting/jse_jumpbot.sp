@@ -935,7 +935,8 @@ public void OnGameFrame() {
 			int iOwner = -1;
 			int iRecordingEnt = -1;
 
-			switch (g_hRecBuffer.Get(g_iRecBufferIdx) & 0xFF) {
+			RecBlockType iRecBlockType = view_as<RecBlockType>(g_hRecBuffer.Get(g_iRecBufferIdx) & 0xFF);
+			switch (iRecBlockType) {
 				case FRAME: {
 					break;
 				}
@@ -1041,6 +1042,27 @@ public void OnGameFrame() {
 			Entity_GetAbsOrigin(iEntity, fPosNow);
 
 			if (GetVectorDistance(fPosNow, fPos) > g_hBotMaxError.FloatValue) {
+				if (iRecBlockType == CLIENT) {
+					float fPosBump[3];
+					fPosBump[0] = fPos[0];
+					fPosBump[1] = fPos[1];
+					fPosBump[2] = fPos[2] + 0.05;
+					Handle hTr = TR_TraceRayFilterEx(fPosBump, view_as<float>({90.0, 0.0, 0.0}), MASK_SHOT_HULL, RayType_Infinite, traceHitNonPlayer, iEntity);
+					if (TR_DidHit(hTr)) {
+						float fPosAhead[3];
+						TR_GetEndPosition(fPosAhead, hTr);
+
+						if (GetVectorDistance(fPosBump, fPosAhead) < 0.05) {
+							#if defined DEBUG
+							PrintToServer("Prevented playback client teleport into the ground (%1.f, %.1f, %.3f)", fPos[0], fPos[1], fPos[2]);
+							#endif 
+
+							fPos[2] = fPosAhead[2];
+						}
+					}
+					delete hTr;
+				}
+
 				Entity_SetAbsOrigin(iEntity, fPos);
 			} else {
 				fVel[0] = (fPos[0]-fPosNow[0])*66;
