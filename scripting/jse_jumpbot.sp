@@ -137,10 +137,7 @@ ConVar g_hBotCallKey;
 
 ConVar g_hBotMaxError;
 ConVar g_hShowMeDefault;
-ConVar g_hShowMeSaveCmd;
-ConVar g_hShowMeTeleCmd;
 ConVar g_hBotJoinExecute;
-ConVar g_hDetectClass;
 ConVar g_hAllowMedic;
 ConVar g_hRobot;
 ConVar g_hFOV;
@@ -274,10 +271,7 @@ public void OnPluginStart() {
 	
 	g_hBotMaxError 			= AutoExecConfig_CreateConVar("jse_jb_maxerr", 			"400.0", 			"Bot max interpolation error before teleport correction", 								FCVAR_NONE, 						true, 0.0, false	);
 	g_hShowMeDefault 		= AutoExecConfig_CreateConVar("jse_jb_showme_default", 	"1", 				"Showme perspective default (0:none, 1:fp, 3:tp)", 										FCVAR_NONE, 						true, 0.0, true, 3.0);
-	g_hShowMeSaveCmd 		= AutoExecConfig_CreateConVar("jse_jb_showme_savecmd", 	"", 				"Save command to use before showme call", 												FCVAR_NONE												);
-	g_hShowMeTeleCmd 		= AutoExecConfig_CreateConVar("jse_jb_showme_telecmd", 	"", 				"Replacement teleport command to use after showme call", 								FCVAR_NONE												);
 	g_hBotJoinExecute	 	= AutoExecConfig_CreateConVar("jse_jb_joinexecute", 	"", 				"Commands bots should execute after joining the server", 								FCVAR_NONE												);
-	g_hDetectClass 			= AutoExecConfig_CreateConVar("jse_jb_detectclass", 	"1", 				"Detect player class for playback", 													FCVAR_NONE, 						true, 0.0, true, 1.0);
 	g_hAllowMedic 			= AutoExecConfig_CreateConVar("jse_jb_allow_medic", 	"1", 				"Allow medics to call for other bot classes", 											FCVAR_NONE, 						true, 0.0, true, 1.0);
 	g_hRobot 				= AutoExecConfig_CreateConVar("jse_jb_robot", 			"1", 				"Use robot model for bot", 																FCVAR_NONE, 						true, 0.0, true, 1.0);
 	g_hFOV 					= AutoExecConfig_CreateConVar("jse_jb_fov", 			"90",		 		"Set the bot to use this field of view", 												FCVAR_NONE												);
@@ -987,7 +981,6 @@ public void OnGameFrame() {
 				}
 				case ENTITY: {
 					iRecordingEnt	= (g_hRecBuffer.Get(g_iRecBufferIdx  ) >>  8) & 0xFF;
-
 					iEntType 		= (g_hRecBuffer.Get(g_iRecBufferIdx  ) >> 16) & 0xFF;
 					iOwner			= (g_hRecBuffer.Get(g_iRecBufferIdx++) >> 24) & 0xFF;
 					
@@ -1054,7 +1047,7 @@ public void OnGameFrame() {
 
 						if (GetVectorDistance(fPosBump, fPosAhead) < 0.05) {
 							#if defined DEBUG
-							PrintToServer("Prevented playback client teleport into the ground (%1.f, %.1f, %.3f)", fPos[0], fPos[1], fPos[2]);
+							PrintToServer("Prevented playback client teleport into ground (%1.f, %.1f, %.3f)", fPos[0], fPos[1], fPos[2]);
 							#endif 
 
 							fPos[2] = fPosAhead[2];
@@ -1699,7 +1692,7 @@ public void OnClientPostAdminCheck(int iClient) {
 
 		if (bChecked) {
 			setupBotImmunity(iClient);
-			
+
 			any aArr[RecBot_Size];
 			aArr[RecBot_iEnt] = iClient;
 			aArr[RecBot_hEquip] = new DataPack();
@@ -1810,8 +1803,7 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 
 	doFullStop();
 
-	g_iRecording = iRecording;
-	loadFile(g_iRecording);
+	loadFile(iRecording);
 
 	g_iRecBufferIdx = 0;
 	g_iRecBufferFrame = 0;
@@ -1820,18 +1812,26 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 
 	ArrayList hClientInfo = iRecording.ClientInfo;
 	for (int i=0; i<hClientInfo.Length; i++) {
-		ClientInfo iClientInfo = hClientInfo.Get(i);
-
-		TFClassType iRecClass = iClientInfo.Class;
-		TFTeam iRecTeam = iClientInfo.Team;
-
 		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
 		if (!IsClientInGame(iRecBot)) {
-			LogError("Native_PlayRecording tried using iRecBot=%d but the client is not in-game", i);
+			LogError("Tried using iRecBot=%d but the client is not in-game", i);
 			return 0;
 		}
 
-		doEquipRec(i, iRecording);
+		ClientInfo iClientInfo = hClientInfo.Get(i);
+
+		float fPos[3];
+		iClientInfo.GetStartPos(fPos);
+		Entity_SetAbsOrigin(iRecBot, fPos);
+
+		float fAng[3];
+		iClientInfo.GetStartAng(fAng);
+		g_aClientState[iRecBot][ClientState_fAng_0] = fAng[0];
+		g_aClientState[iRecBot][ClientState_fAng_1] = fAng[1];
+		g_aClientState[iRecBot][ClientState_fAng_2] = fAng[2];
+
+		TFClassType iRecClass = iClientInfo.Class;
+		TFTeam iRecTeam = iClientInfo.Team;
 
 		if (TF2_GetPlayerClass(iRecBot) != iRecClass) {
 			TF2_SetPlayerClass(iRecBot, iRecClass);
@@ -1841,6 +1841,15 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 		if (view_as<TFTeam>(GetClientTeam(iRecBot)) != iRecTeam) {
 			ChangeClientTeam(iRecBot, view_as<int>(iRecTeam));
 			RequestFrame(Respawn, iRecBot);
+		}
+
+		doEquipRec(i, iRecording);
+	}
+
+	if (g_hRobot.BoolValue) {
+		for (int i=0; i<g_hRecordingBots.Length; i++) {
+			int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+			setRobotModel(iRecBot);
 		}
 	}
 
@@ -1883,6 +1892,8 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 			FakeClientCommand(iClient, "spec_mode %d", iMode);
 		}
 	}
+
+	g_iRecording = iRecording;
 
 	g_iClientInstruction = INST_PLAY;
 	g_iClientOfInterest = iClient;
@@ -2074,7 +2085,7 @@ public Action cmdPlay(int iClient, int iArgC) {
 		return Plugin_Handled;
 	}
 	
-	if ((g_iClientInstruction == INST_RECD || g_iClientInstruction & INST_PLAY) && (g_iClientOfInterest > 0 || g_iClientOfInterest != iClient)) {
+	if ((g_iClientInstruction == INST_RECD || g_iClientInstruction & INST_PLAY) && (g_iClientOfInterest > 0 && g_iClientOfInterest != iClient)) {
 		char  sUserName[32];
 		GetClientName(g_iClientOfInterest, sUserName, sizeof(sUserName));
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Recorder Using", sUserName);
@@ -2089,77 +2100,76 @@ public Action cmdPlay(int iClient, int iArgC) {
 		return Plugin_Handled;
 	}
 
-	if (g_iRecording == NULL_RECORDING) {
-		return Plugin_Handled;
-	}
-	
-	if (g_iClientInstruction == INST_RECD) {
-		g_iClientOfInterest = 0;
-	}
-	
-	if (iArgC == 1) {
-		char sArg1[32];
-		GetCmdArg(1, sArg1, sizeof(sArg1));
-		int iRecID = StringToInt(sArg1);
-		if (iRecID >= g_hRecordings.Length) {
-			return Plugin_Handled;
+	Recording iRecording = g_iRecording;
+	switch (iArgC) {
+		case 0: {
+			if (iRecording == NULL_RECORDING) {
+				// TODO: Translate
+				CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Nothing to replay");
+				return Plugin_Handled;
+			}
 		}
-		
-		if (iRecID < 0) {
-			iRecID = g_hRecordings.Length+iRecID;
+		case 1: {
+			char sArg1[32];
+			GetCmdArg(1, sArg1, sizeof(sArg1));
+			int iRecID = StringToInt(sArg1);
+
+			if (iRecID < 0) {
+				iRecID = g_hRecordings.Length+iRecID;
+			}
+
+			if (iRecID >= g_hRecordings.Length) {
+				CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Invalid recording ID");
+				return Plugin_Handled;
+			}
+
+			iRecording = g_hRecordings.Get(iRecID);
+			loadFile(iRecording);
 		}
-		
-		g_iRecording = g_hRecordings.Get(iRecID);
-		loadFile(g_iRecording);
 	}
 	
+	doFullStop();
+
 	g_iRecBufferIdx = 0;
 	g_iRecBufferFrame = 0;
 	clearRecEntities();
 	g_iRecordingEntTotal = 0;
-
-	g_iClientInstruction = INST_PLAY;
-	g_iClientOfInterest = iClient;
-	g_iClientInstructionPost = INST_NOP;
 	
-	setAllBubbleAlpha(50);
-	
-	ArrayList hClientInfo = g_iRecording.ClientInfo;
+	ArrayList hClientInfo = iRecording.ClientInfo;
 	for (int i=0; i<hClientInfo.Length; i++) {
+		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+		if (!IsClientInGame(iRecBot)) {
+			LogError("Tried using iRecBot=%d but the client is not in-game", i);
+			CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Not enough bots for playback");
+			return Plugin_Handled;
+		}
+
 		ClientInfo iClientInfo = hClientInfo.Get(i);
-		
-		doEquipRec(i, g_iRecording);
+
+		float fPos[3];
+		iClientInfo.GetStartPos(fPos);
+		Entity_SetAbsOrigin(iRecBot, fPos);
+
+		float fAng[3];
+		iClientInfo.GetStartAng(fAng);
+		g_aClientState[iRecBot][ClientState_fAng_0] = fAng[0];
+		g_aClientState[iRecBot][ClientState_fAng_1] = fAng[1];
+		g_aClientState[iRecBot][ClientState_fAng_2] = fAng[2];
 
 		TFClassType iRecClass = iClientInfo.Class;
+		TFTeam iRecTeam = iClientInfo.Team;
 
-		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-		TF2_SetPlayerClass(iRecBot, iRecClass);
-
-		int iWeapon;
-		if (iRecClass == TFClass_DemoMan) {
-			iWeapon = GetPlayerWeaponSlot(iRecBot, TFWeaponSlot_Secondary);
-		} else {
-			iWeapon = GetPlayerWeaponSlot(iRecBot, TFWeaponSlot_Primary);
-		}
-	
-		if(IsValidEntity(iWeapon)) {
-			SetEntPropEnt(iRecBot, Prop_Send, "m_hActiveWeapon", iWeapon);
-		}
-
-		if (TF2_GetPlayerClass(iClient) == TFClass_Medic) {
+		if (TF2_GetPlayerClass(iRecBot) != iRecClass) {
 			TF2_SetPlayerClass(iRecBot, iRecClass);
-			TFTeam iBotTeam = view_as<TFTeam>(GetClientTeam(iRecBot));
-
-			if (iBotTeam <= TFTeam_Spectator || iBotTeam != iClientInfo.Team) {
-				ChangeClientTeam(iRecBot, GetClientTeam(iClient));
-				RequestFrame(Respawn, iRecBot);
-			}
-		} else {
-			doTeamClassMatch(iClient, iRecBot);
 			RequestFrame(Respawn, iRecBot);
 		}
 
-		TF2_RespawnPlayer(iRecBot);
+		if (view_as<TFTeam>(GetClientTeam(iRecBot)) != iRecTeam) {
+			ChangeClientTeam(iRecBot, view_as<int>(iRecTeam));
+			RequestFrame(Respawn, iRecBot);
+		}
+
+		doEquipRec(i, iRecording);
 	}
 	
 	if (g_hRobot.BoolValue) {
@@ -2168,6 +2178,14 @@ public Action cmdPlay(int iClient, int iArgC) {
 			setRobotModel(iRecBot);
 		}
 	}
+
+	g_iRecording = iRecording;
+
+	g_iClientInstruction = INST_PLAY;
+	g_iClientOfInterest = iClient;
+	g_iClientInstructionPost = INST_NOP;
+	
+	setAllBubbleAlpha(50);
 		
 	if (g_hDebug.BoolValue) {
 		CPrintToChatAll("{dodgerblue}[jb] {white}%t", "Playback Start");
@@ -2607,7 +2625,7 @@ public Action cmdDelete(int iClient, int iArgC) {
 		
 		LogMessage("%T '%s' > '%s'", "Deleted Rec", LANG_SERVER, sFilePath, sFilePathTrash);
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t: %s", "Deleted Rec", sFilePath[iFilePart+1]);
-		
+
 		removeModels();
 		loadRecordings(true);
 		spawnModels();
@@ -2621,54 +2639,75 @@ public Action cmdPlayAll(int iClient, int iArgC) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "No Access");
 		return Plugin_Handled;
 	}
-	
-	if (g_iClientInstruction != INST_NOP) {
-		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Terminated");
-		doFullStop();
-	}
-	
-	loadRecordings(true);
-	
+
 	if (!g_hRecordings.Length) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "No Rec");
 		return Plugin_Handled;
 	}
 	
+	if (g_iClientInstruction != INST_NOP) {
+		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Terminated");
+	}
+	
+	doFullStop();
+
+	g_iRecBufferIdx = 0;
+	g_iRecBufferFrame = 0;
+	clearRecEntities();
+	g_iRecordingEntTotal = 0;
+
+	loadRecordings(true);
+	
+	int iStart = 0;
 	if (iArgC == 1) {
 		char sArg1[8];
 		GetCmdArg(1, sArg1, sizeof(sArg1));
-		g_iRecording = g_hRecordings.Get(Math_Max(0, StringToInt(sArg1)));
-	} else {
-		g_iRecording = g_hRecordings.Get(0);
-	}
-	
-	char sFilePath[PLATFORM_MAX_PATH];
-	g_iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
-	
-	if (g_iRecording.Repo && !FileExists(sFilePath)) {
-		g_iClientInstruction = INST_NOP | INST_PLAYALL; // Wait for download completion
-		fetchRecording(g_iRecording);
-	} else {
-		loadFile(g_iRecording);
-		g_iClientInstruction = INST_PLAY | INST_PLAYALL;
+		iStart = Math_Min(StringToInt(sArg1), 0);
 	}
 
+	Recording iRecording = g_hRecordings.Get(iStart);
+	
 	g_hPlaybackQueue.Clear();
-	for (int i=1; i<g_hRecordings.Length; i++) {
+	for (int i=iStart; i<g_hRecordings.Length; i++) {
 		g_hPlaybackQueue.Push(g_hRecordings.Get(i));
 	}
 	
 	// TODO: Bot count vs RecBot count mismatch
 	ArrayList hClientInfo = g_iRecording.ClientInfo;
 	for (int i=0; i<hClientInfo.Length; i++) {
-		int iRecBot = g_hRecordingBots.Get(i);
+		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+		if (!IsClientInGame(iRecBot)) {
+			LogError("Tried using iRecBot=%d but the client is not in-game", i);
+			CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Not enough bots for playback");
+			return Plugin_Handled;
+		}
+
 		ClientInfo iClientInfo = hClientInfo.Get(i);
 
-		TF2_SetPlayerClass(iRecBot, iClientInfo.Class);
-		ChangeClientTeam(iRecBot, view_as<int>(iClientInfo.Team));
+		float fPos[3];
+		iClientInfo.GetStartPos(fPos);
+		Entity_SetAbsOrigin(iRecBot, fPos);
 
-		RequestFrame(Respawn, iRecBot);
-		TF2_RespawnPlayer(iRecBot);
+		float fAng[3];
+		iClientInfo.GetStartAng(fAng);
+		g_aClientState[iRecBot][ClientState_fAng_0] = fAng[0];
+		g_aClientState[iRecBot][ClientState_fAng_1] = fAng[1];
+		g_aClientState[iRecBot][ClientState_fAng_2] = fAng[2];
+
+		TFClassType iRecClass = iClientInfo.Class;
+		TFTeam iRecTeam = iClientInfo.Team;
+
+		if (TF2_GetPlayerClass(iRecBot) != iRecClass) {
+			TF2_SetPlayerClass(iRecBot, iRecClass);
+			RequestFrame(Respawn, iRecBot);
+		}
+
+		if (view_as<TFTeam>(GetClientTeam(iRecBot)) != iRecTeam) {
+			ChangeClientTeam(iRecBot, view_as<int>(iRecTeam));
+			RequestFrame(Respawn, iRecBot);
+		}
+
+		doEquipRec(i, iRecording);
 	}
 	
 	if (g_hRobot.BoolValue) {
@@ -2677,28 +2716,19 @@ public Action cmdPlayAll(int iClient, int iArgC) {
 			setRobotModel(iRecBot);
 		}
 	}
-	
-	// TODO: Bot count vs. RecClient count mismatch
-	for (int i=0; i<hClientInfo.Length; i++) {
-		ClientInfo iClientInfo = hClientInfo.Get(i);
-		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
 
-		float fPos[3];
-		iClientInfo.GetStartPos(fPos);
-		Entity_SetAbsOrigin(iRecBot, fPos);
-	
-		float fAng[3];
-		iClientInfo.GetStartAng(fAng);
+	char sFilePath[PLATFORM_MAX_PATH];
+	iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
 
-		g_aClientState[iRecBot][ClientState_fAng_0] = fAng[0];
-		g_aClientState[iRecBot][ClientState_fAng_1] = fAng[1];
-		g_aClientState[iRecBot][ClientState_fAng_2] = fAng[2];
-
-		/*
-		iClientInfo.GetStartAng(g_fIdleViewAngles);
-		g_fIdleViewAngles[2] = 0.0;
-		*/
+	if (g_iRecording.Repo && !FileExists(sFilePath)) {
+		g_iClientInstruction = INST_NOP | INST_PLAYALL; // Wait for download completion
+		fetchRecording(iRecording);
+	} else {
+		g_iClientInstruction = INST_PLAY | INST_PLAYALL;
+		loadFile(iRecording);
 	}
+
+	g_iRecording = iRecording;
 
 	g_iClientOfInterest = iClient;
 	g_iClientInstructionPost = INST_NOP;
@@ -3141,20 +3171,72 @@ public Action cmdShowMe(int iClient, int iArgC) {
 	return Plugin_Handled;
 }
 
-void doShowMe(int iClient, Recording iClosestRecord, TFTeam iTeam, Obs_Mode iMode) {
+void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 	if (g_iClientInstruction != INST_NOP || !IsClientInGame(iClient) || !g_hRecordingBots.Length) {
 		return;
 	}
 	
 	char sFilePath[PLATFORM_MAX_PATH];
-	iClosestRecord.GetFilePath(sFilePath, sizeof(sFilePath));
+	iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
 	bool bFileExists = FileExists(sFilePath);
 	
-	if (!loadFile(iClosestRecord) && !iClosestRecord.Repo) {
+	if (!loadFile(iRecording) && !iRecording.Repo) {
 		LogError("%T: %s", "Cannot Local Play", LANG_SERVER, sFilePath);
 		g_iClientInstruction = INST_NOP;
 		g_iRecording = NULL_RECORDING;
 		return;
+	}
+
+	g_iRecBufferIdx = 0;
+	g_iRecBufferFrame = 0;
+	clearRecEntities();
+	g_iRecordingEntTotal = 0;
+
+	ArrayList hClientInfo = iRecording.ClientInfo;
+	for (int i=0; i<hClientInfo.Length; i++) {
+		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+		if (!IsClientInGame(iRecBot)) {
+			LogError("Tried using iRecBot=%d but the client is not in-game", i);
+			CPrintToChat(iClient, "{dodgerblue}[jb] {white}Not enough bots for playback");
+			return;
+		}
+
+		ClientInfo iClientInfo = hClientInfo.Get(i);
+
+		float fPos[3];
+		iClientInfo.GetStartPos(fPos);
+		Entity_SetAbsOrigin(iRecBot, fPos);
+
+		float fAng[3];
+		iClientInfo.GetStartAng(fAng);
+		g_aClientState[iRecBot][ClientState_fAng_0] = fAng[0];
+		g_aClientState[iRecBot][ClientState_fAng_1] = fAng[1];
+		g_aClientState[iRecBot][ClientState_fAng_2] = fAng[2];
+
+		TFClassType iRecClass = iClientInfo.Class;
+		TFTeam iRecTeam = iClientInfo.Team;
+
+		if (TF2_GetPlayerClass(iRecBot) != iRecClass) {
+			TF2_SetPlayerClass(iRecBot, iRecClass);
+			RequestFrame(Respawn, iRecBot);
+		}
+
+		if (view_as<TFTeam>(GetClientTeam(iRecBot)) != iRecTeam) {
+			ChangeClientTeam(iRecBot, view_as<int>(iRecTeam));
+			RequestFrame(Respawn, iRecBot);
+		}
+
+		doEquipRec(i, iRecording);
+
+		TF2_RemoveCondition(iRecBot, TFCond_Taunting);
+		CreateTimer(0.0, Timer_DoVoiceGo, iRecBot, TIMER_FLAG_NO_MAPCHANGE);
+	}
+
+	if (g_hRobot.BoolValue) {
+		for (int i=0; i<g_hRecordingBots.Length; i++) {
+			int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+			setRobotModel(iRecBot);
+		}
 	}
 	
 	if (g_hDebug.BoolValue) {
@@ -3170,70 +3252,28 @@ void doShowMe(int iClient, Recording iClosestRecord, TFTeam iTeam, Obs_Mode iMod
 	GetClientEyeAngles(iClient, fAng);
 	GetClientAbsOrigin(iClient, fPos);
 	setRespawn(iClient, fPos, fAng);
-		
-	if (iClosestRecord.Repo && (!bFileExists || iClosestRecord.Downloading)) {
+
+	if (iRecording.Repo && (!bFileExists || iRecording.Downloading)) {
 		g_iClientInstruction = INST_WAIT; // Wait for download completion
 		
 		if (g_hDebug.BoolValue) {
 			CPrintToChat(iClient, "{dodgerblue}[jb] {white}File %s", !bFileExists ? "does not exist" : "is downloading");
 		}
 		
-		if (!iClosestRecord.Downloading) {
-			fetchRecording(iClosestRecord);
+		if (!iRecording.Downloading) {
+			fetchRecording(iRecording);
 		}
 	} else {
 		g_iClientInstruction = INST_WARMUP;
+		loadFile(iRecording);
 	}
 	
-	g_iRecording = iClosestRecord;
+	g_iRecording = iRecording;
 	g_iRecBufferFrame =  0;
 	g_iRecBufferIdx = 0;
 
 	//g_fShadowBufferAlpha = 0.0;
 	g_fPlaybackSpeed = g_fSpeed[g_iClientOfInterest];
-	
-	TFClassType iClass = TF2_GetPlayerClass(iClient);
-
-	ArrayList hClientInfo = iClosestRecord.ClientInfo;
-
-	if (g_hDetectClass.BoolValue) {
-		for (int i=0; i<hClientInfo.Length; i++) {
-			ClientInfo iClientInfo = hClientInfo.Get(i);
-
-			doEquipRec(i, g_iRecording);
-			
-			TFClassType iRecClass = iClientInfo.Class;
-
-			int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-			TF2_SetPlayerClass(iRecBot, iRecClass);
-	
-			int iWeapon;
-			if (iRecClass == TFClass_DemoMan) {
-				iWeapon = GetPlayerWeaponSlot(iRecBot, TFWeaponSlot_Secondary);
-			} else {
-				iWeapon = GetPlayerWeaponSlot(iRecBot, TFWeaponSlot_Primary);
-			}
-		
-			if(IsValidEntity(iWeapon)) {
-				SetEntPropEnt(iRecBot, Prop_Send, "m_hActiveWeapon", iWeapon);
-			}
-
-			if (iClass == TFClass_Medic) {
-				TF2_SetPlayerClass(iRecBot, iRecClass);
-				TFTeam iBotTeam = view_as<TFTeam>(GetClientTeam(iRecBot));
-
-				if (iBotTeam <= TFTeam_Spectator || iBotTeam != iClientInfo.Team) {
-					ChangeClientTeam(iRecBot, GetClientTeam(iClient));
-					RequestFrame(Respawn, iRecBot);
-				}
-			} else {
-				doTeamClassMatch(iClient, iRecBot);
-				RequestFrame(Respawn, iRecBot);
-			}
-
-			TF2_RespawnPlayer(iRecBot);
-		}
-	}
 	
 	setAllBubbleAlpha(50);
 	
@@ -3250,40 +3290,12 @@ void doShowMe(int iClient, Recording iClosestRecord, TFTeam iTeam, Obs_Mode iMod
 	}
 	TF2Attrib_SetByName(g_iClientControl, "gesture speed increase", g_fPlaybackSpeed);
 	*/
-	
-	if (g_hRobot.BoolValue) {
-		for (int i=0; i<g_hRecordingBots.Length; i++) {
-			int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-			setRobotModel(iRecBot);
-		}
-	}
-	
-	for (int i=0; i<hClientInfo.Length; i++) {
-		ClientInfo iClientInfo = hClientInfo.Get(i);
-		iClientInfo.GetStartPos(fPos);
-		iClientInfo.GetStartAng(fAng);
-	
-		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-		g_aClientState[iRecBot][ClientState_fAng_0] = fAng[0];
-		g_aClientState[iRecBot][ClientState_fAng_1] = fAng[1];
-		g_aClientState[iRecBot][ClientState_fAng_2] = fAng[2];
-
-		float fVel[3] = {0.0, ...};
-		TeleportEntity(iRecBot, fPos, fAng, fVel);
-
-		TF2_RemoveCondition(iRecBot, TFCond_Taunting);
-	
-		CreateTimer(0.0, Timer_DoVoiceGo, iRecBot, TIMER_FLAG_NO_MAPCHANGE);
-	}
 
 	if (g_hAllowMedic.BoolValue && TF2_GetPlayerClass(iClient) == TFClass_Medic && iTeam > TFTeam_Spectator) {
 		g_iClientInstructionPost = INST_NOP;
 		g_iClientInstruction = INST_WARMUP;
 		return;
 	}
-
-	char sSaveCmd[32];
-	g_hShowMeSaveCmd.GetString(sSaveCmd, sizeof(sSaveCmd));
 
 	// Primary rec
 	int iRecBot = g_hRecordingBots.Get(0, RecBot_iEnt);
@@ -3302,10 +3314,6 @@ void doShowMe(int iClient, Recording iClosestRecord, TFTeam iTeam, Obs_Mode iMod
 		}
 
 		setRespawnTeam(g_iClientOfInterest, iTeam);
-		
-		if (sSaveCmd[0]) {
-			FakeClientCommand(iClient, sSaveCmd);
-		}
 	} else {
 		g_iClientInstructionPost = INST_NOP;
 	}
@@ -3714,12 +3722,6 @@ public Action Timer_TeleportOnSpawn(Handle hTimer, any aData) {
 	if (IsClientInGame(iClient)) {
 		SetEntityFlags(iClient, GetEntityFlags(iClient) & ~FL_FROZEN);
 		SetEntityFlags(iClient, GetEntityFlags(iClient) & ~FL_ATCONTROLS);
-		
-		char sTeleCmd[32];
-		g_hShowMeTeleCmd.GetString(sTeleCmd, sizeof(sTeleCmd));
-		if (sTeleCmd[0]) {
-			FakeClientCommand(iClient, sTeleCmd);
-		}
 	}
 	
 	return Plugin_Handled;
@@ -3841,6 +3843,10 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		char sClass[32];
 
 		ArrayList hClientInfo = iRecording.ClientInfo;
+		if (!IsRecordingVisible(iRecording, iOther)) {
+			return Plugin_Handled;
+		}
+
 		if (hClientInfo.Length) {
 			// Primary author
 			ClientInfo iClientInfo = hClientInfo.Get(0);
@@ -3942,6 +3948,7 @@ public Action Hook_RocketSpawn(int iEntity) {
 			g_hRecordingEntTypes.PushString("tf_projectile_rocket");
 		}
 
+		// TODO: GC for unused g_iRecordingEntTotal, since max 256
 		int iArr[RecEnt_Size];
 		iArr[RecEnt_iID			] = g_iRecordingEntTotal++;
 		iArr[RecEnt_iRef		] = iRef;
@@ -4001,6 +4008,7 @@ public Action Hook_ProjectileSpawn(int iEntity) {
 			g_hRecordingEntTypes.PushString(sClassName);
 		}
 
+		// TODO: GC for unused g_iRecordingEntTotal, since max 256
 		int iArr[RecEnt_Size];
 		iArr[RecEnt_iID			] = g_iRecordingEntTotal++;
 		iArr[RecEnt_iRef		] = iRef;
@@ -4106,21 +4114,11 @@ public Action Hook_Entity_SetTransmit(int iEntity, int iClient) {
 		return Plugin_Continue;
 	}
 	
-	if (view_as<TFTeam>(GetClientTeam(iClient)) != TFTeam_Spectator && !(g_hAllowMedic.BoolValue && TF2_GetPlayerClass(iClient) == TFClass_Medic)) {
-		TFClassType iClass = TF2_GetPlayerClass(iClient);
-
-		ArrayList hClientInfo = iRecording.ClientInfo;
-		for (int i=0; i<hClientInfo.Length; i++) {
-			ClientInfo iClientInfo = hClientInfo.Get(i);
-			if (iClass == iClientInfo.Class) {
-				return Plugin_Continue;
-			}
-		}
-
-		return Plugin_Handled;
+	if (IsRecordingVisible(iRecording, iClient)) {
+		return Plugin_Continue;
 	}
-	
-	return Plugin_Continue;
+
+	return Plugin_Handled;
 }
 
 // TODO: Follower taunt
@@ -4469,7 +4467,7 @@ void doTeamClassMatch(int iClientToMatch, int iClient) {
 	
 	TFTeam iTeamToMatch = view_as<TFTeam>(GetClientTeam(iClientToMatch));
 	
-	if (g_hDetectClass.BoolValue && iTeamToMatch > TFTeam_Spectator) {
+	if (iTeamToMatch > TFTeam_Spectator) {
 		if (TF2_GetPlayerClass(iClientToMatch) != TFClass_Unknown) {
 			iClass = TF2_GetPlayerClass(iClientToMatch);
 		}
@@ -4510,7 +4508,7 @@ FindResult findNearestRecording(float fPos[3], TFClassType iClass, Recording &iC
 
 			iClientInfo.GetStartPos(fPosRecord);
 
-			if (iClass > TFClass_Unknown && g_hDetectClass.BoolValue && (iClientInfo.Class != iClass) && !(g_hAllowMedic.BoolValue && iClass == TFClass_Medic)) {
+			if (iClass > TFClass_Unknown && !(g_hAllowMedic.BoolValue && iClass == TFClass_Medic)) {
 				continue;
 			}
 
@@ -5184,6 +5182,10 @@ void setBubbleAlpha(Recording iRecording, int iAlpha) {
 }
 
 void setProjectileGlow(int iEntity) {
+	if (!IsValidEntity(iEntity)) {
+		return;
+	}
+
 	char sTargetName[32];
 	Entity_GetName(iEntity, sTargetName, sizeof(sTargetName));
 	if (!sTargetName[0]) {
@@ -5372,41 +5374,39 @@ void spawnModels() {
 			SDKHook(iEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);
 		}
 		
-		if (g_hDetectClass.BoolValue) {
-			// Primary author
-			ClientInfo iClientInfo = iRecording.ClientInfo.Get(0);
+		// Primary author
+		ClientInfo iClientInfo = iRecording.ClientInfo.Get(0);
 
-			TFClassType iClass = iClientInfo.Class;
-			if ((iClass == TFClass_Soldier || iClass == TFClass_DemoMan) && (iEntity = CreateEntityByName("prop_dynamic")) != INVALID_ENT_REFERENCE) {
-				if (iClass == TFClass_Soldier) {
-					SetEntityModel(iEntity, HINT_ROCKET_MODEL);
-				} else {
-					SetEntityModel(iEntity, HINT_STICKY_MODEL);
-				}
-				
-				DispatchKeyValue(iEntity, "Solid", "0");
-				SetEntPropFloat(iEntity, Prop_Data, "m_flModelScale", 0.75);
-				DispatchSpawn(iEntity);
-				SetEntityRenderMode(iEntity, RENDER_TRANSALPHA);
-				
-				iRecording.WeaponModel = EntIndexToEntRef(iEntity);
-				
-				float fPos[3];
-				iClientInfo.GetStartPos(fPos);
-				fPos[2] += 9.0;
-				
-				float fAng[3];
-				iClientInfo.GetStartAng(fAng);
-				fAng[0] = 0.0;
-				fAng[1] = 90.0 + float((RoundFloat(fAng[1]) - 90) % 360);
-				TeleportEntity(iEntity, fPos, fAng, NULL_VECTOR);	
-
-				char sKey[5];
-				IntToString(iEntity, sKey, sizeof(sKey));
-				g_hBubbleLookup.SetValue(sKey, iRecording);
-				
-				SDKHook(iEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);				
+		TFClassType iClass = iClientInfo.Class;
+		if ((iClass == TFClass_Soldier || iClass == TFClass_DemoMan) && (iEntity = CreateEntityByName("prop_dynamic")) != INVALID_ENT_REFERENCE) {
+			if (iClass == TFClass_Soldier) {
+				SetEntityModel(iEntity, HINT_ROCKET_MODEL);
+			} else {
+				SetEntityModel(iEntity, HINT_STICKY_MODEL);
 			}
+			
+			DispatchKeyValue(iEntity, "Solid", "0");
+			SetEntPropFloat(iEntity, Prop_Data, "m_flModelScale", 0.75);
+			DispatchSpawn(iEntity);
+			SetEntityRenderMode(iEntity, RENDER_TRANSALPHA);
+			
+			iRecording.WeaponModel = EntIndexToEntRef(iEntity);
+			
+			float fPos[3];
+			iClientInfo.GetStartPos(fPos);
+			fPos[2] += 9.0;
+			
+			float fAng[3];
+			iClientInfo.GetStartAng(fAng);
+			fAng[0] = 0.0;
+			fAng[1] = 90.0 + float((RoundFloat(fAng[1]) - 90) % 360);
+			TeleportEntity(iEntity, fPos, fAng, NULL_VECTOR);	
+
+			char sKey[5];
+			IntToString(iEntity, sKey, sizeof(sKey));
+			g_hBubbleLookup.SetValue(sKey, iRecording);
+			
+			SDKHook(iEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);				
 		}
 	}
 }
@@ -5574,12 +5574,34 @@ void ToTimeDisplay(char[] sBuffer, int iLength, int iTime) {
 
 		FormatEx(sBuffer, iLength, "%d:%02d:%02d", iHours, iMinutes, iSeconds);
 	} else {
-		FormatEx(sBuffer, iLength, "%2d:%02d", iTime / 60, iTime % 60);
+		FormatEx(sBuffer, iLength, "%d:%02d", iTime / 60, iTime % 60);
 	}
 }
 
 int GetItemDefIndex(int iItem) {
 	return GetEntProp(iItem, Prop_Send, "m_iItemDefinitionIndex");
+}
+
+bool IsRecordingVisible(Recording iRecording, int iClient) {
+	if (IsFakeClient(iClient)) {
+		return false;
+	}
+
+	if (view_as<TFTeam>(GetClientTeam(iClient)) == TFTeam_Spectator || (g_hAllowMedic.BoolValue && TF2_GetPlayerClass(iClient) == TFClass_Medic) || g_hDebug.BoolValue) {
+		return true;
+	}
+
+	TFClassType iClass = TF2_GetPlayerClass(iClient);
+
+	ArrayList hClientInfo = iRecording.ClientInfo;
+	for (int i=0; i<hClientInfo.Length; i++) {
+		ClientInfo iClientInfo = hClientInfo.Get(i);
+		if (iClass == iClientInfo.Class) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 int RespawnRecEnt(int iRecEntIdx) {
