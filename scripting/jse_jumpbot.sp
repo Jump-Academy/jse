@@ -4066,8 +4066,6 @@ public void Hook_ProjVPhysics(int iEntity) {
 // Adapted from BeTheRobot: https://forums.alliedmods.net/showthread.php?t=193067
 public Action Hook_NormalSound(int iClients[64], int &iNumClients, char sSound[PLATFORM_MAX_PATH], int &iEnt, int &iChannel, float &fVolume, int &iLevel, int &iPitch, int &iFlags) {
 	if (g_hRobot.BoolValue && g_hRecordingBots.FindValue(iEnt, RecBot_iEnt) != -1) {
-		// FIXME: Precache robot sounds
-		/*
 		TFClassType iClass = TF2_GetPlayerClass(iEnt);
 		
 		if (StrContains(sSound, "player/footsteps/", false) != -1 && iClass != TFClass_Medic) {
@@ -4092,7 +4090,6 @@ public Action Hook_NormalSound(int iClients[64], int &iNumClients, char sSound[P
 			PrecacheSound(sSound);
 			return Plugin_Changed;
 		}
-		*/
 	}
 	
 	return Plugin_Continue;
