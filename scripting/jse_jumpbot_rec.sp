@@ -440,8 +440,9 @@ public int Native_Recording_Destroy(Handle hPlugin, int iArgC) {
 }
 
 public int Sort_Recordings(int iIdx1, int iIdx2, Handle hArray, Handle hParam) {
-	Recording iRecording1 = view_as<Recording>(view_as<ArrayList>(hArray).Get(iIdx1));
-	Recording iRecording2 = view_as<Recording>(view_as<ArrayList>(hArray).Get(iIdx2));
+	ArrayList hArrayList = view_as<ArrayList>(hArray);
+	Recording iRecording1 = view_as<Recording>(hArrayList.Get(iIdx1));
+	Recording iRecording2 = view_as<Recording>(hArrayList.Get(iIdx2));
 	
 	if (iRecording1.Repo && !iRecording2.Repo) {
 		return -1;
@@ -451,12 +452,7 @@ public int Sort_Recordings(int iIdx1, int iIdx2, Handle hArray, Handle hParam) {
 		return 0;
 	}
 	
-	char sFilePath1[PLATFORM_MAX_PATH];
-	char sFilePath2[PLATFORM_MAX_PATH];
-	iRecording1.GetFilePath(sFilePath1, sizeof(sFilePath1));
-	iRecording2.GetFilePath(sFilePath2, sizeof(sFilePath2));
-	
-	return strcmp(sFilePath1, sFilePath2);
+	return iRecording1.Timestamp - iRecording2.Timestamp;
 }
 
 // Stocks
