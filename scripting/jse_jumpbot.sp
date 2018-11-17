@@ -1244,13 +1244,13 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 				
 				if (g_iCallKeyMask) {
 					if (g_iClientInstruction & INST_PLAYALL) {
-						PrintHintText(iClient, "[%d/%d] %t %s/%s\n%s\n%t", g_hRecordings.Length-g_hPlaybackQueue.Length+1, g_hRecordings.Length, "Replaying", sTimePlay, sTimeTotal, sRecordingType, "Press Stop", g_sCallKeyLabel);
+						PrintHintText(iClient, "[%d/%d] %t %s/%s\n%s\n%t", g_hRecordings.Length-g_hPlaybackQueue.Length, g_hRecordings.Length, "Replaying", sTimePlay, sTimeTotal, sRecordingType, "Press Stop", g_sCallKeyLabel);
 					} else {
 						PrintHintText(iClient, "%t %s/%s\n%s\n%t", "Replaying", sTimePlay, sTimeTotal, sRecordingType, "Press Stop", g_sCallKeyLabel);
 					}
 				} else {
 					if (g_iClientInstruction & INST_PLAYALL) {
-						PrintHintText(iClient, "[%d/%d] %t %s/%s\n%s\n%t", g_hRecordings.Length-g_hPlaybackQueue.Length+1, g_hRecordings.Length, "Replaying", sTimePlay, sTimeTotal, sRecordingType, "Type Stop");
+						PrintHintText(iClient, "[%d/%d] %t %s/%s\n%s\n%t", g_hRecordings.Length-g_hPlaybackQueue.Length, g_hRecordings.Length, "Replaying", sTimePlay, sTimeTotal, sRecordingType, "Type Stop");
 					} else {
 						PrintHintText(iClient, "%t %s/%s\n%s", "Replaying", sTimePlay, sTimeTotal, sRecordingType);
 					}
@@ -4540,8 +4540,6 @@ FindResult findNearestRecording(float fPos[3], TFClassType iClass, Recording &iC
 		ArrayList hClientInfo = iRecording.ClientInfo;
 		for (int j=0; j<hClientInfo.Length; j++) {
 			ClientInfo iClientInfo = hClientInfo.Get(j);
-
-			iClientInfo.GetStartPos(fPosRecord);
 
 			if (iClass > TFClass_Unknown && iClientInfo.Class != iClass && !(g_hAllowMedic.BoolValue && iClass == TFClass_Medic)) {
 				continue;
