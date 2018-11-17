@@ -35,6 +35,13 @@
 #define RecEnt_iAssign			5
 #define RecEnt_Size				6
 
+#define MAX_REC_ENT_FAIL_FRAMES 5
+
+#define RecEntFail_iRecEnt		0
+#define RecEntFail_iCount		1
+#define RecEntFail_iInitTick	2
+#define RecEntFail_Size			3
+
 #define RecBot_iEnt				0
 #define RecBot_hEquip			1
 #define RecBot_Size				2
@@ -49,8 +56,6 @@
 #define INST_RETURN				(1 << 6)
 #define INST_WAIT				(1 << 7)
 #define INST_SPEC				(1 << 8)
-
-//#define BUFFER_SIZE 			6553600
 
 #define MAX_NEARBY_SEARCH_DISTANCE	1000.0
 #define MAX_TARGET_FOLLOW_DISTANCE	4000.0
@@ -191,6 +196,7 @@ int g_iRecBufferUsed;
 int g_iRecBufferFrame;
 //ArrayList g_hRecEntSpawnList;
 ArrayList g_hRecBufferFrames;
+ArrayList g_hRecEntFail;
 int g_iRewindWaitFrames;
 int g_iStateLoadLast;
 
@@ -362,6 +368,7 @@ public void OnPluginStart() {
 	g_hRecordingBots = new ArrayList(RecBot_Size);
 	g_hRecBufferFrames = new ArrayList();
 	//g_hRecEntSpawnList = new ArrayList();
+	g_hRecEntFail = new ArrayList(RecEntFail_Size);
 
 	strcopy(g_sRecSubDir, sizeof(g_sRecSubDir), RECORD_FOLDER);
 	
@@ -644,6 +651,7 @@ public void OnMapEnd() {
 	clearRecordings(g_hRecordings);
 	g_hRecordingClients.Clear();
 	clearRecEntities();
+	g_hRecEntFail.Clear();
 	g_hRecordingEntTypes.Clear();
 	g_iRecordingEntTotal = 0;
 	//g_hRecEntSpawnList.Clear();
@@ -807,6 +815,7 @@ public void OnGameFrame() {
 		if (g_iRecBufferIdx >= g_hRecBuffer.Length || (g_iRecBufferIdx >= g_iRecBufferUsed)) {
 			resetBubbleRotation(g_iRecording);
 			clearRecEntities();
+			g_hRecEntFail.Clear();
 			
 			if (g_hPlaybackQueue.Length && g_iClientInstruction & INST_PLAYALL) {
 				g_iRecording = g_hPlaybackQueue.Get(0);
@@ -918,7 +927,6 @@ public void OnGameFrame() {
 			return;
 		}
 
-		int iRecEntFailCount = 0;
 		while (g_iRecBufferIdx < g_iRecBufferUsed && g_iRecBufferIdx < g_hRecBuffer.Length) {
 			int iEntity = INVALID_ENT_REFERENCE;
 			int iEntType;
@@ -1011,10 +1019,25 @@ public void OnGameFrame() {
 							#if defined DEBUG
 							PrintToServer("Got iRecEnt[%d] block but found no usable entity", iRecordingEnt);
 							#endif
-							iRecEntFailCount++;
+							
+							int iRecEntFailIdx = g_hRecEntFail.FindValue(iRecordingEnt, RecEntFail_iRecEnt);
+							if (iRecEntFailIdx == -1) {
+								int iArr[RecEntFail_Size];
+								iArr[RecEntFail_iRecEnt]	= iRecordingEnt;
+								iArr[RecEntFail_iCount]		= 1;
+								iArr[RecEntFail_iInitTick]	= GetGameTickCount();
+								g_hRecEntFail.PushArray(iArr);
+							} else {
+								g_hRecEntFail.Set(iRecEntFailIdx, g_hRecEntFail.Get(iRecEntFailIdx, RecEntFail_iCount)+1, RecEntFail_iCount);
+							}
 						}
 					} else {
 						iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iRef));
+
+						int iRecEntFailIdx = g_hRecEntFail.FindValue(iRecEntIdx, RecEntFail_iRecEnt);
+						if (iRecEntFailIdx != -1) {
+							g_hRecEntFail.Erase(iRecEntFailIdx);
+						}
 					}
 				}
 				#if defined DEBUG
@@ -1062,8 +1085,16 @@ public void OnGameFrame() {
 			TeleportEntity(iEntity, NULL_VECTOR, fAng, fVel);
 		}
 
-		if (iRecEntFailCount > 1) {
-			RespawnFrameRecEnt(g_iRecBufferFrame);
+		for (int i=0; i<g_hRecEntFail.Length; i++) {
+			if (g_hRecEntFail.Get(i, RecEntFail_iCount) > MAX_REC_ENT_FAIL_FRAMES) {
+				RespawnFrameRecEnt(g_iRecBufferFrame);
+				break;
+			}
+
+			if (GetGameTickCount() - g_hRecEntFail.Get(i, RecEntFail_iInitTick) > MAX_REC_ENT_FAIL_FRAMES) {
+				g_hRecEntFail.Erase(i--);
+				continue;
+			}
 		}
 
 		if (g_iClientInstruction & INST_PAUSE) {
@@ -2122,7 +2153,10 @@ public Action cmdPlay(int iClient, int iArgC) {
 			}
 
 			iRecording = g_hRecordings.Get(iRecID);
-			loadFile(iRecording);
+			if (!loadFile(iRecording)) {
+				CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Failed to load recording file");
+				return Plugin_Handled;
+			}
 		}
 	}
 	
