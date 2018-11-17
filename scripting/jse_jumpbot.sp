@@ -2012,6 +2012,7 @@ public Action cmdRecord(int iClient, int iArgC) {
 	g_hRecordingEntities.Clear();
 	g_iRecordingEntTotal = 0;
 
+	g_hRecBuffer.Clear();
 	g_iRecBufferIdx = 0;
 	g_iRecBufferUsed = 0;
 	g_iRecBufferFrame = 0;
@@ -4211,11 +4212,7 @@ void clearRecBotData(int iID = -1) {
 
 void clearRecordings(ArrayList hRecordings) {
 	for (int i=0; i<hRecordings.Length; i++) {
-		Recording iRecording = g_hRecordings.Get(i);
-		ArrayList hClientInfo = iRecording.ClientInfo;
-		for (int j=0; j<hClientInfo.Length; j++) {
-			ClientInfo.Destroy(hClientInfo.Get(j));
-		}
+		Recording iRecording = hRecordings.Get(i);
 		Recording.Destroy(iRecording);
 	}
 	hRecordings.Clear();
