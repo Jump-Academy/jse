@@ -4543,7 +4543,7 @@ FindResult findNearestRecording(float fPos[3], TFClassType iClass, Recording &iC
 
 			iClientInfo.GetStartPos(fPosRecord);
 
-			if (iClass > TFClass_Unknown && !(g_hAllowMedic.BoolValue && iClass == TFClass_Medic)) {
+			if (iClass > TFClass_Unknown && iClientInfo.Class != iClass && !(g_hAllowMedic.BoolValue && iClass == TFClass_Medic)) {
 				continue;
 			}
 
