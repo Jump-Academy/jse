@@ -301,7 +301,7 @@ public void OnPluginStart() {
 	RegConsoleCmd(	"jb_record", 		cmdRecord, 							"Start recording movement into the buffer"							);
 	RegConsoleCmd(	"jb_play", 			cmdPlay, 							"Start playback of movement from the buffer on the control client"	);
 	RegConsoleCmd(	"jb_save", 			cmdSave, 							"Save the last recording to disk"									);
-	RegAdminCmd(	"jb_delete", 		cmdDelete, 			ADMFLAG_ROOT,	"Remove the specified recording ID"									);
+	RegAdminCmd(	"jb_delete", 		cmdDelete, 			ADMFLAG_BAN,	"Remove the specified recording ID"									);
 	RegAdminCmd(	"jb_clearcache", 	cmdClearCache, 		ADMFLAG_ROOT, 	"Clear the recording cache"											);
 	RegAdminCmd(	"jb_upgrade", 		cmdUpgrade, 		ADMFLAG_ROOT, 	"Perform plugin upgrade operations"									);
 	
@@ -2257,15 +2257,16 @@ public Action cmdSave(int iClient, int iArgC) {
 	
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), g_sRecSubDir);
-	if(!DirExists(sPath))
+	if(!DirExists(sPath)) {
 		CreateDirectory(sPath, 509);
+	}
 	
-	char sFileName[32];
-	GetCurrentMap(sFileName, sizeof(sFileName));
+	char sMapName[32];
+	GetCurrentMap(sMapName, sizeof(sMapName));
 	
 	char sDate[32];
 	FormatTime(sDate, sizeof(sDate), "%Y%m%d_%H%M%S");
-	Format(sPath, sizeof(sPath), "%s/%s-%s.jmp", sPath, sFileName, sDate);
+	Format(sPath, sizeof(sPath), "%s/%s-%s.jmp", sPath, sMapName, sDate);
 
 	if (!SaveFile(sPath)) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t: %s", "Cannot File Write", sPath);
@@ -2279,6 +2280,9 @@ public Action cmdSave(int iClient, int iArgC) {
 	} else {
 		CPrintToChat(iClient, "{dodgerblue}[jb] {white}%t", "Playback Saved", g_hRecBufferFrames.Length, sSteamID);
 	}
+
+	Recording.Destroy(g_iRecording);
+	g_iRecording = NULL_RECORDING;
 		
 	// Refresh recordings
 	removeModels();
@@ -4748,16 +4752,13 @@ Recording loadRecording(char[] sFilePath) {
 	}
 
 	hFile.Seek(0x28, SEEK_SET);
-	int iPosMapName;
-	hFile.ReadInt32(iPosMapName);
-	hFile.Seek(iPosMapName, SEEK_SET);
 
 	char sMapName[PLATFORM_MAX_PATH];
 	GetCurrentMap(sMapName, sizeof(sMapName));
 
 	char sFileMapName[32];
-	hFile.ReadString(sMapName, sizeof(sMapName));
-	if (!StrEqual(sMapName, sFileMapName, false)) {
+	hFile.ReadString(sFileMapName, sizeof(sFileMapName));
+	if (g_hMapMatch.BoolValue && !StrEqual(sMapName, sFileMapName, false)) {
 		LogError("Map mismatch (%s): %s", sFileMapName, sFilePath);
 		Recording.Destroy(iRecording);
 		return NULL_RECORDING;
