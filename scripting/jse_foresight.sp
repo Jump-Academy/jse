@@ -3,7 +3,7 @@
 //#define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.0"
+#define PLUGIN_VERSION "0.1.1"
 
 #define CAMERA_MODEL	"models/combine_scanner.mdl"
 
@@ -39,8 +39,8 @@ public Plugin myinfo = {
 public void OnPluginStart() {
 	CreateConVar("jse_foresight_version", PLUGIN_VERSION, "Jump Server Essentials foresight version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 	g_hDuration = CreateConVar("jse_foresight_duration", "30.0", "Foresight max duration", FCVAR_NONE, true, -1.0);
-	g_hTurnRatio = CreateConVar("jse_foresight_turn_ratio", "0.15", "Foresight mouse-to-angle turn ratio", FCVAR_NONE, true, 0.0);
-	g_hSpeed = CreateConVar("jse_foresight_speed", "500.0", "Foresight fly speed", FCVAR_NONE, true, 0.0);
+	g_hTurnRatio = CreateConVar("jse_foresight_turn_ratio", "0.08", "Foresight mouse-to-angle turn ratio", FCVAR_NONE, true, 0.0);
+	g_hSpeed = CreateConVar("jse_foresight_speed", "800.0", "Foresight fly speed", FCVAR_NONE, true, 0.0);
 	
 	RegConsoleCmd("sm_foresight",	cmdForesight, "Explore in spirit form");
 	RegConsoleCmd("sm_fs",			cmdForesight, "Explore in spirit form");
@@ -93,8 +93,9 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 	}
 
 	float fTimeLeft = 1.0;
-	if (g_hDuration.IntValue != -1) {
-		fTimeLeft = g_hDuration.FloatValue - (GetGameTime()-iCamera.StartTime);
+	float fStartTime = iCamera.StartTime;
+	if (g_hDuration.IntValue != -1 && fStartTime > 0.0) {
+		fTimeLeft = g_hDuration.FloatValue - (GetGameTime()-fStartTime);
 	}
 
 	if (iButtons & IN_ATTACK || fTimeLeft <= 0.0) {
@@ -117,17 +118,24 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 
 	float fVelDesired[3];
 
-	float fFwd[3], fRight[3];
-	GetAngleVectors(fAngDesired, fFwd, fRight, NULL_VECTOR);
+	float fFwd[3], fRight[3], fUp[3];
+	GetAngleVectors(fAngDesired, fFwd, fRight, fUp);
 
 	float fSpeed = g_hSpeed.FloatValue;
 	ScaleVector(fFwd, fSpeed * (float((iButtons & IN_FORWARD) != 0) - float((iButtons & IN_BACK) != 0)));
 	ScaleVector(fRight, fSpeed * (float((iButtons & IN_MOVERIGHT) != 0) - float((iButtons & IN_MOVELEFT) != 0)));
+	ScaleVector(fUp, fSpeed * (float((iButtons & IN_JUMP) != 0) - float((iButtons & IN_DUCK) != 0)));
 	
 	AddVectors(fFwd, fRight, fVelDesired);
+	AddVectors(fVelDesired, fUp, fVelDesired);
 
 	if (GetGameTickCount() % 33 == 0) {
-		PrintHintText(iClient, "Press %s to exit foresight (%.0f)", "%+attack%", fTimeLeft);
+		if (fStartTime) {
+			PrintHintText(iClient, "Press %s to exit foresight (%.0f)", "%+attack%", fTimeLeft);
+		} else {
+			PrintHintText(iClient, "Press %s to exit foresight", "%+attack%");
+		}
+		
 		StopSound(iClient, SNDCHAN_STATIC, "ui/hint.wav");
 	}
 	
@@ -207,8 +215,11 @@ public Action cmdForesight(int iClient, int iArgC) {
 	iCamera.Client = iClient;
 	iCamera.Entity = EntIndexToEntRef(iEntity);
 	iCamera.ViewControl = EntIndexToEntRef(iViewControl);
-	iCamera.StartTime = GetGameTime();
 
+	if (!CheckCommandAccess(iClient, "jse_foresight_untimed", ADMFLAG_RESERVATION)) {
+		iCamera.StartTime = GetGameTime();
+	}
+	
 	float fPos[3], fAng[3];
 	GetClientEyePosition(iClient, fPos);
 	GetClientEyeAngles(iClient, fAng);
