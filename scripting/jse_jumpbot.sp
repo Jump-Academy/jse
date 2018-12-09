@@ -3994,9 +3994,8 @@ public Action Hook_RocketSpawn(int iEntity) {
 			g_hRecordingEntTypes.PushString("tf_projectile_rocket");
 		}
 
-		// TODO: GC for unused g_iRecordingEntTotal, since max 256
 		int iArr[RecEnt_Size];
-		iArr[RecEnt_iID			] = g_iRecordingEntTotal++;
+		iArr[RecEnt_iID			] = g_iRecordingEntTotal++ % 256;
 		iArr[RecEnt_iRef		] = iRef;
 		iArr[RecEnt_iType		] = iEntType;
 		iArr[RecEnt_iMoveType	] = view_as<int>(GetEntityMoveType(iEntity));
@@ -4054,9 +4053,8 @@ public Action Hook_ProjectileSpawn(int iEntity) {
 			g_hRecordingEntTypes.PushString(sClassName);
 		}
 
-		// TODO: GC for unused g_iRecordingEntTotal, since max 256
 		int iArr[RecEnt_Size];
-		iArr[RecEnt_iID			] = g_iRecordingEntTotal++;
+		iArr[RecEnt_iID			] = g_iRecordingEntTotal++ % 256;
 		iArr[RecEnt_iRef		] = iRef;
 		iArr[RecEnt_iType		] = iEntType;
 		iArr[RecEnt_iMoveType	] = view_as<int>(GetEntityMoveType(iEntity));
