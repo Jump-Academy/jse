@@ -4753,7 +4753,7 @@ Recording loadRecording(char[] sFilePath) {
 
 	hFile.Seek(0x28, SEEK_SET);
 
-	char sMapName[PLATFORM_MAX_PATH];
+	char sMapName[32];
 	GetCurrentMap(sMapName, sizeof(sMapName));
 
 	char sFileMapName[32];
