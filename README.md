@@ -8,6 +8,7 @@ JSE is a set of modular plugins for enabling standard features present in most T
 * Core
 * JumpBOT
 * Show Keys
+* Foresight
 
 ## Dependencies
 * [AutoExecConfig](https://github.com/Impact123/AutoExecConfig)
