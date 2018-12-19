@@ -24,6 +24,7 @@
 ConVar g_hDuration;
 ConVar g_hTurnRatio;
 ConVar g_hSpeed;
+ConVar g_hAlpha;
 
 ArrayList g_hCameras;
 FSCamera g_iActiveCamera[MAXPLAYERS+1] = {NULL_CAMERA, ...};
@@ -41,6 +42,7 @@ public void OnPluginStart() {
 	g_hDuration = CreateConVar("jse_foresight_duration", "30.0", "Foresight max duration", FCVAR_NONE, true, -1.0);
 	g_hTurnRatio = CreateConVar("jse_foresight_turn_ratio", "0.08", "Foresight mouse-to-angle turn ratio", FCVAR_NONE, true, 0.0);
 	g_hSpeed = CreateConVar("jse_foresight_speed", "800.0", "Foresight fly speed", FCVAR_NONE, true, 0.0);
+	g_hAlpha = CreateConVar("jse_foresight_alpha", "0.6", "Player body transparency ratio when using foresight", FCVAR_NONE, true, 0.0, true, 1.0);
 	
 	RegConsoleCmd("sm_foresight",	cmdForesight, "Explore in spirit form");
 	RegConsoleCmd("sm_fs",			cmdForesight, "Explore in spirit form");
@@ -207,6 +209,13 @@ public Action cmdForesight(int iClient, int iArgC) {
 	DispatchSpawn(iEntity);
 	SetEntityMoveType(iEntity, MOVETYPE_NOCLIP);
 
+	if (g_hAlpha.FloatValue < 1.0) {
+		SetEntityRenderMode(iClient, RENDER_TRANSALPHA);
+		int iR, iG, iB, iA;
+		GetEntityRenderColor(iClient, iR, iG, iB, iA);
+		SetEntityRenderColor(iClient, iR, iG, iB, RoundToNearest(255*g_hAlpha.FloatValue));
+	}
+
 	SetVariantString("!activator");
 	AcceptEntityInput(iViewControl, "SetParent", iEntity, iViewControl);
 	DispatchSpawn(iViewControl);
@@ -288,6 +297,13 @@ void DisableCamera(FSCamera iCamera) {
 		if (IsValidEntity(hViewEntity) && HasEntProp(hViewEntity, Prop_Data, "m_hPlayer") && GetEntPropEnt(hViewEntity, Prop_Data, "m_hPlayer")  != iClient) {
 			SetEntPropEnt(hViewEntity, Prop_Data, "m_hPlayer", iClient);
 			AcceptEntityInput(hViewEntity, "Disable");
+		}
+
+		if (g_hAlpha.FloatValue > 1.0) {
+			SetEntityRenderMode(iClient, RENDER_TRANSALPHA);
+			int iR, iG, iB, iA;
+			GetEntityRenderColor(iClient, iR, iG, iB, iA);
+			SetEntityRenderColor(iClient, iR, iG, iB, 255);
 		}
 	}
 
