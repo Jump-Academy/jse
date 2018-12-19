@@ -3,7 +3,7 @@
 //#define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.2.0"
+#define PLUGIN_VERSION "0.2.1"
 
 #define CAMERA_MODEL	"models/combine_scanner.mdl"
 
@@ -24,6 +24,7 @@
 ConVar g_hDuration;
 ConVar g_hTurnRatio;
 ConVar g_hSpeed;
+ConVar g_hAccel;
 ConVar g_hAlpha;
 
 ArrayList g_hCameras;
@@ -41,7 +42,8 @@ public void OnPluginStart() {
 	CreateConVar("jse_foresight_version", PLUGIN_VERSION, "Jump Server Essentials foresight version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 	g_hDuration = CreateConVar("jse_foresight_duration", "30.0", "Foresight max duration", FCVAR_NONE, true, -1.0);
 	g_hTurnRatio = CreateConVar("jse_foresight_turn_ratio", "0.08", "Foresight mouse-to-angle turn ratio", FCVAR_NONE, true, 0.0);
-	g_hSpeed = CreateConVar("jse_foresight_speed", "800.0", "Foresight fly speed", FCVAR_NONE, true, 0.0);
+	g_hSpeed = CreateConVar("jse_foresight_speed", "1000.0", "Foresight fly speed", FCVAR_NONE, true, 0.0);
+	g_hAccel = CreateConVar("jse_foresight_accel", "0.075", "Foresight fly acceleration", FCVAR_NONE, true, 0.0, true, 1.0);
 	g_hAlpha = CreateConVar("jse_foresight_alpha", "0.6", "Player body transparency ratio when using foresight", FCVAR_NONE, true, 0.0, true, 1.0);
 	
 	RegConsoleCmd("sm_foresight",	cmdForesight, "Explore in spirit form");
@@ -141,6 +143,12 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 		StopSound(iClient, SNDCHAN_STATIC, "ui/hint.wav");
 	}
 	
+	float fVelCurrent[3], fVelDiff[3];
+	Entity_GetAbsVelocity(iEntity, fVelCurrent);
+	SubtractVectors(fVelDesired, fVelCurrent, fVelDiff);
+
+	ScaleVector(fVelDiff, g_hAccel.FloatValue);
+	AddVectors(fVelCurrent, fVelDiff, fVelDesired);
 	Entity_SetAbsVelocity(iEntity, fVelDesired);
 
 	return Plugin_Continue;
