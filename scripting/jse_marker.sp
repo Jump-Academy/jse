@@ -451,11 +451,12 @@ void SendUnmarkMenu(int iClient) {
 
 	char sInfo[8];
 	for (int i=0; i<hAnnotations.Length; i++) {
-		if (hAnnotations.Get(i, Annotation_iID) == -1) {
+		int iAnnotationID = hAnnotations.Get(i, Annotation_iID);
+		if (iAnnotationID == -1) {
 			continue;
 		}
 
-		IntToString(i, sInfo, sizeof(sInfo));
+		IntToString(iAnnotationID, sInfo, sizeof(sInfo));
 
 		char sText[32];
 		hAnnotations.GetString(i, sText, sizeof(sText));
@@ -472,13 +473,16 @@ public int MenuHandler_Unmark(Menu hMenu, MenuAction iAction, int iClient, int i
 			char sInfo[32];
 			hMenu.GetItem(iOption, sInfo, sizeof(sInfo));
 
-			int iIdx = StringToInt(sInfo);
+			int iAnnotationID = StringToInt(sInfo);
 
 			ArrayList hAnnotations = g_hAnnotations[iClient];
-			int iAnnotationID = hAnnotations.Get(iIdx, Annotation_iID);
-
-			HideAnnotation(iAnnotationID, iClient);
-			hAnnotations.Set(iIdx, -1, Annotation_iID);
+			for (int i=0; i<hAnnotations.Length; i++) {
+				if (iAnnotationID == hAnnotations.Get(i, Annotation_iID)) {
+					HideAnnotation(iAnnotationID, iClient);
+					hAnnotations.Set(i, -1, Annotation_iID);
+					break;
+				}
+			}
 
 			SendUnmarkMenu(iClient);
 		}
