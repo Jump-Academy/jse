@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR		"AI"
-#define PLUGIN_VERSION		"0.1.0"
+#define PLUGIN_VERSION		"0.2.0"
 
 #define Annotation_sText	0
 #define Annotation_fPosX	8
@@ -16,9 +16,7 @@
 
 #include <sourcemod>
 #include <sdktools>
-#include <smlib/arrays>
 #include <smlib/clients>
-#include <smlib/entities>
 #include <multicolors>
 
 #undef REQUIRE_PLUGIN
