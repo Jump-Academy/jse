@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR		"AI"
-#define PLUGIN_VERSION		"0.2.0"
+#define PLUGIN_VERSION		"0.2.1"
 
 #define Annotation_sText	0
 #define Annotation_fPosX	8
@@ -206,7 +206,7 @@ public Action cmdPlayerMark(int iClient, int iArgC) {
 			iClient,
 			iTargetList,
 			MAXPLAYERS,
-			COMMAND_TARGET_NONE,
+			COMMAND_FILTER_NO_IMMUNITY,
 			sTargetName,
 			sizeof(sTargetName),
 			bTnIsML)) <= 0) {
