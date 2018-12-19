@@ -12,13 +12,14 @@
 #define Annotation_Size		13
 
 #define ANNOTATIONS_ID_OFFSET 	1000
-#define ANNOTATIONS_CLIENT_MAX	20
+#define ANNOTATIONS_CLIENT_MAX	40
 
 #include <sourcemod>
 #include <sdktools>
 #include <smlib/arrays>
 #include <smlib/clients>
 #include <smlib/entities>
+#include <multicolors>
 
 #undef REQUIRE_PLUGIN
 #include <updater>
@@ -42,6 +43,7 @@ public void OnPluginStart() {
 	g_hLimit = CreateConVar("jse_marker_limit", "1", "Marker limit per player", FCVAR_NONE, true, 0.0, true, float(ANNOTATIONS_CLIENT_MAX));
 
 	RegConsoleCmd("sm_mark",		cmdMark, "Mark a foresight annotation");
+	RegConsoleCmd("sm_pmark",		cmdPlayerMark, "Mark a foresight annotation on a player");
 	RegConsoleCmd("sm_unmark",		cmdUnmark, "Remove a foresight annotation");
 	RegConsoleCmd("sm_unmarkall",	cmdUnmarkAll, "Remove all foresight annotations");
 
@@ -59,6 +61,20 @@ public void OnMapEnd() {
 public void OnClientDisconnect(int iClient) {
 	if (g_hAnnotations[iClient] != null) {
 		delete g_hAnnotations[iClient];
+	}
+
+	for (int i=1; i<=MaxClients; i++) {
+		if (g_hAnnotations[i] != null) {
+			ArrayList hAnnotations = g_hAnnotations[i];
+			for (int j=0; j<hAnnotations.Length; j++) {
+				int iAnnotationID = hAnnotations.Get(j, Annotation_iID);
+				if (iAnnotationID != -1 && hAnnotations.Get(j, Annotation_iTarget) == iClient) {
+					HideAnnotation(iAnnotationID, i);
+					hAnnotations.Set(j, -1, Annotation_iID);
+				}
+			}
+
+		}
 	}
 }
 
@@ -103,6 +119,7 @@ public Action cmdMark(int iClient, int iArgC) {
 			}
 
 			if (!bAvailable) {
+				CReplyToCommand(iClient, "{dodgerblue}[jse] Marker capacity is full.");
 				return Plugin_Handled;
 			}
 		}
@@ -129,7 +146,7 @@ public Action cmdMark(int iClient, int iArgC) {
 			aData[Annotation_iTarget] = iTraceEnt;
 
 			for (int i=0; i<hAnnotations.Length; i++) {
-				if (hAnnotations.Get(i, Annotation_iTarget) == iTraceEnt) {
+				if (hAnnotations.Get(i, Annotation_iID) != -1 && hAnnotations.Get(i, Annotation_iTarget) == iTraceEnt) {
 					CloseHandle(hTr);
 					return Plugin_Handled;
 				}
@@ -156,13 +173,112 @@ public Action cmdMark(int iClient, int iArgC) {
 		}
 
 		if (iArgC == 0) {
-			FormatEx(sText, sizeof(sText), "%d", iIdx+1);
+			if (iTraceEnt > 0) {
+				FormatEx(sText, sizeof(sText), "%N", iTraceEnt);
+			} else {
+				FormatEx(sText, sizeof(sText), "%d", iIdx+1);
+			}
 		}
 
 		hAnnotations.SetString(iIdx, sText);
 		ShowAnnotation(iClient, iIdx);
 	}
 	CloseHandle(hTr);
+
+	return Plugin_Handled;
+}
+
+public Action cmdPlayerMark(int iClient, int iArgC) {
+	if (iArgC == 0) {
+		CReplyToCommand(iClient, "{dodgerblue}[jse] Usage: sm_pmark <target>");
+		return Plugin_Handled;
+	}
+
+	int iLimit = CheckCommandAccess(iClient, "jse_marker_maxlimit", ADMFLAG_RESERVATION) ? ANNOTATIONS_CLIENT_MAX : g_hLimit.IntValue;
+
+	char sArg1[32];
+	GetCmdArg(1, sArg1, sizeof(sArg1));
+
+	char sTargetName[MAX_TARGET_LENGTH];
+	int iTargetList[MAXPLAYERS], iTargetCount;
+	bool bTnIsML;
+ 
+	if ((iTargetCount = ProcessTargetString(
+			sArg1,
+			iClient,
+			iTargetList,
+			MAXPLAYERS,
+			COMMAND_TARGET_NONE,
+			sTargetName,
+			sizeof(sTargetName),
+			bTnIsML)) <= 0) {
+		ReplyToTargetError(iClient, iTargetCount);
+		return Plugin_Handled;
+	}
+
+	ArrayList hAnnotations = g_hAnnotations[iClient];
+	if (hAnnotations == null) {
+		hAnnotations = g_hAnnotations[iClient] = new ArrayList(Annotation_Size);
+	}
+	
+	char sText[32];
+
+	bool bSelfMark = false;
+	any aData[Annotation_Size];
+	for (int i = 0; i < iTargetCount; i++) {
+		if (iTargetList[i] == iClient) {
+			bSelfMark = true;
+			continue;
+		}
+
+		bool bDuplicate = false;
+		for (int j=0; j<hAnnotations.Length; j++) {
+			if (hAnnotations.Get(j, Annotation_iID) != -1 && hAnnotations.Get(j, Annotation_iTarget) == iTargetList[i]) {
+				bDuplicate = true;
+				break;
+			}
+		}
+
+		if (bDuplicate) {
+			continue;
+		}
+
+		aData[Annotation_iTarget] = iTargetList[i];
+
+		int iIdx = -1;
+		for (int j=0; j<hAnnotations.Length; j++) {
+			if (hAnnotations.Get(j, Annotation_iID) == -1) {
+				iIdx = j;
+				break;
+			}
+		}
+
+		if (iIdx == -1) {
+			if (hAnnotations.Length >= iLimit) {
+				CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Marker capacity is full.");
+				return Plugin_Handled;
+			}
+
+			hAnnotations.PushArray(aData);
+			iIdx = hAnnotations.Length-1;
+		} else {
+			hAnnotations.SetArray(iIdx, aData);
+		}
+
+		FormatEx(sText, sizeof(sText), "%N", iTargetList[i]);
+		hAnnotations.SetString(iIdx, sText);
+		ShowAnnotation(iClient, iIdx);
+	}
+
+	if (iTargetCount == 1 && bSelfMark) {
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Cannot mark self");
+	} else {
+		if (bTnIsML) {
+			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Marked %t", sTargetName);
+		} else {
+			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Marked %s", sTargetName);
+		}
+	}
 
 	return Plugin_Handled;
 }
@@ -211,7 +327,11 @@ public Action cmdUnmark(int iClient, int iArgC) {
 			}
 		}
 
-		if (iIdx != -1) {
+		if (iIdx == -1) {
+			if (iClient > 0) {
+				SendUnmarkMenu(iClient);
+			}
+		} else {
 			HideAnnotation(iAnnotationID, iClient);
 			hAnnotations.Set(iIdx, -1, Annotation_iID);
 		}
@@ -315,4 +435,55 @@ void HideAnnotation(int iAnnotationID, int iClient) {
 
 	hEvent.SetInt("id", iAnnotationID);
 	hEvent.FireToClient(iClient);
+}
+
+// Menus
+
+void SendUnmarkMenu(int iClient) {
+	ArrayList hAnnotations = g_hAnnotations[iClient];
+	if (hAnnotations == null || !hAnnotations.Length) {
+		return;
+	}
+
+	Menu hMenu = new Menu(MenuHandler_Unmark);
+	hMenu.SetTitle("Unmark");
+	hMenu.ExitButton = true;
+
+	char sInfo[8];
+	for (int i=0; i<hAnnotations.Length; i++) {
+		if (hAnnotations.Get(i, Annotation_iID) == -1) {
+			continue;
+		}
+
+		IntToString(i, sInfo, sizeof(sInfo));
+
+		char sText[32];
+		hAnnotations.GetString(i, sText, sizeof(sText));
+		hMenu.AddItem(sInfo, sText);
+	}
+
+
+	hMenu.Display(iClient, 0);
+}
+
+public int MenuHandler_Unmark(Menu hMenu, MenuAction iAction, int iClient, int iOption) {
+	switch (iAction) {
+		case MenuAction_Select: {
+			char sInfo[32];
+			hMenu.GetItem(iOption, sInfo, sizeof(sInfo));
+
+			int iIdx = StringToInt(sInfo);
+
+			ArrayList hAnnotations = g_hAnnotations[iClient];
+			int iAnnotationID = hAnnotations.Get(iIdx, Annotation_iID);
+
+			HideAnnotation(iAnnotationID, iClient);
+			hAnnotations.Set(iIdx, -1, Annotation_iID);
+
+			SendUnmarkMenu(iClient);
+		}
+		case MenuAction_End: {
+			delete hMenu;
+		}
+	}
 }
