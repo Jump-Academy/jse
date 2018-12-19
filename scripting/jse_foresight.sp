@@ -3,7 +3,7 @@
 //#define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.1"
+#define PLUGIN_VERSION "0.2.0"
 
 #define CAMERA_MODEL	"models/combine_scanner.mdl"
 
@@ -220,9 +220,14 @@ public Action cmdForesight(int iClient, int iArgC) {
 		iCamera.StartTime = GetGameTime();
 	}
 	
-	float fPos[3], fAng[3];
+	float fPos[3], fAng[3], fDir[3];
 	GetClientEyePosition(iClient, fPos);
 	GetClientEyeAngles(iClient, fAng);
+
+	GetAngleVectors(fAng, fDir, NULL_VECTOR, NULL_VECTOR);
+	ScaleVector(fDir, 50.0);
+	AddVectors(fPos, fDir, fPos);
+
 	TeleportEntity(iEntity, fPos, fAng, NULL_VECTOR);
 
 	g_hCameras.Push(iCamera);
@@ -233,6 +238,10 @@ public Action cmdForesight(int iClient, int iArgC) {
 	SetEntityFlags(iClient, GetEntityFlags(iClient) | FL_FROZEN | FL_ATCONTROLS);
 	AcceptEntityInput(iViewControl, "Enable", iClient, iViewControl, 0);
 	Client_SetHideHud(iClient, HIDEHUD_HEALTH | HIDEHUD_WEAPONSELECTION | HIDEHUD_MISCSTATUS);
+
+	Client_SetObserverTarget(iClient, 0);
+	Client_SetObserverMode(iClient, OBS_MODE_DEATHCAM, false);
+
 	#endif
 
 	return Plugin_Handled;
@@ -297,6 +306,9 @@ void DisableForesight(FSCamera iCamera) {
 	FSCamera.Destroy(iCamera);
 
 	int iClient = iCamera.Client;
+	Client_SetObserverTarget(iClient, -1);
+	Client_SetObserverMode(iClient, OBS_MODE_NONE);
+	SetEntityMoveType(iClient, MOVETYPE_WALK);
 
 	g_iActiveCamera[iClient] = NULL_CAMERA;
 	Client_SetHideHud(iClient, 0);
