@@ -240,12 +240,14 @@ public Action cmdForesight(int iClient, int iArgC) {
 	float fPos[3], fAng[3], fDir[3];
 	GetClientEyePosition(iClient, fPos);
 	GetClientEyeAngles(iClient, fAng);
-
+	
 	GetAngleVectors(fAng, fDir, NULL_VECTOR, NULL_VECTOR);
 	ScaleVector(fDir, 50.0);
 	AddVectors(fPos, fDir, fPos);
-
-	TeleportEntity(iEntity, fPos, fAng, NULL_VECTOR);
+	NormalizeVector(fDir, fDir);
+	ScaleVector(fDir, 0.5*g_hSpeed.FloatValue);
+	
+	TeleportEntity(iEntity, fPos, fAng, fDir);
 
 	g_hCameras.Push(iCamera);
 	g_iActiveCamera[iClient] = iCamera;
