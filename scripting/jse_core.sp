@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.3.2"
+#define PLUGIN_VERSION "0.3.3"
 
 #define DATA_FOLDER "data/jse"
 
@@ -563,14 +563,14 @@ public Action Timer_AmmoRegen(Handle hTimer) {
 	for (int i = 1; i <= MaxClients; i++) {
 		if (IsClientInGame(i) && (bRegenAmmo || g_bAmmoRegen[i]) && !g_bBlockRegen[i]) {
 			regenWeapons(i);
-			
-			int iEntity = -1;
-			if (bRegenCaber) {
-				while ((iEntity = FindEntityByClassname(iEntity, "tf_weapon_stickbomb")) != INVALID_ENT_REFERENCE) {
-					SetEntProp(iEntity, Prop_Send, "m_bBroken", 0);
-					SetEntProp(iEntity, Prop_Send, "m_iDetonated", 0);
-				}
-			}
+		}
+	}
+
+	if (bRegenCaber) {
+		int iEntity = -1;
+		while ((iEntity = FindEntityByClassname(iEntity, "tf_weapon_stickbomb")) != INVALID_ENT_REFERENCE) {
+			SetEntProp(iEntity, Prop_Send, "m_bBroken", 0);
+			SetEntProp(iEntity, Prop_Send, "m_iDetonated", 0);
 		}
 	}
 	
