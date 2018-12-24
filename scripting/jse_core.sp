@@ -57,8 +57,7 @@ Handle g_hCaptureForward;
 
 ArrayList g_hBlockSounds;
 
-StringMap g_hControlPointNames;
-ArrayList g_hControlPointData;
+StringMap g_hControlPoints;
 
 bool g_bBlockEquip[MAXPLAYERS + 1];
 bool g_bBlockRegen[MAXPLAYERS + 1];
@@ -71,7 +70,6 @@ int g_iLastSpawn[MAXPLAYERS + 1];
 
 int g_iObjectiveResource = INVALID_ENT_REFERENCE;
 
-
 public Plugin myinfo = {
 	name = "Jump Server Essentials - Core",
 	author = PLUGIN_AUTHOR,
@@ -79,6 +77,7 @@ public Plugin myinfo = {
 	version = PLUGIN_VERSION,
 	url = "https://jumpacademy.tf"
 };
+
 public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErrMax) {
 	RegPluginLibrary("jse_core");
 	CreateNative("GetBlockEquip", Native_GetBlockEquip);
@@ -121,8 +120,7 @@ public void OnPluginStart() {
 	
 	g_hBlockSounds = new ArrayList(128);
 	
-	g_hControlPointNames = new StringMap();
-	g_hControlPointData = new ArrayList(MAXPLAYERS+1);
+	g_hControlPoints = new StringMap();
 	
 	AddNormalSoundHook(Hook_NormalSound);
 	
@@ -215,7 +213,7 @@ public void OnPluginStart() {
 		}
 	}
 	
-	g_hCaptureForward = CreateGlobalForward("OnCapPointCapture", ET_Single, Param_Cell, Param_Cell, Param_Cell, Param_String);
+	g_hCaptureForward = CreateGlobalForward("OnCapPointCapture", ET_Single, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_String);
 	
 	LoadTranslations("common.phrases");
 }
@@ -298,8 +296,7 @@ public void OnMapStart() {
 }
 
 public void OnMapEnd() {
-	g_hControlPointNames.Clear();
-	g_hControlPointData.Clear();
+	g_hControlPoints.Clear();
 }
 
 public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fVel[3], float fAng[3], int &iWeapon) {
@@ -455,38 +452,44 @@ public Action Hook_TouchCaptureArea(int iEntity, int iClient) {
 	if (Client_IsValid(iClient)) {
 		
 		char sCapName[128];
+		char sCapPrintName[128];
 		GetEntPropString(iEntity, Prop_Data, "m_iszCapPointName", sCapName, sizeof(sCapName));
 		
 		int iTime = GetTime();
 		
-		int iPointIndex;
-		if (g_hControlPointNames.GetValue(sCapName, iPointIndex) && (iTime - g_iLastCapture[iClient] > g_hCVCapInterval.IntValue)) {
-			if (g_hControlPointData.Get(iPointIndex, iClient)) {
-				return Plugin_Handled;
-			}
-			
+		int iControlPointData[MAXPLAYERS + 1];
+
+		if ((iTime - g_iLastCapture[iClient] > g_hCVCapInterval.IntValue) && g_hControlPoints.GetArray(sCapName, iControlPointData, sizeof(iControlPointData)) && !iControlPointData[iClient]) {
 			int iTeam = GetClientTeam(iClient);
 			
-			int iControlPointEntity = EntRefToEntIndex(g_hControlPointData.Get(iPointIndex, 0));
-			GetEntPropString(iControlPointEntity, Prop_Data, "m_iszPrintName", sCapName, sizeof(sCapName));
+			int iControlPointEntity = EntRefToEntIndex(iControlPointData[0]);
+			int iPointIndex = -1;
+			if (IsValidEntity(iControlPointEntity)) {
+				GetEntPropString(iControlPointEntity, Prop_Data, "m_iszPrintName", sCapPrintName, sizeof(sCapPrintName));
+				iPointIndex = GetEntProp(iControlPointEntity, Prop_Data, "m_iPointIndex");
+			} else {
+				strcopy(sCapPrintName, sizeof(sCapPrintName), sCapName);
+			}
 			
 			int iResult = CAP_NORMAL;
 			Call_StartForward(g_hCaptureForward);
 			Call_PushCell(iClient);
 			Call_PushCell(iControlPointEntity);
-			Call_PushCell(iPointIndex);
+			Call_PushCell(iEntity);
 			Call_PushString(sCapName);
+			Call_PushString(sCapPrintName);
 			Call_Finish(iResult);
 			
 			if (iResult) {
-				g_hControlPointData.Set(iPointIndex, 1, iClient);
+				iControlPointData[iClient] = 1;
+				g_hControlPoints.SetArray(sCapName, iControlPointData, sizeof(iControlPointData));
 				
 				if (iResult & CAP_EVENT) {				
 					// Manually construct event to avoid announcer sqwawk
 					
 					Event hEvent = CreateEvent("teamplay_point_captured");
 					hEvent.SetInt("cp", iPointIndex);
-					hEvent.SetString("cpname", sCapName);
+					hEvent.SetString("cpname", sCapPrintName);
 					hEvent.SetInt("team", iTeam & 0xFF);
 					
 					char sCappers[2];
@@ -681,9 +684,18 @@ bool checkSpawned(int iClient) {
 }
 */
 void clearControlPointCapture(iClient) {
-	for (int i = 0; i < g_hControlPointData.Length; i++) {
-		g_hControlPointData.Set(i, 0, iClient);
+	char sCapName[128];
+	int iControlPointData[MAXPLAYERS + 1];
+	
+	StringMapSnapshot hSnap = g_hControlPoints.Snapshot();
+	for (int i = 0; i < hSnap.Length; i++) {
+		hSnap.GetKey(i, sCapName, sizeof(sCapName));
+
+		g_hControlPoints.GetArray(sCapName, iControlPointData, sizeof(iControlPointData));
+		iControlPointData[iClient] = 0;
+		g_hControlPoints.SetArray(sCapName, iControlPointData, sizeof(iControlPointData));
 	}
+	delete hSnap;
 }
 
 void clearScore(int iClient) {
@@ -738,25 +750,19 @@ void regenWeapons(int iClient, bool bForce=false) {
 }
 
 void setup() {
-	g_hControlPointNames.Clear();
-	g_hControlPointData.Clear();
+	g_hControlPoints.Clear();
 	
 	int iControlPointData[MAXPLAYERS + 1];
-	for (int i = 0; i < 8; i++) {
-		g_hControlPointData.PushArray(iControlPointData); // All zero
-	}
 	
-	char sCapName[32];
+	char sCapName[128];
 	int iEntity = INVALID_ENT_REFERENCE;
 	while ((iEntity = FindEntityByClassname(iEntity, "team_control_point")) != INVALID_ENT_REFERENCE) {
-		int iPointIndex = GetEntProp(iEntity, Prop_Data, "m_iPointIndex");
-		
+		iControlPointData[0] = EntIndexToEntRef(iEntity); // Save ent index
+
 		Entity_GetName(iEntity, sCapName, sizeof(sCapName));
-		g_hControlPointNames.SetValue(sCapName, iPointIndex);
-		
-		g_hControlPointData.Set(iPointIndex, EntIndexToEntRef(iEntity), 0); // Save ent index
+		g_hControlPoints.SetArray(sCapName, iControlPointData, sizeof(iControlPointData));
 	}
-	
+
 	iEntity = INVALID_ENT_REFERENCE;
 	while ((iEntity = FindEntityByClassname(iEntity, "trigger_capture_area")) != INVALID_ENT_REFERENCE) {
 		SDKHook(iEntity, SDKHook_StartTouch, Hook_TouchCaptureArea);
@@ -767,6 +773,12 @@ void setup() {
 		
 		SetVariantString("3 0");
 		AcceptEntityInput(iEntity, "SetTeamCanCap");
+
+		GetEntPropString(iEntity, Prop_Data, "m_iszCapPointName", sCapName, sizeof(sCapName));
+		if (!g_hControlPoints.GetArray(sCapName, iControlPointData, sizeof(iControlPointData))) {
+			iControlPointData[0] = -1;
+			g_hControlPoints.SetArray(sCapName, iControlPointData, sizeof(iControlPointData));
+		}
 	}
 	
 	iEntity = INVALID_ENT_REFERENCE;

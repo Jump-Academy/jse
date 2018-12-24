@@ -38,7 +38,7 @@ native void SetRegen(int iClient, bool bEnabled);
 native void ClearControlPointCapture(int iClient);
 native void ClearScore(int iClient);
 
-forward int OnCapPointCapture(int iClient, int iCapPointEntity, int iCapPointIndex, const char[] sCapPointName);
+forward int OnCapPointCapture(int iClient, int iCapPointEntity, int iCapAreaEntity, const char[] sCapPointName, const char[] sCapPrintName);
 
 // Capture options
 #define CAP_ABORT			(0)
