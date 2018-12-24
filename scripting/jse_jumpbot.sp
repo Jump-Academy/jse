@@ -660,7 +660,9 @@ public void OnMapEnd() {
 	
 	Array_Fill(g_bPlayerGrantAccess, sizeof(g_bPlayerGrantAccess), false);
 	
-	delete g_hQueueTimer;
+	if (g_hQueueTimer != null) {
+		delete g_hQueueTimer;
+	}
 	
 	for (int i = 1; i <= MaxClients; i++) {
 		if (g_hQueuePanel[i] != null) {
@@ -1790,7 +1792,9 @@ public void OnClientDisconnect(int iClient) {
 			KickClient(g_hRecordingBots.Get(i), "%t", "Server Empty");
 		}
 
-		delete g_hQueueTimer;
+		if (g_hQueueTimer != null) {
+			delete g_hQueueTimer;
+		}
 	}
 }
 
@@ -3820,8 +3824,8 @@ public Action Timer_SetupBot(Handle hTimer) {
 		ServerCommand("sv_cheats 1; bot -name \"%s\" -class soldier; sv_cheats 0", sBotName);
 	}
 	
-	if (g_hQueueTimer == INVALID_HANDLE) {
-		g_hQueueTimer = CreateTimer(1.0, Timer_Queue, INVALID_HANDLE, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+	if (g_hQueueTimer == null) {
+		g_hQueueTimer = CreateTimer(1.0, Timer_Queue, 0, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 	}
 	
 	return Plugin_Handled;
