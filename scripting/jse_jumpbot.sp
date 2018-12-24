@@ -254,6 +254,7 @@ public Plugin myinfo = {
 //////// Built-in forwards ////////
 
 public void OnPluginStart() {
+	AutoExecConfig_SetCreateFile(true);
 	AutoExecConfig_SetFile("jse_jumpbot");
 	
 	g_hBotName 				= AutoExecConfig_CreateConVar("jse_jb_name", 			"JumpBOT", 			"JumpBOT default name", 																FCVAR_NONE												);
@@ -276,7 +277,7 @@ public void OnPluginStart() {
 	g_hBotOptionsShort		= AutoExecConfig_CreateConVar("jse_jb_options_short", 	"jbo", 				"JumpBOT short options, jb_options alternative", 										FCVAR_NONE												);
 	g_hBotCallKey 			= AutoExecConfig_CreateConVar("jse_jb_callkey", 		"3", 				"JumpBOT call key (0:disable, 1:+reload, 2:+attack2, 3:+attack3 (default), 4:+use)", 	FCVAR_NONE, 						true, 0.0, true, 4.0);
 	
-	g_hBotMaxError 			= AutoExecConfig_CreateConVar("jse_jb_maxerr", 			"400.0", 			"Bot max interpolation error before teleport correction", 								FCVAR_NONE, 						true, 0.0, false	);
+	g_hBotMaxError 			= AutoExecConfig_CreateConVar("jse_jb_maxerr", 			"50.0", 			"Bot max interpolation error before teleport correction", 								FCVAR_NONE, 						true, 0.0, false	);
 	g_hShowMeDefault 		= AutoExecConfig_CreateConVar("jse_jb_showme_default", 	"1", 				"Showme perspective default (0:none, 1:fp, 3:tp)", 										FCVAR_NONE, 						true, 0.0, true, 3.0);
 	g_hBotJoinExecute	 	= AutoExecConfig_CreateConVar("jse_jb_joinexecute", 	"", 				"Commands bots should execute after joining the server", 								FCVAR_NONE												);
 	g_hAllowMedic 			= AutoExecConfig_CreateConVar("jse_jb_allow_medic", 	"1", 				"Allow medics to call for other bot classes", 											FCVAR_NONE, 						true, 0.0, true, 1.0);
@@ -633,10 +634,7 @@ public void OnMapStart() {
 	
 	CreateTimer(0.1, Timer_AmmoRegen, 0, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 	
-	loadRecordings();	
-	blockFlags();
-	blockRegen();
-	spawnModels();
+	loadRecordings();
 }
 
 public void OnMapEnd() {
@@ -931,6 +929,7 @@ public void OnGameFrame() {
 			int iEntity = INVALID_ENT_REFERENCE;
 			int iEntType;
 			int iOwner = -1;
+			int iBotID = -1;
 			int iRecordingEnt = -1;
 
 			RecBlockType iRecBlockType = view_as<RecBlockType>(g_hRecBuffer.Get(g_iRecBufferIdx) & 0xFF);
@@ -942,7 +941,8 @@ public void OnGameFrame() {
 					if (g_iClientInstruction & INST_REWIND && g_iClientInstruction & INST_RECD) {
 						iEntity = g_hRecordingClients.Get((g_hRecBuffer.Get(g_iRecBufferIdx++) >> 8) & 0xFF, RecBot_iEnt);
 					} else {
-						iEntity = g_hRecordingBots.Get((g_hRecBuffer.Get(g_iRecBufferIdx++) >> 8) & 0xFF, RecBot_iEnt);
+						iBotID = (g_hRecBuffer.Get(g_iRecBufferIdx++) >> 8) & 0xFF;
+						iEntity = g_hRecordingBots.Get(iBotID, RecBot_iEnt);
 					}
 
 					fPos[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
@@ -1053,7 +1053,8 @@ public void OnGameFrame() {
 
 			Entity_GetAbsOrigin(iEntity, fPosNow);
 
-			if (GetVectorDistance(fPosNow, fPos) > g_hBotMaxError.FloatValue) {
+			float fPosErr = GetVectorDistance(fPosNow, fPos);
+			if (fPosErr > g_hBotMaxError.FloatValue) {
 				if (iRecBlockType == CLIENT) {
 					float fPosBump[3];
 					fPosBump[0] = fPos[0];
@@ -1076,6 +1077,10 @@ public void OnGameFrame() {
 				}
 
 				Entity_SetAbsOrigin(iEntity, fPos);
+
+				#if defined DEBUG
+				PrintToServer("Position for %s[%d] exceeded max error (%.1f/%.1f)", iRecBlockType == CLIENT ? "iBotID" : "iRecEnt", iRecBlockType == CLIENT ? iBotID : iRecordingEnt, fPosErr, g_hBotMaxError.FloatValue);
+				#endif
 			} else {
 				fVel[0] = (fPos[0]-fPosNow[0])*66;
 				fVel[1] = (fPos[1]-fPosNow[1])*66;
@@ -4402,6 +4407,7 @@ void doFullStop() {
 	}
 
 	clearRecEntities();
+	g_hRecEntFail.Clear();
 	g_hPlaybackQueue.Clear();
 	
 	for (int i=0; i<g_hRecordingBots.Length; i++) {
