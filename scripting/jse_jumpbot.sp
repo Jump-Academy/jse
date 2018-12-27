@@ -667,7 +667,6 @@ public void OnMapEnd() {
 	for (int i = 1; i <= MaxClients; i++) {
 		if (g_hQueuePanel[i] != null) {
 			delete g_hQueuePanel[i];
-			g_hQueuePanel[i] = null;
 		}
 	}
 	
@@ -3448,7 +3447,6 @@ public Action cmdClearCache(int iClient, int iArgC) {
 	for (int i = 1; i <= MaxClients; i++) {
 		if (g_hQueuePanel[i] != null) {
 			delete g_hQueuePanel[i];
-			g_hQueuePanel[i] = null;
 		}
 	}
 			
@@ -3732,10 +3730,8 @@ public Action Timer_Queue(Handle hTimer, any aData) {
 		g_hQueue.GetArray(0, aQueueData, sizeof(aQueueData));
 		g_hQueue.Erase(0);
 		
-		Panel hPanel = g_hQueuePanel[aQueueData[QUEUE_CLIENT]];
-		if (hPanel != null) {
-			delete hPanel;
-			g_hQueuePanel[aQueueData[QUEUE_CLIENT]] = null;
+		if (g_hQueuePanel[aQueueData[QUEUE_CLIENT]] != null) {
+			delete g_hQueuePanel[aQueueData[QUEUE_CLIENT]];
 		}
 		
 		doShowMe(aQueueData[QUEUE_CLIENT], aQueueData[QUEUE_RECORDING], aQueueData[QUEUE_TEAM], aQueueData[QUEUE_OBSMODE]);
@@ -3974,7 +3970,12 @@ public Action Hook_TouchFlag(int iEntity, int iOther) {
 
 public Action Hook_RocketSpawn(int iEntity) {
 	int iOwnerEnt = Entity_GetOwner(iEntity);
+
 	//PrintToServer("Hook_RocketSpawn callback for entity %d owned by %N", iEntity, iOwnerEnt);
+
+	if (!Client_IsValid(iOwnerEnt)) {
+		return Plugin_Continue;
+	}
 
 	int iRecBot = -1;
 	int iRecOwner = IsFakeClient(iOwnerEnt) ? (iRecBot = g_hRecordingBots.FindValue(iOwnerEnt, RecBot_iEnt)) : g_hRecordingClients.FindValue(iOwnerEnt);
@@ -4043,7 +4044,12 @@ public Action Hook_RocketSpawn(int iEntity) {
 
 public Action Hook_ProjectileSpawn(int iEntity) {
 	int iOwnerEnt = Entity_GetOwner(iEntity);
-	
+
+	// TODO: Track and record sentry rockets
+	if (!Client_IsValid(iOwnerEnt)) {
+		return Plugin_Continue;
+	}
+
 	int iRecBot = -1;
 	int iRecOwner = IsFakeClient(iOwnerEnt) ? (iRecBot = g_hRecordingBots.FindValue(iOwnerEnt, RecBot_iEnt)) : g_hRecordingClients.FindValue(iOwnerEnt);
 	if (iRecOwner != -1) {
