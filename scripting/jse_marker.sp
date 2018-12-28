@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR		"AI"
-#define PLUGIN_VERSION		"0.2.1"
+#define PLUGIN_VERSION		"0.2.2"
 
 #define Annotation_sText	0
 #define Annotation_fPosX	8
@@ -46,10 +46,20 @@ public void OnPluginStart() {
 	RegConsoleCmd("sm_unmarkall",	cmdUnmarkAll, "Remove all foresight annotations");
 
 	HookEvent("player_spawn", Event_PlayerSpawn);
+
+	if (LibraryExists("updater")) {
+		Updater_AddPlugin(UPDATE_URL);
+	}
 }
 
 public void OnPluginEnd() {
 	Cleanup();
+}
+
+public void OnLibraryAdded(const char[] sName) {
+	if (StrEqual(sName, "updater")) {
+		Updater_AddPlugin(UPDATE_URL);
+	}
 }
 
 public void OnMapEnd() {

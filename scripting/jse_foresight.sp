@@ -57,10 +57,20 @@ public void OnPluginStart() {
 	LoadTranslations("common.phrases");
 
 	g_hCameras = new ArrayList();
+
+	if (LibraryExists("updater")) {
+		Updater_AddPlugin(UPDATE_URL);
+	}
 }
 
 public void OnPluginEnd() {
 	Cleanup();
+}
+
+public void OnLibraryAdded(const char[] sName) {
+	if (StrEqual(sName, "updater")) {
+		Updater_AddPlugin(UPDATE_URL);
+	}
 }
 
 public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErrMax) {
