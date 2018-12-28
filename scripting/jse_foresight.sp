@@ -2,10 +2,10 @@
 
 //#define DEBUG
 
-#define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.2.1"
+#define PLUGIN_AUTHOR		"AI"
+#define PLUGIN_VERSION		"0.2.2"
 
-#define CAMERA_MODEL	"models/combine_scanner.mdl"
+#define CAMERA_MODEL		"models/combine_scanner.mdl"
 
 #include <sourcemod>
 #include <sdktools>
@@ -309,7 +309,7 @@ void DisableCamera(FSCamera iCamera) {
 			AcceptEntityInput(hViewEntity, "Disable");
 		}
 
-		if (g_hAlpha.FloatValue > 1.0) {
+		if (g_hAlpha.FloatValue < 1.0) {
 			SetEntityRenderMode(iClient, RENDER_TRANSALPHA);
 			int iR, iG, iB, iA;
 			GetEntityRenderColor(iClient, iR, iG, iB, iA);
