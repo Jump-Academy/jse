@@ -578,7 +578,6 @@ public void OnMapStart() {
 	g_iRecBufferIdx = 0;
 	g_iRecBufferUsed = 0;
 	g_iRecBufferFrame = 0;
-	g_hRecBufferFrames = null;
 
 	g_iStateLoadLast = -1;
 
