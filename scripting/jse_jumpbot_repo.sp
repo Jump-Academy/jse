@@ -18,13 +18,13 @@ enum DLType {
 
 #define MAX_RETRIES		5
 
-void fetchRecording(Recording iRecord, bool bPrefetchOnly = false) {
-	if (!g_bSocketExtension || !g_hUseRepo.BoolValue || iRecord == NULL_RECORDING || iRecord.Downloading) {
+void fetchRecording(Recording iRecording, bool bPrefetchOnly = false) {
+	if (!g_bSocketExtension || !g_hUseRepo.BoolValue || iRecording == NULL_RECORDING || iRecording.Downloading) {
 		return;
 	}
 	
 	char sFilePath[PLATFORM_MAX_PATH];
-	iRecord.GetFilePath(sFilePath, sizeof (sFilePath));
+	iRecording.GetFilePath(sFilePath, sizeof (sFilePath));
 	
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), CACHE_FOLDER);
@@ -59,8 +59,8 @@ void fetchRecording(Recording iRecord, bool bPrefetchOnly = false) {
 	char sPage[64];
 	FormatEx(sPage, sizeof(sPage), "%s?hash=%s", REPO_FETCH_PAGE, sHash);
 	hFileInfo.PushString(sPage);
-	hFileInfo.Push(iRecord);
-	iRecord.Downloading = 1;
+	hFileInfo.Push(iRecording);
+	iRecording.Downloading = 1;
 	
 	SocketSetArg(hSocket, hFileInfo);
 	SocketConnect(hSocket, OnSocketConnected, OnSocketReceive, OnSocketDisconnected, API_HOST, 80);
@@ -163,14 +163,14 @@ public int OnSocketError(Handle hSocket, const int iErrorType, const int iErrorN
 	
 	DLType iType = hFileInfo.Get(FileInfo_iType);
 	if (iType == DL_Prefetch || iType == DL_Play) {
-		Recording iRecord = view_as<Recording>(hFileInfo.Get(FileInfo_aData));
+		Recording iRecording = view_as<Recording>(hFileInfo.Get(FileInfo_aData));
 
 		char sFilePath[PLATFORM_MAX_PATH];
-		iRecord.GetFilePath(sFilePath, sizeof(sFilePath));
+		iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
 		DeleteFile(sFilePath);
 		
-		if (iRecord.Downloading++ < MAX_RETRIES) {
-			fetchRecording(iRecord, iType == DL_Prefetch);
+		if (iRecording.Downloading++ < MAX_RETRIES) {
+			fetchRecording(iRecording, iType == DL_Prefetch);
 		} else if (iType == DL_Play) {
 			g_iClientInstruction = INST_NOP;
 			doReturn();
@@ -214,8 +214,8 @@ public int OnSocketReceive(Handle hSocket, char[] sData, const int iSize, any aA
 					char[] sFileSize = new char[iFSLength+1];
 					strcopy(sFileSize, iFSLength+1, sData[16+iFSOffset+16]);
 					
-					Recording iRecord = view_as<Recording>(hFileInfo.Get(FileInfo_aData));
-					iRecord.FileSize = StringToInt(sFileSize);
+					Recording iRecording = view_as<Recording>(hFileInfo.Get(FileInfo_aData));
+					iRecording.FileSize = StringToInt(sFileSize);
 					
 					if (g_hDebug.BoolValue) {
 						CPrintToChatAll("{dodgerblue}[jb] {white}Content-Length: %s bytes", sFileSize);
@@ -263,50 +263,63 @@ public int OnSocketDisconnected(Handle hSocket, any aArg) {
 		}
 		
 		case DL_Prefetch: {
-			Recording iRecord = view_as<Recording>(hFileInfo.Get(FileInfo_aData));
+			Recording iRecording = view_as<Recording>(hFileInfo.Get(FileInfo_aData));
 			char sFilePath[PLATFORM_MAX_PATH];
-			iRecord.GetFilePath(sFilePath, sizeof(sFilePath));
+			iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
 			
 			delete hFile;
 			
 			if (g_hDebug.BoolValue) {
-				CPrintToChatAll("{dodgerblue}[jb] {white}Downloaded %d/%d bytes", FileSize(sFilePath), iRecord.FileSize);
+				CPrintToChatAll("{dodgerblue}[jb] {white}Downloaded %d/%d bytes", FileSize(sFilePath), iRecording.FileSize);
 			}
 			
-			if (FileSize(sFilePath) == iRecord.FileSize) {
-				iRecord.Downloading = 0;
+			if (FileSize(sFilePath) == iRecording.FileSize) {
+				iRecording.Downloading = 0;
 			} else {
 				DeleteFile(sFilePath);
 				
-				if (iRecord.Downloading++ < MAX_RETRIES) {
-					fetchRecording(iRecord, true);
+				if (iRecording.Downloading++ < MAX_RETRIES) {
+					fetchRecording(iRecording, true);
 				}
 			}
 		}
 		
 		case DL_Play: {
-			Recording iRecord = view_as<Recording>(hFileInfo.Get(FileInfo_aData));
+			Recording iRecording = view_as<Recording>(hFileInfo.Get(FileInfo_aData));
 			char sFilePath[PLATFORM_MAX_PATH];
-			iRecord.GetFilePath(sFilePath, sizeof(sFilePath));
+			iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
 			
 			delete hFile;
 			
 			if (g_hDebug.BoolValue) {
-				CPrintToChatAll("{dodgerblue}[jb] {white}Downloaded %d/%d bytes", FileSize(sFilePath), iRecord.FileSize);
+				CPrintToChatAll("{dodgerblue}[jb] {white}Downloaded %d/%d bytes", FileSize(sFilePath), iRecording.FileSize);
 			}
 			
-			if (FileSize(sFilePath) == iRecord.FileSize) {
-				iRecord.Downloading = 0;
+			if (FileSize(sFilePath) == iRecording.FileSize) {
+				iRecording.Downloading = 0;
 				
-				loadFile(iRecord);
-				
+				LoadRecording(iRecording);
+
+				ArrayList hClientInfo = iRecording.ClientInfo;
+				for (int i=0; i<hClientInfo.Length; i++) {
+					int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+					if (!IsClientInGame(iRecBot)) {
+						LogError("Tried using iRecBot=%d but the client is not in-game", i);
+						return;
+					}
+
+					doEquipRec(i, iRecording);
+				}
+
+				LoadFrames(iRecording);
+
 				g_iClientInstruction |= INST_PLAY;
 				g_iClientInstruction &= ~INST_WAIT;
 			} else {
 				DeleteFile(sFilePath);
 				
-				if (iRecord.Downloading++ < MAX_RETRIES) {
-					fetchRecording(iRecord, false);
+				if (iRecording.Downloading++ < MAX_RETRIES) {
+					fetchRecording(iRecording, false);
 				} else {
 					g_iClientInstruction = INST_NOP;
 					doReturn();
@@ -391,6 +404,8 @@ void parseIndex(char[] sPath) {
 
 		iRecording.NodeModel = INVALID_ENT_REFERENCE;
 		iRecording.WeaponModel = INVALID_ENT_REFERENCE;
+
+		g_hRecordings.Push(iRecording);
 		
 		hKV.GoBack();
 		i++;

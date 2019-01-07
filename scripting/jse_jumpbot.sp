@@ -97,7 +97,6 @@
 #include <tf2items>
 #include <socket>
 #include <jse_jumpbot>
-#include "jse_jumpbot_rec.sp"
 
 #undef REQUIRE_PLUGIN
 #include <updater>
@@ -176,7 +175,7 @@ ArrayList g_hRecordings;
 Recording g_iRecording;
 ArrayList g_hPlaybackQueue;
 
-#include "jse_jumpbot_repo.sp"
+#include "jse_jumpbot_rec.sp"
 
 bool g_bShuttingDown;
 bool g_bLocked;
@@ -189,6 +188,8 @@ ArrayList g_hRecordingClients;
 ArrayList g_hRecordingEntities;
 ArrayList g_hRecordingEntTypes;
 int g_iRecordingEntTotal;
+
+#include "jse_jumpbot_repo.sp"
 
 ArrayList g_hRecBuffer;
 int g_iRecBufferIdx;
@@ -633,7 +634,7 @@ public void OnMapStart() {
 	
 	CreateTimer(0.1, Timer_AmmoRegen, 0, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 	
-	loadRecordings();
+	LoadRecordings();
 }
 
 public void OnMapEnd() {
@@ -836,7 +837,7 @@ public void OnGameFrame() {
 				if (g_iRecording.Repo && !FileExists(sFilePath)) {
 					g_iClientInstruction = INST_NOP | INST_PLAYALL;
 					fetchRecording(g_iRecording);
-				} else if(!loadFile(g_iRecording)) {
+				} else if(!LoadFrames(g_iRecording)) {
 					if(g_hDebug.BoolValue)
 						CPrintToChatAll("{dodgerblue}[jb] \0x1%t", "Cannot File Read");
 					g_iRecBufferIdx = 0;
@@ -1089,9 +1090,13 @@ public void OnGameFrame() {
 
 			TeleportEntity(iEntity, NULL_VECTOR, fAng, fVel);
 		}
-
+		
 		for (int i=0; i<g_hRecEntFail.Length; i++) {
 			if (g_hRecEntFail.Get(i, RecEntFail_iCount) > MAX_REC_ENT_FAIL_FRAMES) {
+				#if defined DEBUG
+				PrintToServer("Respawning missing recording entities");
+				#endif
+
 				RespawnFrameRecEnt(g_iRecBufferFrame);
 				break;
 			}
@@ -1101,7 +1106,7 @@ public void OnGameFrame() {
 				continue;
 			}
 		}
-
+		
 		if (g_iClientInstruction & INST_PAUSE) {
 			g_iRecBufferIdx = iRecBufferIdxBackup;
 		}
@@ -1372,7 +1377,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 					if (g_iRecording.Repo && !FileExists(sFilePath)) {
 						g_iClientInstruction = INST_NOP | INST_PLAYALL;
 						fetchRecording(g_iRecording);
-					} else if(!loadFile(g_iRecording)) {
+					} else if(!LoadFrames(g_iRecording)) {
 						if(g_hDebug.BoolValue)
 							CPrintToChatAll("{dodgerblue}[jb] \0x1%t", "Cannot File Read");
 						g_iShadowBufferIndex = BUFFER_SIZE;
@@ -1818,7 +1823,7 @@ public int Native_LoadRecordings(Handle hPlugin, int iArgC) {
 	doFullStop();
 
 	removeModels();
-	loadRecordings();
+	LoadRecordings();
 	spawnModels();
 }
 
@@ -1837,7 +1842,7 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 
 	doFullStop();
 
-	loadFile(iRecording);
+	LoadFrames(iRecording);
 
 	g_iRecBufferIdx = 0;
 	g_iRecBufferFrame = 0;
@@ -2160,7 +2165,7 @@ public Action cmdPlay(int iClient, int iArgC) {
 			}
 
 			iRecording = g_hRecordings.Get(iRecID);
-			if (!loadFile(iRecording)) {
+			if (!LoadFrames(iRecording)) {
 				CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Failed to load recording file");
 				return Plugin_Handled;
 			}
@@ -2293,7 +2298,7 @@ public Action cmdSave(int iClient, int iArgC) {
 		
 	// Refresh recordings
 	removeModels();
-	loadRecordings(true);
+	LoadRecordings(true);
 	spawnModels();
 	
 	return Plugin_Handled;
@@ -2423,16 +2428,16 @@ public Action cmdStateLoad(int iClient, int iArgC) {
 		if (FileExists(sFilePath)) {
 			doFullStop();
 
-			Recording iRecording = loadRecording(sFilePath);
-
-			//PrintToServer("Loaded recording of length=%d, frames=%d: %s", iRecording.Length, iRecording.Frames.Length, sFilePath);
-			g_iClientOfInterest = iClient;
+			Recording iRecording = Recording.Instance();
+			iRecording.SetFilePath(sFilePath);
 
 			if (LoadState(iRecording)) {
 				CPrintToChat(iClient, "{dodgerblue}[jb] {white}Load state slot %d (%d frames)", iSaveID, g_hRecBufferFrames.Length);
+				g_iClientOfInterest = iClient;
 				g_iStateLoadLast = iSaveID;
 			} else {
 				CPrintToChat(iClient, "{dodgerblue}[jb] {white}Failed to load state slot %d", iSaveID);
+				g_iClientOfInterest = -1;
 			}
 		} else {
 			CPrintToChat(iClient, "{dodgerblue}[jb] {white}No such state slot %d", iSaveID);
@@ -2625,7 +2630,7 @@ public Action cmdLoad(int iClient, int iArgC) {
 	}
 	
 	removeModels();
-	loadRecordings();
+	LoadRecordings();
 	spawnModels();
 	return Plugin_Handled;
 }
@@ -2670,7 +2675,7 @@ public Action cmdDelete(int iClient, int iArgC) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t: %s", "Deleted Rec", sFilePath[iFilePart+1]);
 
 		removeModels();
-		loadRecordings(true);
+		LoadRecordings(true);
 		spawnModels();
 	}
 	
@@ -2699,7 +2704,7 @@ public Action cmdPlayAll(int iClient, int iArgC) {
 	clearRecEntities();
 	g_iRecordingEntTotal = 0;
 
-	loadRecordings(true);
+	LoadRecordings(true);
 	
 	int iRecID = 0;
 	if (iArgC == 1) {
@@ -2778,7 +2783,7 @@ public Action cmdPlayAll(int iClient, int iArgC) {
 		fetchRecording(iRecording);
 	} else {
 		g_iClientInstruction = INST_WARMUP | INST_PLAYALL;
-		loadFile(iRecording);
+		LoadFrames(iRecording);
 	}
 
 	g_iRecording = iRecording;
@@ -3233,7 +3238,7 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 	iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
 	bool bFileExists = FileExists(sFilePath);
 	
-	if (!loadFile(iRecording) && !iRecording.Repo) {
+	if (!LoadFrames(iRecording) && !iRecording.Repo) {
 		LogError("%T: %s", "Cannot Local Play", LANG_SERVER, sFilePath);
 		g_iClientInstruction = INST_NOP;
 		g_iRecording = NULL_RECORDING;
@@ -3279,7 +3284,10 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 			RequestFrame(Respawn, iRecBot);
 		}
 
-		doEquipRec(i, iRecording);
+		// TODO: Equip info for repo
+		if (!iRecording.Repo) {
+			doEquipRec(i, iRecording);
+		}
 
 		TF2_RemoveCondition(iRecBot, TFCond_Taunting);
 		CreateTimer(0.0, Timer_DoVoiceGo, iRecBot, TIMER_FLAG_NO_MAPCHANGE);
@@ -3318,7 +3326,19 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 		}
 	} else {
 		g_iClientInstruction = INST_WARMUP;
-		loadFile(iRecording);
+		LoadRecording(iRecording);
+
+		for (int i=0; i<hClientInfo.Length; i++) {
+			int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+			if (!IsClientInGame(iRecBot)) {
+				LogError("Tried using iRecBot=%d but the client is not in-game", i);
+				return;
+			}
+
+			doEquipRec(i, iRecording);
+		}
+
+		LoadFrames(iRecording);
 	}
 	
 	g_iRecording = iRecording;
@@ -3426,7 +3446,7 @@ public Action cmdChdir(int iClient, int iArgC) {
 	}
 	
 	removeModels();
-	loadRecordings(true);
+	LoadRecordings(true);
 	spawnModels();
 	
 	CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Rec Chdir", g_sRecSubDir);
@@ -3463,7 +3483,7 @@ public Action cmdClearCache(int iClient, int iArgC) {
 	delete hDir;
 	
 	removeModels();
-	loadRecordings(); // Redownload repo index
+	LoadRecordings(); // Redownload repo index
 	spawnModels();
 	
 	return Plugin_Handled;
@@ -4459,12 +4479,15 @@ void doEquip(int iBotID) {
 	char sClassName[128];
 	for (int iSlot = TFWeaponSlot_Primary; iSlot <= TFWeaponSlot_Item2; iSlot++) {
 		int iCurrentWeapon = GetPlayerWeaponSlot(iClient, iSlot);
-		if (iCurrentWeapon != -1) {
-			AcceptEntityInput(iCurrentWeapon, "Kill");
-		}
 
 		int iItemDefIndex = hEquip.ReadCell();
 		if (iItemDefIndex) {
+			if (IsValidEntity(iCurrentWeapon) && iItemDefIndex == GetItemDefIndex(iCurrentWeapon)) {
+				continue;
+			}
+			
+			TF2_RemoveWeaponSlot(iClient, iSlot);
+
 			hEquip.ReadString(sClassName, sizeof(sClassName));
 			
 			Handle hWeapon = TF2Items_CreateItem(OVERRIDE_ALL | PRESERVE_ATTRIBUTES | FORCE_GENERATION);
@@ -4481,6 +4504,8 @@ void doEquip(int iBotID) {
 			if (!iWeaponAvailable) {
 				iWeaponAvailable = iWeapon;
 			}
+		} else {
+			TF2_RemoveWeaponSlot(iClient, iSlot);
 		}
 	}
 	
@@ -4489,7 +4514,7 @@ void doEquip(int iBotID) {
 	}
 }
 
-void doEquipRec(int iBotID, Recording iRecording) {
+void doEquipRec(int iBotID, Recording iRecording, bool bImmediate = true) {
 	if (iRecording == NULL_RECORDING) {
 		return;
 	}
@@ -4510,7 +4535,9 @@ void doEquipRec(int iBotID, Recording iRecording) {
 		}
 	}
 
-	doEquip(iBotID);
+	if (bImmediate) {
+		doEquip(iBotID);
+	}
 }
 
 void doTeamClassMatch(int iClientToMatch, int iClient) {
@@ -4664,7 +4691,7 @@ void findTargetFollow() {
 	
 		Recording iClosestRecord;
 		if (findNearestRecording(fPos, TF2_GetPlayerClass(g_iClientControl), iClosestRecord) == FOUND_RECORDING) {
-			if (g_iRecording == iClosestRecord || loadFile(iClosestRecord)) {
+			if (g_iRecording == iClosestRecord || LoadFrames(iClosestRecord)) {
 				g_iRecording = iClosestRecord;
 				
 				int idx = iClosestRecord.Length - 1;
@@ -4722,18 +4749,16 @@ bool getCookieInt(int iClient, Handle hCookie, int &fValue) {
 	return false;
 }
 
-Recording loadRecording(char[] sFilePath) {
-	Recording iRecording = Recording.Instance();
-	iRecording.SetFilePath(sFilePath);
-	iRecording.Repo = false;
+bool LoadRecording(Recording iRecording) {
+	char sFilePath[PLATFORM_MAX_PATH];
+	iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
+
 	iRecording.FileSize = FileSize(sFilePath);
 
 	File hFile = OpenFile(sFilePath, "rb");
 	if (hFile == null) {
 		LogError("%T: %s", "Cannot Local Play", LANG_SERVER, sFilePath);
-
-		Recording.Destroy(iRecording);
-		return NULL_RECORDING;
+		return false;
 	}
 
 	hFile.Seek(0x8, SEEK_SET);
@@ -4749,11 +4774,12 @@ Recording loadRecording(char[] sFilePath) {
 
 	if (!iFrames || !iLength) {
 		LogError("Recording has no frames: %s", sFilePath);
-		Recording.Destroy(iRecording);
-		return NULL_RECORDING;
+		delete hFile;
+		return false;
 	}
 
 	ArrayList hRecBufferFrames = iRecording.Frames;
+	hRecBufferFrames.Clear();
 	hFile.Seek(0x18, SEEK_SET);
 	int iPosFrameIndex;
 	hFile.ReadInt32(iPosFrameIndex);
@@ -4773,8 +4799,8 @@ Recording loadRecording(char[] sFilePath) {
 	hFile.ReadString(sFileMapName, sizeof(sFileMapName));
 	if (g_hMapMatch.BoolValue && !StrEqual(sMapName, sFileMapName, false)) {
 		LogError("Map mismatch (%s): %s", sFileMapName, sFilePath);
-		Recording.Destroy(iRecording);
-		return NULL_RECORDING;
+		delete hFile;
+		return false;
 	}
 
 	hFile.Seek(0x1C, SEEK_SET);
@@ -4787,11 +4813,18 @@ Recording loadRecording(char[] sFilePath) {
 
 	if (!iRecClients) {
 		LogError("Recording has no clients: %s", sFilePath);
-		Recording.Destroy(iRecording);
-		return NULL_RECORDING;
+		delete hFile;
+		return false;
 	}
 
 	ArrayList hClientInfo = iRecording.ClientInfo;
+
+	// Clear existing info, such as from repo listing
+	for (int i=0; i<hClientInfo.Length; i++) {
+		ClientInfo.Destroy(hClientInfo.Get(i));
+	}
+	hClientInfo.Clear();
+
 	for (int i=0; i<iRecClients; i++) {
 		ClientInfo iClientInfo = ClientInfo.Instance();
 
@@ -4864,10 +4897,10 @@ Recording loadRecording(char[] sFilePath) {
 	iRecording.NodeModel = INVALID_ENT_REFERENCE;
 	iRecording.WeaponModel = INVALID_ENT_REFERENCE;
 
-	return iRecording;
+	return true;
 }
 
-void loadRecordings(bool bUseCachedRepoIndex = false) {
+void LoadRecordings(bool bUseCachedRepoIndex = false) {
 	clearRecordings(g_hRecordings);
 	
 	char sFilePath[PLATFORM_MAX_PATH];
@@ -4933,9 +4966,13 @@ void loadRecordings(bool bUseCachedRepoIndex = false) {
 						continue;
 					}
 
-					Recording iRecording = loadRecording(sFilePath);
-					if (iRecording != NULL_RECORDING) {
+					Recording iRecording = Recording.Instance();
+					iRecording.SetFilePath(sFilePath);
+
+					if (LoadRecording(iRecording)) {
 						g_hRecordings.Push(iRecording);
+					} else {
+						Recording.Destroy(iRecording);
 					}
 				}
 			}
@@ -5000,7 +5037,16 @@ ArrayList GetSaveStates() {
 
 					if (iSaveID) {
 						PrintToServer("Found save slot %d: %s", iSaveID, sFilePath);
-						Recording iRecording = loadRecording(sFilePath);
+						Recording iRecording = Recording.Instance();
+
+						iRecording.SetFilePath(sFilePath);
+						if (!LoadRecording(iRecording)) {
+							LogError("Failed to load save slot %d: %s", iSaveID, sFilePath);
+
+							Recording.Destroy(iRecording);
+							hSaveStates.Set(iSaveID-1, NULL_RECORDING);
+							continue;
+						}
 
 						while (iSaveID > hSaveStates.Length) {
 							hSaveStates.Push(NULL_RECORDING);
@@ -5017,6 +5063,10 @@ ArrayList GetSaveStates() {
 }
 
 bool LoadState(Recording iRecording) {
+	if (!LoadRecording(iRecording)) {
+		return false;
+	}
+
 	ArrayList hClientInfo = iRecording.ClientInfo;
 	for (int i=0; i<hClientInfo.Length; i++) {
 		int iRecBot = g_hRecordingBots.Get(i);
@@ -5029,7 +5079,7 @@ bool LoadState(Recording iRecording) {
 		TF2_RespawnPlayer(iRecBot);
 	}
 
-	if (loadFile(iRecording)) {
+	if (LoadFrames(iRecording)) {
 		g_iRecording = iRecording;
 		g_hRecBufferFrames = iRecording.Frames;
 		g_iRecBufferFrame = g_hRecBufferFrames.Length-1 - g_hRewindWaitFrames.IntValue;
@@ -5486,7 +5536,7 @@ void removeModels(bool bRemoveEdict = true) {
 	}
 }
 
-bool loadFile(Recording iRecording) {
+bool LoadFrames(Recording iRecording) {
 	if(iRecording == NULL_RECORDING) {
 		return false;
 	}
@@ -5708,7 +5758,7 @@ int RespawnRecEnt(int iRecEntIdx) {
 	return -1;
 }
 
-int RespawnFrameRecEnt(int iFrame) {
+void RespawnFrameRecEnt(int iFrame) {
 	ArrayList hRecEnts = new ArrayList();
 	for (int i=0; i<g_hRecordingEntities.Length; i++) {
 		int iRecEntIdx = EntRefToEntIndex(g_hRecordingEntities.Get(i, RecEnt_iRef));
@@ -5724,6 +5774,11 @@ int RespawnFrameRecEnt(int iFrame) {
 	
 	ArrayList hClients = g_iClientInstruction & INST_RECD ? g_hRecordingClients : g_hRecordingBots;
 	iRecBufferIdx += 11 * hClients.Length;
+
+	// Incomplete last frame check
+	if (iRecBufferIdx >= g_hRecBuffer.Length) {
+		return;
+	}
 
 	float fPos[3], fAng[3], fVel[3];
 
