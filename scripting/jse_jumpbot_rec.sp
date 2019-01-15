@@ -1,8 +1,3 @@
-#if defined _RECORDING_included
- #endinput
-#endif
-#define _RECORDING_included
-
 // class ClientInfo
 
 #define ClientInfo_sAuthID			0	// char[24] = int[6]
@@ -402,11 +397,13 @@ public int Native_Recording_Instance(Handle hPlugin, int iArgC) {
 	}
 	
 	static int iEmptyRecording[Recording_Size] =  { 0, ... };
+	iEmptyRecording[Recording_iNodeModel] = INVALID_ENT_REFERENCE;
+	iEmptyRecording[Recording_iWeaponModel] = INVALID_ENT_REFERENCE;
 
 	for (int i=0; i<hRecordings.Length; i++) {
 		if (hRecordings.Get(i, Recording_bGCFlag)) {
 			hRecordings.SetArray(i, iEmptyRecording);
-			hRecordings.Set(i, new ArrayList(ClientInfo_Size), Recording_hClientInfo);
+			hRecordings.Set(i, new ArrayList(), Recording_hClientInfo);
 			hRecordings.Set(i, new ArrayList(), Recording_hFrames);
 			
 			return i;
@@ -414,7 +411,7 @@ public int Native_Recording_Instance(Handle hPlugin, int iArgC) {
 	}
 	
 	hRecordings.PushArray(iEmptyRecording);
-	hRecordings.Set(hRecordings.Length-1, new ArrayList(ClientInfo_Size), Recording_hClientInfo);
+	hRecordings.Set(hRecordings.Length-1, new ArrayList(), Recording_hClientInfo);
 	hRecordings.Set(hRecordings.Length-1, new ArrayList(), Recording_hFrames);
 
 	return hRecordings.Length-1;

@@ -308,7 +308,7 @@ public int OnSocketDisconnected(Handle hSocket, any aArg) {
 						return;
 					}
 
-					doEquipRec(i, iRecording);
+					EquipRec(i, iRecording);
 				}
 
 				LoadFrames(iRecording);
@@ -402,9 +402,6 @@ void parseIndex(char[] sPath) {
 		
 		iRecording.ClientInfo.Push(iClientInfo);
 
-		iRecording.NodeModel = INVALID_ENT_REFERENCE;
-		iRecording.WeaponModel = INVALID_ENT_REFERENCE;
-
 		g_hRecordings.Push(iRecording);
 		
 		hKV.GoBack();
@@ -414,6 +411,4 @@ void parseIndex(char[] sPath) {
 	LogMessage("%T", "Loaded Repo", LANG_SERVER, i);
 	
 	delete hKV;
-	
-	spawnModels();
 }

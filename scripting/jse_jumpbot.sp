@@ -368,7 +368,7 @@ public void OnPluginStart() {
 	g_hRecordingEntities = new ArrayList(RecEnt_Size);
 	g_hRecordingEntTypes = new ArrayList(ByteCountToCells(128));
 	g_hRecordingBots = new ArrayList(RecBot_Size);
-	g_hRecBufferFrames = new ArrayList();
+	g_hRecBufferFrames = null;
 	//g_hRecEntSpawnList = new ArrayList();
 	g_hRecEntFail = new ArrayList(RecEntFail_Size);
 
@@ -382,7 +382,6 @@ public void OnPluginStart() {
 	//HookEvent("player_builtobject", Event_BuiltObject);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_team", Event_PlayerTeam, EventHookMode_Pre);
-	HookEvent("player_changeclass", Event_PlayerChangeClass, EventHookMode_Post);
 	HookEvent("post_inventory_application", Event_Resupply,  EventHookMode_Post);
 	HookEvent("teamplay_round_start", Event_RoundStart);
 	HookUserMessage(GetUserMessageId("VoiceSubtitle"), UserMessage_VoiceSubtitle, true);
@@ -436,7 +435,7 @@ public void OnPluginStart() {
 }
 
 public void OnPluginEnd() {
-	removeModels();
+	RemoveAllModels();
 	
 	g_iRecording = NULL_RECORDING;
 	g_hBubbleLookup.Clear();
@@ -635,6 +634,8 @@ public void OnMapStart() {
 	CreateTimer(0.1, Timer_AmmoRegen, 0, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 	
 	LoadRecordings();
+	blockFlags();
+	blockRegen();
 }
 
 public void OnMapEnd() {
@@ -812,7 +813,7 @@ public void OnGameFrame() {
 		static int iButtons;
 
 		if (g_iRecBufferIdx >= g_hRecBuffer.Length || (g_iRecBufferIdx >= g_iRecBufferUsed)) {
-			resetBubbleRotation(g_iRecording);
+			ResetBubbleRotation(g_iRecording);
 			clearRecEntities();
 			g_hRecEntFail.Clear();
 			
@@ -1632,7 +1633,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 				g_iClientOfInterest = -1;
 				g_iClientInstructionPost = INST_NOP;
 				g_iTargetFollow = g_iClientFollow;
-				setAllBubbleAlpha(50);
+				SetAllBubbleAlpha(50);
 			} else if (g_iTargetFollow != g_iClientControl && fDist < 90.0) {
 				float fAngBehind[3];
 				fAngBehind[0] = 30.0;
@@ -1822,9 +1823,8 @@ public int Native_Shutdown(Handle hPlugin, int iArgC) {
 public int Native_LoadRecordings(Handle hPlugin, int iArgC) {
 	doFullStop();
 
-	removeModels();
+	RemoveAllModels();
 	LoadRecordings();
-	spawnModels();
 }
 
 public int Native_GetRecordings(Handle hPlugin, int iArgC) {
@@ -1849,47 +1849,8 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 	clearRecEntities();
 	g_iRecordingEntTotal = 0;
 
-	ArrayList hClientInfo = iRecording.ClientInfo;
-	for (int i=0; i<hClientInfo.Length; i++) {
-		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-		if (!IsClientInGame(iRecBot)) {
-			LogError("Tried using iRecBot=%d but the client is not in-game", i);
-			return 0;
-		}
-
-		ClientInfo iClientInfo = hClientInfo.Get(i);
-
-		float fPos[3];
-		iClientInfo.GetStartPos(fPos);
-		Entity_SetAbsOrigin(iRecBot, fPos);
-
-		float fAng[3];
-		iClientInfo.GetStartAng(fAng);
-		g_aClientState[iRecBot][ClientState_fAng_0] = fAng[0];
-		g_aClientState[iRecBot][ClientState_fAng_1] = fAng[1];
-		g_aClientState[iRecBot][ClientState_fAng_2] = fAng[2];
-
-		TFClassType iRecClass = iClientInfo.Class;
-		TFTeam iRecTeam = iClientInfo.Team;
-
-		if (TF2_GetPlayerClass(iRecBot) != iRecClass) {
-			TF2_SetPlayerClass(iRecBot, iRecClass);
-			RequestFrame(Respawn, iRecBot);
-		}
-
-		if (view_as<TFTeam>(GetClientTeam(iRecBot)) != iRecTeam) {
-			ChangeClientTeam(iRecBot, view_as<int>(iRecTeam));
-			RequestFrame(Respawn, iRecBot);
-		}
-
-		doEquipRec(i, iRecording);
-	}
-
-	if (g_hRobot.BoolValue) {
-		for (int i=0; i<g_hRecordingBots.Length; i++) {
-			int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-			setRobotModel(iRecBot);
-		}
+	if (!PrepareBots(iRecording)) {
+		return 0;
 	}
 
 	if (iClient) {
@@ -1938,7 +1899,7 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 	g_iClientOfInterest = iClient;
 	g_iClientInstructionPost = INST_NOP;
 	
-	setAllBubbleAlpha(50);
+	SetAllBubbleAlpha(50);
 
 	return 1;
 }
@@ -2039,7 +2000,7 @@ public Action cmdRecord(int iClient, int iArgC) {
 			g_iClientOfInterest = 0;
 			
 			if (!g_bLocked) {
-				setAllBubbleAlpha(255);
+				SetAllBubbleAlpha(255);
 			}
 		} else {
 			char sUserName[32];
@@ -2061,14 +2022,12 @@ public Action cmdRecord(int iClient, int iArgC) {
 	g_iRecBufferFrame = 0;
 	g_iClientInstruction = INST_RECD;
 	
-	setAllBubbleAlpha(50);
+	SetAllBubbleAlpha(50);
 	
 	char sAuthID[24];
 	GetClientAuthId(iClient, AuthId_Steam3, sAuthID, sizeof(sAuthID));
 
 	Recording iRec = Recording.Instance();
-	iRec.NodeModel = INVALID_ENT_REFERENCE;
-	iRec.WeaponModel = INVALID_ENT_REFERENCE;
 	g_hRecBufferFrames = iRec.Frames;
 	
 	// TODO: Bot count vs. RecClient count mismatch
@@ -2099,13 +2058,6 @@ public Action cmdRecord(int iClient, int iArgC) {
 		}
 
 		iRec.ClientInfo.Push(iClientInfo);
-
-		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-		ChangeClientTeam(iRecBot, view_as<int>(iClientInfo.Team));
-		doTeamClassMatch(iRecClient, iRecBot);
-		TF2_RespawnPlayer(iRecBot);
-
-		doEquipRec(i, iRec);
 	}
 
 	g_iRecording = iRec;
@@ -2120,27 +2072,20 @@ public Action cmdPlay(int iClient, int iArgC) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "No Access");
 		return Plugin_Handled;
 	}
-	
-	if (!g_hRecordingBots.Length) {
-		return Plugin_Handled;
-	}
-	
+
 	if ((g_iClientInstruction == INST_RECD || g_iClientInstruction & INST_PLAY) && (g_iClientOfInterest > 0 && g_iClientOfInterest != iClient)) {
 		char  sUserName[32];
 		GetClientName(g_iClientOfInterest, sUserName, sizeof(sUserName));
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Recorder Using", sUserName);
 		return Plugin_Handled;
 	}
-	
-	if (!g_hRecordingBots.Length) {
-		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Setting Up");
-		if (!g_hRecordingBots.Length) {
-			Timer_SetupBot(INVALID_HANDLE);
-		}
+
+	Recording iRecording = g_iRecording;
+
+	if (!PrepareBots(iRecording)) {
 		return Plugin_Handled;
 	}
 
-	Recording iRecording = g_iRecording;
 	switch (iArgC) {
 		case 0: {
 			if (iRecording == NULL_RECORDING) {
@@ -2179,57 +2124,14 @@ public Action cmdPlay(int iClient, int iArgC) {
 	clearRecEntities();
 	g_iRecordingEntTotal = 0;
 	
-	ArrayList hClientInfo = iRecording.ClientInfo;
-	for (int i=0; i<hClientInfo.Length; i++) {
-		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-		if (!IsClientInGame(iRecBot)) {
-			LogError("Tried using iRecBot=%d but the client is not in-game", i);
-			CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Not enough bots for playback");
-			return Plugin_Handled;
-		}
-
-		ClientInfo iClientInfo = hClientInfo.Get(i);
-
-		float fPos[3];
-		iClientInfo.GetStartPos(fPos);
-		Entity_SetAbsOrigin(iRecBot, fPos);
-
-		float fAng[3];
-		iClientInfo.GetStartAng(fAng);
-		g_aClientState[iRecBot][ClientState_fAng_0] = fAng[0];
-		g_aClientState[iRecBot][ClientState_fAng_1] = fAng[1];
-		g_aClientState[iRecBot][ClientState_fAng_2] = fAng[2];
-
-		TFClassType iRecClass = iClientInfo.Class;
-		TFTeam iRecTeam = iClientInfo.Team;
-
-		if (TF2_GetPlayerClass(iRecBot) != iRecClass) {
-			TF2_SetPlayerClass(iRecBot, iRecClass);
-			RequestFrame(Respawn, iRecBot);
-		}
-
-		if (view_as<TFTeam>(GetClientTeam(iRecBot)) != iRecTeam) {
-			ChangeClientTeam(iRecBot, view_as<int>(iRecTeam));
-			RequestFrame(Respawn, iRecBot);
-		}
-
-		doEquipRec(i, iRecording);
-	}
-	
-	if (g_hRobot.BoolValue) {
-		for (int i=0; i<g_hRecordingBots.Length; i++) {
-			int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-			setRobotModel(iRecBot);
-		}
-	}
-
 	g_iRecording = iRecording;
+	g_hRecBufferFrames = iRecording.Frames;
 
 	g_iClientInstruction = INST_WARMUP;
 	g_iClientOfInterest = iClient;
 	g_iClientInstructionPost = INST_NOP;
 	
-	setAllBubbleAlpha(50);
+	SetAllBubbleAlpha(50);
 		
 	if (g_hDebug.BoolValue) {
 		CPrintToChatAll("{dodgerblue}[jb] {white}%t", "Playback Start");
@@ -2297,9 +2199,8 @@ public Action cmdSave(int iClient, int iArgC) {
 	g_iRecording = NULL_RECORDING;
 		
 	// Refresh recordings
-	removeModels();
+	RemoveAllModels();
 	LoadRecordings(true);
-	spawnModels();
 	
 	return Plugin_Handled;
 }
@@ -2629,9 +2530,8 @@ public Action cmdLoad(int iClient, int iArgC) {
 		doFullStop();
 	}
 	
-	removeModels();
+	RemoveAllModels();
 	LoadRecordings();
-	spawnModels();
 	return Plugin_Handled;
 }
 
@@ -2674,9 +2574,8 @@ public Action cmdDelete(int iClient, int iArgC) {
 		LogMessage("%T '%s' > '%s'", "Deleted Rec", LANG_SERVER, sFilePath, sFilePathTrash);
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t: %s", "Deleted Rec", sFilePath[iFilePart+1]);
 
-		removeModels();
+		RemoveAllModels();
 		LoadRecordings(true);
-		spawnModels();
 	}
 	
 	return Plugin_Handled;
@@ -2724,55 +2623,14 @@ public Action cmdPlayAll(int iClient, int iArgC) {
 	}
 
 	Recording iRecording = g_hRecordings.Get(iRecID);
+
+	if (!PrepareBots(iRecording)) {
+		return Plugin_Handled;
+	}
 	
 	g_hPlaybackQueue.Clear();
 	for (int i=iRecID+1; i<g_hRecordings.Length; i++) {
 		g_hPlaybackQueue.Push(g_hRecordings.Get(i));
-	}
-
-	// TODO: Bot count vs RecBot count mismatch
-	ArrayList hClientInfo = iRecording.ClientInfo;
-	for (int i=0; i<hClientInfo.Length; i++) {
-		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-		if (!IsClientInGame(iRecBot)) {
-			LogError("Tried using iRecBot=%d but the client is not in-game", i);
-			CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Not enough bots for playback");
-			return Plugin_Handled;
-		}
-
-		ClientInfo iClientInfo = hClientInfo.Get(i);
-
-		float fPos[3];
-		iClientInfo.GetStartPos(fPos);
-		Entity_SetAbsOrigin(iRecBot, fPos);
-
-		float fAng[3];
-		iClientInfo.GetStartAng(fAng);
-		g_aClientState[iRecBot][ClientState_fAng_0] = fAng[0];
-		g_aClientState[iRecBot][ClientState_fAng_1] = fAng[1];
-		g_aClientState[iRecBot][ClientState_fAng_2] = fAng[2];
-
-		TFClassType iRecClass = iClientInfo.Class;
-		TFTeam iRecTeam = iClientInfo.Team;
-
-		if (TF2_GetPlayerClass(iRecBot) != iRecClass) {
-			TF2_SetPlayerClass(iRecBot, iRecClass);
-			RequestFrame(Respawn, iRecBot);
-		}
-
-		if (view_as<TFTeam>(GetClientTeam(iRecBot)) != iRecTeam) {
-			ChangeClientTeam(iRecBot, view_as<int>(iRecTeam));
-			RequestFrame(Respawn, iRecBot);
-		}
-
-		doEquipRec(i, iRecording);
-	}
-	
-	if (g_hRobot.BoolValue) {
-		for (int i=0; i<hClientInfo.Length; i++) {
-			int iRecBot = g_hRecordingBots.Get(i);
-			setRobotModel(iRecBot);
-		}
 	}
 
 	char sFilePath[PLATFORM_MAX_PATH];
@@ -2793,7 +2651,7 @@ public Action cmdPlayAll(int iClient, int iArgC) {
 	g_iRecBufferIdx = 0;
 	g_iRecBufferFrame = 0;
 	
-	setAllBubbleAlpha(50);
+	SetAllBubbleAlpha(50);
 	
 	return Plugin_Handled;
 }
@@ -2860,12 +2718,12 @@ public Action cmdStop(int iClient, int iArgC) {
 	if (g_iClientInstruction != INST_NOP) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Terminated");
 		if (g_iClientInstruction == INST_PLAY && g_iRecording != NULL_RECORDING) {
-			resetBubbleRotation(g_iRecording);
+			ResetBubbleRotation(g_iRecording);
 		}
 		
 		doFullStop();
 		doPlayerQueueClear();
-		setAllBubbleAlpha(255);
+		SetAllBubbleAlpha(255);
 	}
 	
 	return Plugin_Handled;
@@ -3084,10 +2942,10 @@ public Action cmdToggleLock(int iClient, int iArgs) {
 	g_bLocked = !g_bLocked;
 	if (g_bLocked) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Bot Locked");
-		setAllBubbleAlpha(50);
+		SetAllBubbleAlpha(50);
 	} else {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Bot Unlocked");
-		setAllBubbleAlpha(255);
+		SetAllBubbleAlpha(255);
 	}
 	
 	return Plugin_Handled;
@@ -3169,7 +3027,7 @@ public Action cmdShowMe(int iClient, int iArgC) {
 	
 	Recording iClosestRecord;
 	if (GetTime()-g_iLastBubbleTime[iClient][1] < 10) {
-		char sKey[5];
+		char sKey[32];
 		IntToString(g_iLastBubbleTime[iClient][0], sKey, sizeof(sKey));
 		g_hBubbleLookup.GetValue(sKey, iClosestRecord);
 	} else {
@@ -3245,6 +3103,10 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 		return;
 	}
 
+	if (!PrepareBots(iRecording)) {
+		return;
+	}
+
 	g_iRecBufferIdx = 0;
 	g_iRecBufferFrame = 0;
 	clearRecEntities();
@@ -3252,54 +3114,9 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 
 	ArrayList hClientInfo = iRecording.ClientInfo;
 	for (int i=0; i<hClientInfo.Length; i++) {
-		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-		if (!IsClientInGame(iRecBot)) {
-			LogError("Tried using iRecBot=%d but the client is not in-game", i);
-			CPrintToChat(iClient, "{dodgerblue}[jb] {white}Not enough bots for playback");
-			return;
-		}
-
-		ClientInfo iClientInfo = hClientInfo.Get(i);
-
-		float fPos[3];
-		iClientInfo.GetStartPos(fPos);
-		Entity_SetAbsOrigin(iRecBot, fPos);
-
-		float fAng[3];
-		iClientInfo.GetStartAng(fAng);
-		g_aClientState[iRecBot][ClientState_fAng_0] = fAng[0];
-		g_aClientState[iRecBot][ClientState_fAng_1] = fAng[1];
-		g_aClientState[iRecBot][ClientState_fAng_2] = fAng[2];
-
-		TFClassType iRecClass = iClientInfo.Class;
-		TFTeam iRecTeam = iClientInfo.Team;
-
-		if (TF2_GetPlayerClass(iRecBot) != iRecClass) {
-			TF2_SetPlayerClass(iRecBot, iRecClass);
-			RequestFrame(Respawn, iRecBot);
-		}
-
-		if (view_as<TFTeam>(GetClientTeam(iRecBot)) != iRecTeam) {
-			ChangeClientTeam(iRecBot, view_as<int>(iRecTeam));
-			RequestFrame(Respawn, iRecBot);
-		}
-
-		// TODO: Equip info for repo
-		if (!iRecording.Repo) {
-			doEquipRec(i, iRecording);
-		}
-
-		TF2_RemoveCondition(iRecBot, TFCond_Taunting);
-		CreateTimer(0.0, Timer_DoVoiceGo, iRecBot, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(0.0, Timer_DoVoiceGo, g_hRecordingBots.Get(i), TIMER_FLAG_NO_MAPCHANGE);
 	}
 
-	if (g_hRobot.BoolValue) {
-		for (int i=0; i<g_hRecordingBots.Length; i++) {
-			int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-			setRobotModel(iRecBot);
-		}
-	}
-	
 	if (g_hDebug.BoolValue) {
 		CPrintToChat(iClient, "{dodgerblue}[jb] {white}%t: %s", "Playing Closest", sFilePath);
 	} else {
@@ -3327,16 +3144,7 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 	} else {
 		g_iClientInstruction = INST_WARMUP;
 		LoadRecording(iRecording);
-
-		for (int i=0; i<hClientInfo.Length; i++) {
-			int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
-			if (!IsClientInGame(iRecBot)) {
-				LogError("Tried using iRecBot=%d but the client is not in-game", i);
-				return;
-			}
-
-			doEquipRec(i, iRecording);
-		}
+		PrepareBots(iRecording);
 
 		LoadFrames(iRecording);
 	}
@@ -3348,7 +3156,7 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 	//g_fShadowBufferAlpha = 0.0;
 	g_fPlaybackSpeed = g_fSpeed[g_iClientOfInterest];
 	
-	setAllBubbleAlpha(50);
+	SetAllBubbleAlpha(50);
 	
 	// TODO: Playback speed
 	/*
@@ -3445,9 +3253,8 @@ public Action cmdChdir(int iClient, int iArgC) {
 		FormatEx(g_sRecSubDir, sizeof(g_sRecSubDir), "%s/%s", RECORD_FOLDER, sArg1);
 	}
 	
-	removeModels();
+	RemoveAllModels();
 	LoadRecordings(true);
-	spawnModels();
 	
 	CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Rec Chdir", g_sRecSubDir);
 	
@@ -3482,9 +3289,8 @@ public Action cmdClearCache(int iClient, int iArgC) {
 	}
 	delete hDir;
 	
-	removeModels();
+	RemoveAllModels();
 	LoadRecordings(); // Redownload repo index
-	spawnModels();
 	
 	return Plugin_Handled;
 }
@@ -3611,7 +3417,7 @@ public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroa
 			setRobotModel(iClient);
 		}
 		
-		doEquipRec(iBotID, g_iRecording);
+		Equip(iBotID);
 	} else {
 		// Have bots join a team after a player joins one
 		if (!IsFakeClient(iClient) && g_hRecordingBots.Length) {
@@ -3642,16 +3448,6 @@ public Action Event_PlayerTeam(Event hEvent, const char[] sName, bool bDontBroad
 	return Plugin_Continue;
 }
 
-public Action Event_PlayerChangeClass(Event hEvent, const char[] sName, bool bDontBroadcast) {
-	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
-	int iBotID = -1;
-	if ((iBotID = g_hRecordingBots.FindValue(iClient, RecBot_iEnt)) != -1) {
-		doEquipRec(iBotID, g_iRecording);
-	}
-	
-	return Plugin_Continue;
-}
-
 public Action Event_Resupply(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
 	if (g_hRecordingBots.FindValue(iClient, RecBot_iEnt) != -1 && g_iClientOfInterest != -1) {
@@ -3672,8 +3468,7 @@ public Action Event_Resupply(Event hEvent, const char[] sName, bool bDontBroadca
 }
 
 public Action Event_RoundStart(Event hEvent, const char[] sName, bool bDontBroadcast) {
-	removeModels(false); // Edicts already wiped on round restart
-	spawnModels();
+	RemoveAllModels();
 	blockFlags();
 	blockRegen();
 }
@@ -3776,6 +3571,8 @@ public Action Timer_Queue(Handle hTimer, any aData) {
 		sendQueuePanel(g_hQueue.Get(i, QUEUE_CLIENT));
 	}
 	
+	RefreshModels();
+
 	return Plugin_Continue;
 }
 
@@ -3903,8 +3700,11 @@ public bool traceHitNonPlayer(int iEntity, int iMask, any aData) {
 
 public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 	if (Client_IsValid(iOther) && !IsFakeClient(iOther) && g_bBubble[iOther]) {
-		char sKey[5];
-		IntToString(iEntity, sKey, sizeof(sKey));
+		int iEntityRef = EntIndexToEntRef(iEntity);
+
+		char sKey[32];
+		IntToString(iEntityRef, sKey, sizeof(sKey));
+
 		Recording iRecording;
 		g_hBubbleLookup.GetValue(sKey, iRecording);
 		
@@ -3954,13 +3754,13 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		}
 		StopSound(iOther, SNDCHAN_STATIC, "ui/hint.wav");
 		
-		if (g_hDebug.BoolValue && (iEntity != g_iLastBubbleTime[iOther][0] || GetTime()-g_iLastBubbleTime[iOther][1] > 10)) {
+		if (g_hDebug.BoolValue && (iEntityRef != g_iLastBubbleTime[iOther][0] || GetTime()-g_iLastBubbleTime[iOther][1] > 10)) {
 			char sFilePath[PLATFORM_MAX_PATH];
 			iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
 			CPrintToChat(iOther, "{dodgerblue}[jb] {white}ID: %d | %t | %s%t (%s) | %t: %s | %t:\n	%s", iRecID, (iRecording.Repo ? "Repository" : "Local"), sClass, "Recording", sTimeTotal, "Author", sAuthID, "File", sFilePath);
 		}
 
-		g_iLastBubbleTime[iOther][0] = iEntity;
+		g_iLastBubbleTime[iOther][0] = iEntityRef;
 		g_iLastBubbleTime[iOther][1] = GetTime();
 	}
 	
@@ -3970,7 +3770,7 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 public Action Hook_EndTouchInfo(int iEntity, int iOther) {
 	if (Client_IsValid(iOther) && !IsFakeClient(iOther) && g_bBubble[iOther]) {
 		int iTimeDiff = GetTime() - g_iLastBubbleTime[iOther][1];
-		if (iEntity == g_iLastBubbleTime[iOther][0] && iTimeDiff < 10) {
+		if (EntIndexToEntRef(iEntity) == g_iLastBubbleTime[iOther][0] && iTimeDiff < 10) {
 			PrintHintText(iOther, " ");
 			StopSound(iOther, SNDCHAN_STATIC, "ui/hint.wav");
 			CreateTimer(0.1, Timer_CloseHintPanel, iOther, TIMER_FLAG_NO_MAPCHANGE);
@@ -4081,6 +3881,8 @@ public Action Hook_ProjectileSpawn(int iEntity) {
 		char sClassName[128];
 		GetEntityClassname(iEntity, sClassName, sizeof(sClassName));
 
+		//PrintToServer("Hook_ProjectileSpawn entity %d: %s", iEntity, sClassName);
+
 		int iEntType = g_hRecordingEntTypes.FindString(sClassName);
 		if (iEntType == -1) {
 			iEntType = g_hRecordingEntTypes.Length;
@@ -4182,8 +3984,8 @@ public Action Hook_Entity_SetTransmit(int iEntity, int iClient) {
 		return Plugin_Handled;
 	}
 	
-	char sKey[10];
-	IntToString(iEntity, sKey, sizeof(sKey));
+	char sKey[32];
+	IntToString(EntIndexToEntRef(iEntity), sKey, sizeof(sKey));
 	Recording iRecording;
 	if (!g_hBubbleLookup.GetValue(sKey, iRecording)) {
 		return Plugin_Continue;
@@ -4192,7 +3994,7 @@ public Action Hook_Entity_SetTransmit(int iEntity, int iClient) {
 	if (IsRecordingVisible(iRecording, iClient)) {
 		return Plugin_Continue;
 	}
-
+	
 	return Plugin_Handled;
 }
 
@@ -4417,9 +4219,9 @@ void doFullStop() {
 	g_iClientOfInterest = -1;
 	g_hProjMap.Clear();
 	
-	resetBubbleRotation(g_iRecording);
+	ResetBubbleRotation(g_iRecording);
 	if (!g_bLocked) {
-		setAllBubbleAlpha(255);
+		SetAllBubbleAlpha(255);
 	}
 	
 	int iEntity = INVALID_ENT_REFERENCE;
@@ -4438,6 +4240,7 @@ void doFullStop() {
 	clearRecEntities();
 	g_hRecEntFail.Clear();
 	g_hPlaybackQueue.Clear();
+	g_hRecBufferFrames = null;
 	
 	for (int i=0; i<g_hRecordingBots.Length; i++) {
 		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
@@ -4454,7 +4257,7 @@ void doFullStop() {
 	}
 }
 
-void doEquip(int iBotID) {
+void Equip(int iBotID) {
 	int iClient = g_hRecordingBots.Get(iBotID, RecBot_iEnt);
 	if (!Client_IsValid(iClient) || !IsClientInGame(iClient)) {
 		LogError("Cannot equip for client not in game: bot %d, client %d", iBotID, iClient);
@@ -4464,7 +4267,6 @@ void doEquip(int iBotID) {
 	DataPack hEquip = g_hRecordingBots.Get(iBotID, RecBot_hEquip);
 	hEquip.Reset(false);
 	if (!hEquip.IsReadable(4)) {
-		LogError("doEquip(iBotID=%d) DataPack is unreadable.", iBotID); 
 		return;
 	}
 
@@ -4480,19 +4282,24 @@ void doEquip(int iBotID) {
 	for (int iSlot = TFWeaponSlot_Primary; iSlot <= TFWeaponSlot_Item2; iSlot++) {
 		int iCurrentWeapon = GetPlayerWeaponSlot(iClient, iSlot);
 
-		int iItemDefIndex = hEquip.ReadCell();
-		if (iItemDefIndex) {
-			if (IsValidEntity(iCurrentWeapon) && iItemDefIndex == GetItemDefIndex(iCurrentWeapon)) {
+		int iItemDefIdx = hEquip.ReadCell();
+		if (iItemDefIdx) {
+			// Need to read from pack even if not re-equipping
+			hEquip.ReadString(sClassName, sizeof(sClassName));
+
+			if (IsValidEntity(iCurrentWeapon) && iItemDefIdx == GetItemDefIndex(iCurrentWeapon)) {
+				if (!iWeaponAvailable) {
+					iWeaponAvailable = iCurrentWeapon;
+				}
+				
 				continue;
 			}
 			
 			TF2_RemoveWeaponSlot(iClient, iSlot);
 
-			hEquip.ReadString(sClassName, sizeof(sClassName));
-			
 			Handle hWeapon = TF2Items_CreateItem(OVERRIDE_ALL | PRESERVE_ATTRIBUTES | FORCE_GENERATION);
 			TF2Items_SetClassname(hWeapon, sClassName);
-			TF2Items_SetItemIndex(hWeapon, iItemDefIndex);
+			TF2Items_SetItemIndex(hWeapon, iItemDefIdx);
 			//TF2Items_SetQuality(hWeapon, GetEntProp(iWeapon, Prop_Send, "m_iEntityQuality"));
 			//TF2Items_SetLevel(hWeapon, GetEntProp(iWeapon, Prop_Send, "m_iEntityLevel"));
 			
@@ -4511,10 +4318,13 @@ void doEquip(int iBotID) {
 	
 	if (iWeaponAvailable) {
 		Client_SetActiveWeapon(iClient, iWeaponAvailable);
+		float fTime = GetGameTime();
+		SetEntPropFloat(iWeaponAvailable, Prop_Send, "m_flNextPrimaryAttack", fTime);
+		SetEntPropFloat(iWeaponAvailable, Prop_Send, "m_flNextSecondaryAttack", fTime);
 	}
 }
 
-void doEquipRec(int iBotID, Recording iRecording, bool bImmediate = true) {
+void EquipRec(int iBotID, Recording iRecording, bool bImmediate = true) {
 	if (iRecording == NULL_RECORDING) {
 		return;
 	}
@@ -4536,34 +4346,7 @@ void doEquipRec(int iBotID, Recording iRecording, bool bImmediate = true) {
 	}
 
 	if (bImmediate) {
-		doEquip(iBotID);
-	}
-}
-
-void doTeamClassMatch(int iClientToMatch, int iClient) {
-	TFTeam iTeam = TFTeam_Red;
-	TFClassType iClass = TFClass_Soldier;
-	
-	TFTeam iTeamToMatch = view_as<TFTeam>(GetClientTeam(iClientToMatch));
-	
-	if (iTeamToMatch > TFTeam_Spectator) {
-		if (TF2_GetPlayerClass(iClientToMatch) != TFClass_Unknown) {
-			iClass = TF2_GetPlayerClass(iClientToMatch);
-		}
-		
-		if (iClass != TF2_GetPlayerClass(iClient)) {
-			TF2_SetPlayerClass(iClient, iClass);
-		}
-	}
-	
-	if (iTeamToMatch > TFTeam_Spectator) {
-		iTeam = view_as<TFTeam>(GetClientTeam(iClientToMatch));
-	
-	
-		if (iTeam != view_as<TFTeam>(GetClientTeam(iClient))) {
-			ChangeClientTeam(iClient, view_as<int>(iTeam));
-			RequestFrame(Respawn, iClient);
-		}
+		Equip(iBotID);
 	}
 }
 
@@ -4572,7 +4355,6 @@ FindResult findNearestRecording(float fPos[3], TFClassType iClass, Recording &iC
 	
 	iClosestRecord = NULL_RECORDING;
 	float fClosestDistance = MAX_NEARBY_SEARCH_DISTANCE;
-	
 	
 	if (!g_hRecordings.Length) {
 		return NO_RECORDING;
@@ -4894,9 +4676,6 @@ bool LoadRecording(Recording iRecording) {
 
 	delete hFile;
 
-	iRecording.NodeModel = INVALID_ENT_REFERENCE;
-	iRecording.WeaponModel = INVALID_ENT_REFERENCE;
-
 	return true;
 }
 
@@ -5097,7 +4876,7 @@ bool LoadState(Recording iRecording) {
 	return false;
 }
 
-void resetBubbleRotation(Recording iRecording) {
+void ResetBubbleRotation(Recording iRecording) {
 	if (iRecording != NULL_RECORDING) {
 		int iBubble = iRecording.NodeModel;
 		if (IsValidEntity(iBubble)) {
@@ -5186,8 +4965,8 @@ bool SaveFile(char[] sFilePath) {
 			if (iWeaponEnt == -1) {
 				hFile.WriteInt32(0);
 			} else {
-				int iItemDefIndex = GetItemDefIndex(iWeaponEnt);
-				hFile.WriteInt32(iItemDefIndex);
+				int iItemDefIdx = GetItemDefIndex(iWeaponEnt);
+				hFile.WriteInt32(iItemDefIdx);
 
 				char sClassName[128];
 				GetEntityClassname(iWeaponEnt, sClassName, sizeof(sClassName));
@@ -5256,14 +5035,14 @@ bool SaveFile(char[] sFilePath) {
 	return true;
 }
 
-void setAllBubbleAlpha(int iAlpha) {
+void SetAllBubbleAlpha(int iAlpha) {
 	for (int i=0; i<g_hRecordings.Length; i++) {
 		Recording iRecording = g_hRecordings.Get(i);
-		setBubbleAlpha(iRecording, iAlpha);
+		SetBubbleAlpha(iRecording, iAlpha);
 	}
 }
 
-void setBubbleAlpha(Recording iRecording, int iAlpha) {
+void SetBubbleAlpha(Recording iRecording, int iAlpha) {
 	int iNModel = iRecording.NodeModel;
 	int iWModel = iRecording.WeaponModel;
 	
@@ -5422,17 +5201,40 @@ public void showKeys(int iClient) {
 	}
 }
 
-void spawnModels() {
+void RefreshModels() {
 	if (!g_hBubble.BoolValue) {
 		return;
 	}
+
+	static int iClients[MAXPLAYERS+1];
 	
 	for (int i=0; i<g_hRecordings.Length; i++) {
 		Recording iRecording = g_hRecordings.Get(i);
-		if (iRecording.NodeModel != INVALID_ENT_REFERENCE) {
+
+		// Primary author
+		ClientInfo iClientInfo = iRecording.ClientInfo.Get(0);
+
+		float fPos[3], fPosClient[3];
+		iClientInfo.GetStartPos(fPos);
+		fPos[2] += 20.0;
+
+		bool bVisible = false;
+		int iClientsNearby = GetClientsInRange(fPos, RangeType_Visibility, iClients, sizeof(iClients));
+		for (int j=0; j<iClientsNearby && !bVisible; j++) {
+			GetClientEyePosition(iClients[j], fPosClient);
+			bVisible = IsRecordingVisible(iRecording, iClients[j]) && GetVectorDistance(fPos, fPosClient) < MAX_NEARBY_SEARCH_DISTANCE;
+		}
+
+		bool bHasModel = iRecording.NodeModel != INVALID_ENT_REFERENCE;
+		if (bHasModel && !bVisible) {
+			RemoveModels(iRecording);
 			continue;
 		}
-		
+
+		if (bHasModel || !bVisible) {
+			continue;
+		}
+
 		int iEntity = CreateEntityByName("prop_dynamic");
 		if (IsValidEntity(iEntity)) {
 			SetEntityModel(iEntity, HINT_MODEL_MARKER);
@@ -5446,15 +5248,9 @@ void spawnModels() {
 				SetEntityRenderColor(iEntity, g_iLocalRecColor[0], g_iLocalRecColor[1], g_iLocalRecColor[2], 255);
 			}
 			
-			iRecording.NodeModel = EntIndexToEntRef(iEntity);
-			
-			// Primary author
-			ClientInfo iClientInfo = iRecording.ClientInfo.Get(0);
+			int iEntityRef = EntIndexToEntRef(iEntity);
+			iRecording.NodeModel = iEntityRef;
 
-			float fPos[3];
-			iClientInfo.GetStartPos(fPos);
-			fPos[2] += 20.0;
-			
 			float fAng[3] = {0.0, ...};
 			iClientInfo.GetStartAng(fAng);
 			fAng[0] = 0.0;
@@ -5464,15 +5260,13 @@ void spawnModels() {
 			
 			SDKHook(iEntity, SDKHook_StartTouch, Hook_StartTouchInfo);
 			SDKHook(iEntity, SDKHook_EndTouch, Hook_EndTouchInfo);
-			char sKey[5];
-			IntToString(iEntity, sKey, sizeof(sKey));
+
+			char sKey[32];
+			IntToString(iEntityRef, sKey, sizeof(sKey));
 			g_hBubbleLookup.SetValue(sKey, iRecording);
 			
 			SDKHook(iEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);
 		}
-		
-		// Primary author
-		ClientInfo iClientInfo = iRecording.ClientInfo.Get(0);
 
 		TFClassType iClass = iClientInfo.Class;
 		if ((iClass == TFClass_Soldier || iClass == TFClass_DemoMan) && (iEntity = CreateEntityByName("prop_dynamic")) != INVALID_ENT_REFERENCE) {
@@ -5487,9 +5281,9 @@ void spawnModels() {
 			DispatchSpawn(iEntity);
 			SetEntityRenderMode(iEntity, RENDER_TRANSALPHA);
 			
-			iRecording.WeaponModel = EntIndexToEntRef(iEntity);
+			int iEntityRef = EntIndexToEntRef(iEntity);
+			iRecording.WeaponModel = iEntityRef;
 			
-			float fPos[3];
 			iClientInfo.GetStartPos(fPos);
 			fPos[2] += 9.0;
 			
@@ -5497,10 +5291,10 @@ void spawnModels() {
 			iClientInfo.GetStartAng(fAng);
 			fAng[0] = 0.0;
 			fAng[1] = 90.0 + float((RoundFloat(fAng[1]) - 90) % 360);
-			TeleportEntity(iEntity, fPos, fAng, NULL_VECTOR);	
+			TeleportEntity(iEntity, fPos, fAng, NULL_VECTOR);
 
-			char sKey[5];
-			IntToString(iEntity, sKey, sizeof(sKey));
+			char sKey[32];
+			IntToString(iEntityRef, sKey, sizeof(sKey));
 			g_hBubbleLookup.SetValue(sKey, iRecording);
 			
 			SDKHook(iEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);				
@@ -5508,36 +5302,44 @@ void spawnModels() {
 	}
 }
 
-void removeModels(bool bRemoveEdict = true) {
-	g_hBubbleLookup.Clear();
-
+void RemoveAllModels() {
 	for (int i=0; i<g_hRecordings.Length; i++) {
-		Recording iRecording = g_hRecordings.Get(i);
+		RemoveModels(g_hRecordings.Get(i));
+	}
 
-		int iNode = EntRefToEntIndex(iRecording.NodeModel);
-		if (iNode > 0 && IsValidEntity(iNode)) {
-			SDKUnhook(iNode, SDKHook_StartTouch, Hook_StartTouchInfo);
-			SDKUnhook(iNode, SDKHook_EndTouch, Hook_EndTouchInfo);
-			SDKUnhook(iNode, SDKHook_SetTransmit, Hook_Entity_SetTransmit);
-			if (bRemoveEdict) {
-				AcceptEntityInput(iNode, "Kill");
-			}
+	g_hBubbleLookup.Clear();
+}
+
+void RemoveModels(Recording iRecording) {
+	int iEntityRef = iRecording.NodeModel;
+	if (iEntityRef != INVALID_ENT_REFERENCE) {
+		int iEntity = EntRefToEntIndex(iEntityRef);
+		if (iEntity > 0 && IsValidEntity(iEntity)) {
+			AcceptEntityInput(iEntity, "Kill");
+			iRecording.NodeModel = INVALID_ENT_REFERENCE;
 		}
-		iRecording.NodeModel = INVALID_ENT_REFERENCE;
-		
-		int iWeapon = EntRefToEntIndex(iRecording.WeaponModel);
-		if (iWeapon > 0 && IsValidEntity(iWeapon)) {
-			SDKUnhook(iWeapon, SDKHook_SetTransmit, Hook_Entity_SetTransmit);
-			if (bRemoveEdict) {
-				AcceptEntityInput(iWeapon, "Kill");
-			}
+
+		char sKey[32];
+		IntToString(iEntityRef, sKey, sizeof(sKey));
+		g_hBubbleLookup.Remove(sKey);
+	}
+	
+	iEntityRef = iRecording.WeaponModel;
+	if (iEntityRef != INVALID_ENT_REFERENCE) {
+		int iEntity = EntRefToEntIndex(iEntityRef);
+		if (iEntity > 0 && IsValidEntity(iEntity)) {
+			AcceptEntityInput(iEntity, "Kill");
+			iRecording.WeaponModel = INVALID_ENT_REFERENCE;
 		}
-		iRecording.WeaponModel = INVALID_ENT_REFERENCE;
+
+		char sKey[32];
+		IntToString(iEntityRef, sKey, sizeof(sKey));
+		g_hBubbleLookup.Remove(sKey);
 	}
 }
 
 bool LoadFrames(Recording iRecording) {
-	if(iRecording == NULL_RECORDING) {
+	if  (iRecording == NULL_RECORDING) {
 		return false;
 	}
 	
@@ -5708,6 +5510,8 @@ int RespawnRecEnt(int iRecEntIdx) {
 	char sClassName[128];
 	g_hRecordingEntTypes.GetString(iArr[RecEnt_iType], sClassName, sizeof(sClassName));
 	
+	PrintToServer("Respawning iRecEnt[%d]: %s", iRecEntIdx, sClassName);
+
 	int iEntity = EntRefToEntIndex(iArr[RecEnt_iRef]);
 
 	float fPos[3];
@@ -5775,17 +5579,12 @@ void RespawnFrameRecEnt(int iFrame) {
 	ArrayList hClients = g_iClientInstruction & INST_RECD ? g_hRecordingClients : g_hRecordingBots;
 	iRecBufferIdx += 11 * hClients.Length;
 
-	// Incomplete last frame check
-	if (iRecBufferIdx >= g_hRecBuffer.Length) {
-		return;
-	}
-
 	float fPos[3], fAng[3], fVel[3];
 
 	int iEntType;
 	int iOwner = -1;
 	//int iRecordingEnt = -1;
-	while (view_as<RecBlockType>(g_hRecBuffer.Get(iRecBufferIdx) & 0xFF) == ENTITY) {
+	while (iRecBufferIdx < g_hRecBuffer.Length && view_as<RecBlockType>(g_hRecBuffer.Get(iRecBufferIdx) & 0xFF) == ENTITY) {
 		iEntType 		= (g_hRecBuffer.Get(iRecBufferIdx  ) >> 16) & 0xFF;
 		iOwner			= (g_hRecBuffer.Get(iRecBufferIdx++) >> 24) & 0xFF;
 		
@@ -5809,6 +5608,11 @@ void RespawnFrameRecEnt(int iFrame) {
 		char sClassName[128];
 		g_hRecordingEntTypes.GetString(iEntType, sClassName, sizeof(sClassName));
 
+		if (!sClassName[0]) {
+			PrintToServer("Invalid iEntType class name for type %d", iEntType);
+			continue;
+		}
+
 		//PrintToServer("Respawning for iRecEnt[%d] block, class=%s, owner=%N", iRecordingEnt, sClassName, iOwner);
 
 		int iEntity = CreateEntityByName(sClassName);
@@ -5820,15 +5624,77 @@ void RespawnFrameRecEnt(int iFrame) {
 			Entity_SetAbsVelocity(iEntity, fVel);
 
 			if (StrEqual(sClassName, "tf_projectile_pipe_remote")) {
+				SetEntPropEnt(iEntity, Prop_Send, "m_hThrower", iOwner);
 				SetEntProp(iEntity, Prop_Send, "m_iType", 1);
 			}
 
 			//g_hRecEntSpawnList.Push(EntIndexToEntRef(iEntity));
 			DispatchSpawn(iEntity);
+
+			PrintToServer("Trying to respawn iEntType type %d: '%s'", iEntType, sClassName);
 		}
 	}
 
 	delete hRecEnts;
+}
+
+bool PrepareBots(Recording iRecording) {
+	if (!g_hRecordingBots.Length) {
+		Timer_SetupBot(INVALID_HANDLE);
+		return false;
+	}
+
+	// TODO: Bot count mismatch
+
+	ArrayList hClientInfo = iRecording.ClientInfo;
+	for (int i=0; i<hClientInfo.Length; i++) {
+		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+		if (!IsClientInGame(iRecBot)) {
+			LogError("Tried using iRecBot=%d but the client is not in-game", i);
+			return false;
+		}
+
+		ClientInfo iClientInfo = hClientInfo.Get(i);
+
+		float fPos[3];
+		iClientInfo.GetStartPos(fPos);
+		Entity_SetAbsOrigin(iRecBot, fPos);
+
+		float fAng[3];
+		iClientInfo.GetStartAng(fAng);
+		g_aClientState[iRecBot][ClientState_fAng_0] = fAng[0];
+		g_aClientState[iRecBot][ClientState_fAng_1] = fAng[1];
+		g_aClientState[iRecBot][ClientState_fAng_2] = fAng[2];
+
+		TFClassType iRecClass = iClientInfo.Class;
+		TFTeam iRecTeam = iClientInfo.Team;
+
+		bool bRespawnRequired = !IsPlayerAlive(iRecBot);
+
+		if (TF2_GetPlayerClass(iRecBot) != iRecClass) {
+			TF2_SetPlayerClass(iRecBot, iRecClass);
+			bRespawnRequired = true;
+		}
+
+		if (view_as<TFTeam>(GetClientTeam(iRecBot)) != iRecTeam) {
+			ChangeClientTeam(iRecBot, view_as<int>(iRecTeam));
+			bRespawnRequired = true;
+		}
+
+		if (bRespawnRequired) {
+			RequestFrame(Respawn, iRecBot);
+		}
+
+		TF2_RemoveCondition(iRecBot, TFCond_Taunting);
+
+		EquipRec(i, iRecording);
+
+		if (g_hRobot.BoolValue) {
+			setRobotModel(iRecBot);
+		}
+	}
+
+	return true;
 }
 
 //////// Menus ////////
