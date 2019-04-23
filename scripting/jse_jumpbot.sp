@@ -2190,9 +2190,9 @@ public Action cmdSave(int iClient, int iArgC) {
 	GetClientAuthId(iClient, AuthId_Steam3, sSteamID, sizeof(sSteamID));
 	
 	if (g_hDebug.BoolValue) {
-		CPrintToChatAll("{dodgerblue}[jb] {white}%t", "Playback Saved", g_hRecBufferFrames.Length, sSteamID);
+		CPrintToChatAll("{dodgerblue}[jb] {white}%t", "Playback Saved", g_iRecording.Frames.Length, sSteamID);
 	} else {
-		CPrintToChat(iClient, "{dodgerblue}[jb] {white}%t", "Playback Saved", g_hRecBufferFrames.Length, sSteamID);
+		CPrintToChat(iClient, "{dodgerblue}[jb] {white}%t", "Playback Saved", g_iRecording.Frames.Length, sSteamID);
 	}
 
 	Recording.Destroy(g_iRecording);
@@ -4909,7 +4909,8 @@ bool SaveFile(char[] sFilePath) {
 	hFile.WriteInt32(g_iRecording.Timestamp);
 
 	// 0xC
-	hFile.WriteInt32(g_hRecBufferFrames.Length);
+	ArrayList hRecBufferFrames = g_iRecording.Frames;
+	hFile.WriteInt32(hRecBufferFrames.Length);
 
 	// 0x10
 	hFile.WriteInt32(g_iRecBufferUsed);
@@ -5025,8 +5026,8 @@ bool SaveFile(char[] sFilePath) {
 	hFile.Seek(iPosFrameIndex, SEEK_SET);
 
 	// Lookup 0x18 for this address 
-	for (int i=0; i<g_hRecBufferFrames.Length; i++) {
-		hFile.WriteInt32(g_hRecBufferFrames.Get(i));
+	for (int i=0; i<hRecBufferFrames.Length; i++) {
+		hFile.WriteInt32(hRecBufferFrames.Get(i));
 	}
 	
 	FlushFile(hFile);
