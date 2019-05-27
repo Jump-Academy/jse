@@ -230,53 +230,57 @@ public int Native_ClientInfo_Destroy(Handle hPlugin, int iArgC) {
 
 // class Recording
 
-#define Recording_sFilePath		0	// char[256] = char[PLATFORM_MAX_PATH] = int[64]
-#define Recording_bRepo			64	// int
-#define Recording_iDownloading	65	// int
-#define Recording_iFileSize		66	// int
-#define Recording_iTimestamp	67	// int
-#define Recording_hFrames		68	// int
-#define Recording_iLength		69	// int
-#define Recording_hClientInfo	70	// int
-#define Recording_iNodeModel	71	// int
-#define Recording_iWeaponModel	72	// int
-#define Recording_bGCFlag		73	// int
-#define Recording_Size			74
+#define Recording_sFilePath			0	// char[256] = char[PLATFORM_MAX_PATH] = int[64]
+#define Recording_bRepo				64	// int
+#define Recording_iDownloading		65	// int
+#define Recording_iFileSize			66	// int
+#define Recording_iTimestamp		67	// int
+#define Recording_hFrames			68	// int
+#define Recording_iFramesExpected	69	// int
+#define Recording_iLength			70	// int
+#define Recording_hClientInfo		71	// int
+#define Recording_iNodeModel		72	// int
+#define Recording_iWeaponModel		73	// int
+#define Recording_bGCFlag			74	// int
+#define Recording_Size				75
 
 static ArrayList hRecordings = null;
 const Recording NULL_RECORDING = view_as<Recording>(-1);
 
 public void Recording_SetupNatives() {
-	CreateNative("Recording.GetFilePath",		Native_Recording_GetFilePath);
-	CreateNative("Recording.SetFilePath",		Native_Recording_SetFilePath);
+	CreateNative("Recording.GetFilePath",			Native_Recording_GetFilePath);
+	CreateNative("Recording.SetFilePath",			Native_Recording_SetFilePath);
 	
-	CreateNative("Recording.Repo.get",			Native_Recording_GetRepo);
-	CreateNative("Recording.Repo.set",			Native_Recording_SetRepo);
+	CreateNative("Recording.Repo.get",				Native_Recording_GetRepo);
+	CreateNative("Recording.Repo.set",				Native_Recording_SetRepo);
 	
-	CreateNative("Recording.Downloading.get",	Native_Recording_GetDownloading);
-	CreateNative("Recording.Downloading.set",	Native_Recording_SetDownloading);
+	CreateNative("Recording.Downloading.get",		Native_Recording_GetDownloading);
+	CreateNative("Recording.Downloading.set",		Native_Recording_SetDownloading);
 	
-	CreateNative("Recording.FileSize.get",		Native_Recording_GetFileSize);
-	CreateNative("Recording.FileSize.set",		Native_Recording_SetFileSize);
+	CreateNative("Recording.FileSize.get",			Native_Recording_GetFileSize);
+	CreateNative("Recording.FileSize.set",			Native_Recording_SetFileSize);
 	
-	CreateNative("Recording.Timestamp.get",		Native_Recording_GetTimestamp);
-	CreateNative("Recording.Timestamp.set",		Native_Recording_SetTimestamp);
+	CreateNative("Recording.Timestamp.get",			Native_Recording_GetTimestamp);
+	CreateNative("Recording.Timestamp.set",			Native_Recording_SetTimestamp);
 	
-	CreateNative("Recording.Frames.get",		Native_Recording_GetFrames);
+	CreateNative("Recording.Frames.get",			Native_Recording_GetFrames);
 	
-	CreateNative("Recording.Length.get",		Native_Recording_GetLength);
-	CreateNative("Recording.Length.set",		Native_Recording_SetLength);
+	CreateNative("Recording.FramesExpected.get",	Native_Recording_GetFramesExpected);
+	CreateNative("Recording.FramesExpected.set",	Native_Recording_SetFramesExpected);
 	
-	CreateNative("Recording.ClientInfo.get",	Native_Recording_GetClientInfo);
+	CreateNative("Recording.Length.get",			Native_Recording_GetLength);
+	CreateNative("Recording.Length.set",			Native_Recording_SetLength);
 	
-	CreateNative("Recording.NodeModel.get",		Native_Recording_GetNodeModel);
-	CreateNative("Recording.NodeModel.set",		Native_Recording_SetNodeModel);
+	CreateNative("Recording.ClientInfo.get",		Native_Recording_GetClientInfo);
 	
-	CreateNative("Recording.WeaponModel.get",	Native_Recording_GetWeaponModel);
-	CreateNative("Recording.WeaponModel.set",	Native_Recording_SetWeaponModel);
+	CreateNative("Recording.NodeModel.get",			Native_Recording_GetNodeModel);
+	CreateNative("Recording.NodeModel.set",			Native_Recording_SetNodeModel);
 	
-	CreateNative("Recording.Instance",			Native_Recording_Instance);
-	CreateNative("Recording.Destroy",			Native_Recording_Destroy);
+	CreateNative("Recording.WeaponModel.get",		Native_Recording_GetWeaponModel);
+	CreateNative("Recording.WeaponModel.set",		Native_Recording_SetWeaponModel);
+	
+	CreateNative("Recording.Instance",				Native_Recording_Instance);
+	CreateNative("Recording.Destroy",				Native_Recording_Destroy);
 }
 
 public int Native_Recording_GetFilePath(Handle hPlugin, int iArgC) {
@@ -351,6 +355,17 @@ public int Native_Recording_SetTimestamp(Handle hPlugin, int iArgC) {
 public int Native_Recording_GetFrames(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1);
 	return hRecordings.Get(iThis, Recording_hFrames);
+}
+
+public int Native_Recording_GetFramesExpected(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	return hRecordings.Get(iThis, Recording_iFramesExpected);
+}
+
+public int Native_Recording_SetFramesExpected(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iFrames = GetNativeCell(2);
+	hRecordings.Set(iThis, iFrames, Recording_iFramesExpected);
 }
 
 public int Native_Recording_GetLength(Handle hPlugin, int iArgC) {

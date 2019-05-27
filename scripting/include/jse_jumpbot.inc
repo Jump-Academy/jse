@@ -1,6 +1,3 @@
-/*
-**
-*/
 #if defined _JSE_JUMPBOT_included
  #endinput
 #endif
@@ -8,8 +5,7 @@
 
 #include <sourcemod>
 
-public SharedPlugin __pl_jse_jumpbot = 
-{
+public SharedPlugin __pl_jse_jumpbot = {
 	name = "jse_jumpbot",
 	file = "jse_jumpbot.smx",
 #if defined REQUIRE_PLUGIN
@@ -21,8 +17,7 @@ public SharedPlugin __pl_jse_jumpbot =
 
 
 #if !defined REQUIRE_PLUGIN
-public void __pl_jse_jumpbot_SetNTVOptional()
-{
+public void __pl_jse_jumpbot_SetNTVOptional() {
 	MarkNativeAsOptional("JSE_JB_Shutdown");
 	MarkNativeAsOptional("JSE_JB_LoadRecordings");
 	MarkNativeAsOptional("JSE_JB_GetRecordings");
@@ -59,6 +54,8 @@ public void __pl_jse_jumpbot_SetNTVOptional()
 	MarkNativeAsOptional("Recording.Timestamp.get");
 	MarkNativeAsOptional("Recording.Timestamp.set");
 	MarkNativeAsOptional("Recording.Frames.get");
+	MarkNativeAsOptional("Recording.FramesExpected.get");
+	MarkNativeAsOptional("Recording.FramesExpected.set");
 	MarkNativeAsOptional("Recording.Length.get");
 	MarkNativeAsOptional("Recording.Length.set");
 	MarkNativeAsOptional("Recording.ClientInfo.get");
@@ -137,6 +134,11 @@ methodmap Recording {
 	
 	property ArrayList Frames {
 		public native get();
+	}
+
+	property int FramesExpected {
+		public native get();
+		public native set(int iFrames);
 	}
 
 	property int Length {

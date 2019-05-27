@@ -2028,7 +2028,7 @@ public Action cmdRecord(int iClient, int iArgC) {
 
 	Recording iRec = Recording.Instance();
 	g_hRecBufferFrames = iRec.Frames;
-	
+
 	// TODO: Bot count vs. RecClient count mismatch
 	char sClassName[128];
 	char sName[32];
@@ -2435,7 +2435,7 @@ public Action Timer_RecList(Handle hTimer, any aData) {
 	ArrayList hClientInfo = iRecording.ClientInfo;
 	
 	char sTimeTotal[32];
-	ToTimeDisplay(sTimeTotal, sizeof(sTimeTotal), iRecording.Frames.Length/66);
+	ToTimeDisplay(sTimeTotal, sizeof(sTimeTotal), iRecording.FramesExpected/66);
 
 	static char sBuffer[4096];
 	FormatEx(sBuffer, sizeof(sBuffer), "\t[%d] duration: %s, frames: %d, buffer: %d, clients: %d", iIdx, sTimeTotal, iRecording.Frames.Length, iRecording.Length, hClientInfo.Length);
@@ -2882,7 +2882,7 @@ public Action cmdSkipTime(int iClient, int iArgC) {
 
 	// TODO: Translate
 	if (iFrame >= g_hRecBufferFrames.Length) {
-		ToTimeDisplay(sTimeRec, sizeof(sTimeRec), g_hRecBufferFrames.Length /66);
+		ToTimeDisplay(sTimeRec, sizeof(sTimeRec), g_hRecBufferFrames.Length/66);
 
 		CPrintToChat(iClient, "{dodgerblue}[jb] {white}Frame number exceeds buffer (%s)", sTimeRec);
 		return Plugin_Handled;
@@ -3739,7 +3739,7 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		}
 
 		char sTimeTotal[32];
-		ToTimeDisplay(sTimeTotal, sizeof(sTimeTotal), iRecording.Frames.Length/66);
+		ToTimeDisplay(sTimeTotal, sizeof(sTimeTotal), iRecording.FramesExpected/66);
 		
 		int iRecID = g_hRecordings.FindValue(iRecording);
 		if (g_iCallKeyMask) {
@@ -4558,6 +4558,7 @@ bool LoadRecording(Recording iRecording) {
 	hFile.Seek(0xC, SEEK_SET);
 	int iFrames, iLength;
 	hFile.ReadInt32(iFrames);
+	iRecording.FramesExpected = iFrames;
 	hFile.ReadInt32(iLength);
 	iRecording.Length = iLength;
 
@@ -4566,7 +4567,7 @@ bool LoadRecording(Recording iRecording) {
 		delete hFile;
 		return false;
 	}
-
+	
 	ArrayList hRecBufferFrames = iRecording.Frames;
 	hRecBufferFrames.Clear();
 	hFile.Seek(0x18, SEEK_SET);
@@ -5733,7 +5734,7 @@ void sendQueuePanel(int iClient) {
 	if (g_iClientInstruction & INST_PLAYALL) {
 		for (int i=0; i<g_hPlaybackQueue.Length; i++) {
 			Recording iRecording = g_hPlaybackQueue.Get(i);
-			fWaitTime += g_iWarmupFrames / 66.0 + iRecording.Length / 66.0 * g_fPlaybackSpeed;
+			fWaitTime += g_iWarmupFrames / 66.0 + iRecording.FramesExpected / 66.0 * g_fPlaybackSpeed;
 		}
 	}
 	for (int i = 0; i < iAhead; i++) {
