@@ -2011,10 +2011,12 @@ public Action cmdRecord(int iClient, int iArgC) {
 	}
 	
 	g_iClientOfInterest = iClient;
-	g_hRecordingClients.Clear();
-	g_hRecordingClients.Push(iClient);
 	g_hRecordingEntities.Clear();
 	g_iRecordingEntTotal = 0;
+
+	if (g_hRecordingClients.FindValue(iClient) == -1) {
+		g_hRecordingClients.Push(iClient);
+	}
 
 	g_hRecBuffer.Clear();
 	g_iRecBufferIdx = 0;
@@ -2023,21 +2025,25 @@ public Action cmdRecord(int iClient, int iArgC) {
 	g_iClientInstruction = INST_RECD;
 	
 	SetAllBubbleAlpha(50);
-	
-	char sAuthID[24];
-	GetClientAuthId(iClient, AuthId_Steam3, sAuthID, sizeof(sAuthID));
 
 	Recording iRec = Recording.Instance();
 	g_hRecBufferFrames = iRec.Frames;
 	
 	// TODO: Bot count vs. RecClient count mismatch
 	char sClassName[128];
+	char sName[32];
+	char sAuthID[24];
+
 	for (int i=0; i<g_hRecordingClients.Length; i++) {
 		int iRecClient = g_hRecordingClients.Get(i);
 
+		GetClientName(iRecClient, sName, sizeof(sName));
+		GetClientAuthId(iRecClient, AuthId_Steam3, sAuthID, sizeof(sAuthID));
+
 		ClientInfo iClientInfo = ClientInfo.Instance();
+		iClientInfo.SetName(sName);
 		iClientInfo.SetAuthID(sAuthID);
-		iClientInfo.Class = TF2_GetPlayerClass(iClient);
+		iClientInfo.Class = TF2_GetPlayerClass(iRecClient);
 		iClientInfo.Team = view_as<TFTeam>(GetClientTeam(iRecClient));
 		
 		for (int iSlot = TFWeaponSlot_Primary; iSlot <= TFWeaponSlot_Item2; iSlot++) {
@@ -4237,6 +4243,7 @@ void doFullStop() {
 		SetEntityMoveType(iRecClient, MOVETYPE_WALK);
 	}
 
+	g_hRecordingClients.Clear();
 	clearRecEntities();
 	g_hRecEntFail.Clear();
 	g_hPlaybackQueue.Clear();
@@ -4953,24 +4960,24 @@ bool SaveFile(char[] sFilePath) {
 
 	hFile.Seek(iPosClientData, SEEK_SET);
 
-	// Lookup 0x1C for this address
-	hFile.WriteInt8(g_hRecordingClients.Length);
-	for (int i=0; i<g_hRecordingClients.Length; i++) {
-		int iRecClient = g_hRecordingClients.Get(i);
+	ArrayList hClientInfo = g_iRecording.ClientInfo;
 
-		hFile.WriteInt8(GetClientTeam(iRecClient));
-		hFile.WriteInt8(view_as<int>(TF2_GetPlayerClass(iRecClient)));
+	char sClassName[128];
+
+	// Lookup 0x1C for this address
+	hFile.WriteInt8(hClientInfo.Length);
+	for (int i=0; i<hClientInfo.Length; i++) {
+		ClientInfo iClientInfo = view_as<ClientInfo>(hClientInfo.Get(i));
+
+		hFile.WriteInt8(view_as<int>(iClientInfo.Team));
+		hFile.WriteInt8(view_as<int>(iClientInfo.Class));
 
 		for (int iSlot=TFWeaponSlot_Primary; iSlot<=TFWeaponSlot_Item2; iSlot++) {
-			int iWeaponEnt = GetPlayerWeaponSlot(iRecClient, iSlot);
-			if (iWeaponEnt == -1) {
-				hFile.WriteInt32(0);
-			} else {
-				int iItemDefIdx = GetItemDefIndex(iWeaponEnt);
-				hFile.WriteInt32(iItemDefIdx);
+			int iItemDefIdx = iClientInfo.GetEquipItemDefIdx(iSlot);
+			hFile.WriteInt32(iItemDefIdx);
 
-				char sClassName[128];
-				GetEntityClassname(iWeaponEnt, sClassName, sizeof(sClassName));
+			if (iItemDefIdx) {	
+				iClientInfo.GetEquipClassName(iSlot, sClassName, sizeof(sClassName));
 				hFile.WriteString(sClassName, true);
 			}
 		}
@@ -4982,15 +4989,15 @@ bool SaveFile(char[] sFilePath) {
 	hFile.Seek(iPosClientNames, SEEK_SET);
 
 	// Lookup 0x20 for this address
-	for (int i=0; i<g_hRecordingClients.Length; i++) {
-		int iRecClient = g_hRecordingClients.Get(i);
+	for (int i=0; i<hClientInfo.Length; i++) {
+		ClientInfo iClientInfo = view_as<ClientInfo>(hClientInfo.Get(i));
 
 		char sName[32];
-		GetClientName(iRecClient, sName, sizeof(sName));
+		iClientInfo.GetName(sName, sizeof(sName));
 		hFile.WriteString(sName, true);	
 
 		char sAuthID[32];
-		GetClientAuthId(iRecClient, AuthId_Steam3, sAuthID, sizeof(sAuthID));
+		iClientInfo.GetAuthID(sAuthID, sizeof(sAuthID));
 		hFile.WriteString(sAuthID, true);
 	}
 
@@ -5004,7 +5011,6 @@ bool SaveFile(char[] sFilePath) {
 	hFile.WriteInt8(g_hRecordingEntTypes.Length);
 
 	for (int i=0; i<g_hRecordingEntTypes.Length; i++) {
-		char sClassName[128];
 		g_hRecordingEntTypes.GetString(i, sClassName, sizeof(sClassName));
 
 		hFile.WriteString(sClassName, true);
