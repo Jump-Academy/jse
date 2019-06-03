@@ -385,13 +385,13 @@ void parseIndex(char[] sPath) {
 		
 		iRecording.Repo = true;
 		
-		iRecording.Length = hKV.GetNum("frames");
+		iRecording.FramesExpected = hKV.GetNum("frames");
 		
 		iClientInfo.Team = view_as<TFTeam>(hKV.GetNum("team"));
 		iClientInfo.Class = view_as<TFClassType>(hKV.GetNum("class"));
 		
-		hKV.GotoFirstSubKey(); // Origin
-		
+		hKV.JumpToKey("origin");
+		hKV.GotoFirstSubKey();
 		fPos[0] = hKV.GetFloat("pos_x");
 		fPos[1] = hKV.GetFloat("pos_y");
 		fPos[2] = hKV.GetFloat("pos_z");
@@ -399,12 +399,23 @@ void parseIndex(char[] sPath) {
 		fAng[1] = hKV.GetFloat("ang_y");
 		iClientInfo.SetStartPos(fPos);
 		iClientInfo.SetStartAng(fAng);
-		
+		hKV.GoBack();
+
+		if (hKV.JumpToKey("equipment")) {
+			hKV.GotoFirstSubKey();
+			
+			int iSlot = hKV.GetNum("slot");
+			int iItemDefIdx = hKV.GetNum("itemdef", 0);
+
+			iRecording.SetEquipFilter(iSlot, iItemDefIdx);
+			
+			hKV.GoBack();
+		}
+
 		iRecording.ClientInfo.Push(iClientInfo);
 
 		g_hRecordings.Push(iRecording);
-		
-		hKV.GoBack();
+
 		i++;
 	} while (hKV.GotoNextKey());
 	

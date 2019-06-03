@@ -239,10 +239,11 @@ public int Native_ClientInfo_Destroy(Handle hPlugin, int iArgC) {
 #define Recording_iFramesExpected	69	// int
 #define Recording_iLength			70	// int
 #define Recording_hClientInfo		71	// int
-#define Recording_iNodeModel		72	// int
-#define Recording_iWeaponModel		73	// int
-#define Recording_bGCFlag			74	// int
-#define Recording_Size				75
+#define Recording_iEquipFilter		72	// int
+#define Recording_iNodeModel		73	// int
+#define Recording_iWeaponModel		74	// int
+#define Recording_bGCFlag			75	// int
+#define Recording_Size				76
 
 static ArrayList hRecordings = null;
 const Recording NULL_RECORDING = view_as<Recording>(-1);
@@ -272,6 +273,9 @@ public void Recording_SetupNatives() {
 	CreateNative("Recording.Length.set",			Native_Recording_SetLength);
 	
 	CreateNative("Recording.ClientInfo.get",		Native_Recording_GetClientInfo);
+
+	CreateNative("Recording.GetEquipFilter",		Native_Recording_GetEquipFilter);
+	CreateNative("Recording.SetEquipFilter",		Native_Recording_SetEquipFilter);
 	
 	CreateNative("Recording.NodeModel.get",			Native_Recording_GetNodeModel);
 	CreateNative("Recording.NodeModel.set",			Native_Recording_SetNodeModel);
@@ -382,6 +386,26 @@ public int Native_Recording_SetLength(Handle hPlugin, int iArgC) {
 public int Native_Recording_GetClientInfo(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1);
 	return hRecordings.Get(iThis, Recording_hClientInfo);
+}
+
+public int Native_Recording_GetEquipFilter(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+
+	int iEquipFilter = hRecordings.Get(iThis, Recording_iEquipFilter);
+	int iSlot = iEquipFilter & 0xFF;
+	int iItemDefIdx = (iEquipFilter >> 16);
+
+	SetNativeCellRef(2, iSlot);
+	SetNativeCellRef(3, iItemDefIdx);
+}
+
+public int Native_Recording_SetEquipFilter(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1);
+	int iSlot = GetNativeCell(2);
+	int iItemDefIdx = GetNativeCell(3);
+
+	int iEquipFilter = (iItemDefIdx << 16) | (iSlot & 0xFF);
+	hRecordings.Set(iThis, iEquipFilter, Recording_iEquipFilter);
 }
 
 public int Native_Recording_GetNodeModel(Handle hPlugin, int iArgC) {

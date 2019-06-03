@@ -59,6 +59,8 @@ public void __pl_jse_jumpbot_SetNTVOptional() {
 	MarkNativeAsOptional("Recording.Length.get");
 	MarkNativeAsOptional("Recording.Length.set");
 	MarkNativeAsOptional("Recording.ClientInfo.get");
+	MarkNativeAsOptional("Recording.GetEquipFilter");
+	MarkNativeAsOptional("Recording.SetEquipFilter");
 	MarkNativeAsOptional("Recording.NodeModel.get");
 	MarkNativeAsOptional("Recording.NodeModel.set");
 	MarkNativeAsOptional("Recording.WeaponModel.get");
@@ -149,6 +151,9 @@ methodmap Recording {
 	property ArrayList ClientInfo {
 		public native get();
 	}
+
+	public native void GetEquipFilter(int &iSlot, int &iItemDefIdx);
+	public native void SetEquipFilter(int iSlot, int iItemDefIdx);
 
 	property int NodeModel {
 		public native get();

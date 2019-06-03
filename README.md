@@ -11,8 +11,11 @@ JSE is a set of modular plugins for enabling standard features present in most T
 * Marker
 * Show Keys
 
+## Required
+* Sourcemod
 
 ## Dependencies
+* [Sourcemod 1.10](https://www.sourcemod.net/)
 * [AutoExecConfig](https://github.com/Impact123/AutoExecConfig)
 * [Bot Controller](https://github.com/VoiDeD/sourcemod-botcontroller)
 * [Multi Colors](https://github.com/Bara/Multi-Colors)

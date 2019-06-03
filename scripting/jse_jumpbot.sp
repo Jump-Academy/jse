@@ -5500,10 +5500,27 @@ bool IsRecordingVisible(Recording iRecording, int iClient) {
 
 	TFClassType iClass = TF2_GetPlayerClass(iClient);
 
+	int iSlot, iItemDefIdx;
+	iRecording.GetEquipFilter(iSlot, iItemDefIdx);
+
 	ArrayList hClientInfo = iRecording.ClientInfo;
 	for (int i=0; i<hClientInfo.Length; i++) {
 		ClientInfo iClientInfo = hClientInfo.Get(i);
 		if (iClass == iClientInfo.Class) {
+			if (iItemDefIdx) {
+				int iWeapon = GetPlayerWeaponSlot(iClient, iSlot);
+				if (GetItemDefIndex(iWeapon) != iItemDefIdx) {
+					return false;
+				}
+			} else if (iClass == TFClass_Soldier) {
+				// Hide stock recording if player is equipped with Original or Beggar's Bazooka
+				switch (GetItemDefIndex(GetPlayerWeaponSlot(iClient, TFWeaponSlot_Primary))) {
+					case 513, 730: {
+						return false;
+					}
+				}
+			}
+
 			return true;
 		}
 	}
