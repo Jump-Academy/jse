@@ -157,7 +157,7 @@ methodmap Recording {
 
 	property int WeaponModel {
 		public native get();
-		public native set(int iWeaponModel)
+		public native set(int iWeaponModel);
 	}
 
 	/**
