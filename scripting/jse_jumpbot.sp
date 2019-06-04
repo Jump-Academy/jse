@@ -46,6 +46,10 @@
 #define RecBot_hEquip			1
 #define RecBot_Size				2
 
+#define Bubble_iEnt				0
+#define Bubble_iTime			1
+#define Bubble_Size				2
+
 #define INST_NOP				 0
 #define INST_PAUSE				 1
 #define INST_RECD				(1 << 1)
@@ -219,7 +223,7 @@ Panel g_hQueuePanel[MAXPLAYERS+1] = {null, ...};
 Handle g_hQueueTimer;
 
 StringMap g_hBubbleLookup;
-int g_iLastBubbleTime[MAXPLAYERS+1][2];
+int g_iLastBubbleTime[MAXPLAYERS+1][Bubble_Size];
 int g_iCallKeyMask;
 char g_sCallKeyLabel[16];
 
@@ -379,15 +383,12 @@ public void OnPluginStart() {
 	g_hHudDisplayDuck = CreateHudSynchronizer();
 	g_hHudDisplayJump = CreateHudSynchronizer();
 	
-	//HookEvent("player_builtobject", Event_BuiltObject);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_team", Event_PlayerTeam, EventHookMode_Pre);
 	HookEvent("post_inventory_application", Event_Resupply,  EventHookMode_Post);
 	HookEvent("teamplay_round_start", Event_RoundStart);
 	HookUserMessage(GetUserMessageId("VoiceSubtitle"), UserMessage_VoiceSubtitle, true);
 	AddNormalSoundHook(Hook_NormalSound);
-	
-	//AddCommandListener(CommandListener_Build, "build");
 	
 	LoadTranslations("core.phrases");
 	LoadTranslations("common.phrases");
@@ -1159,68 +1160,6 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 	}
 	
 	if (iClient == g_iClientOfInterest) {
-		/*
-		if (g_iClientInstruction == INST_RECD) {
-			if (g_iRecBufferIdx >= BUFFER_SIZE) {
-
-				doFullStop();
-				
-				CPrintToChat(g_iClientOfInterest, "{dodgerblue}[jb] {white}%t", "Buffer Full");
-				g_iClientOfInterest = 0;
-				return Plugin_Continue;
-			}
-			
-			if (g_iRecBufferFrame % 10 == 0) {
-				char sFrameInfo[64];
-				float fBuffPercent = (100.0*g_iRecBufferFrame)/BUFFER_SIZE;
-				
-				char sTimeRec[32];
-				char sTimeTotal[32];
-				ToTimeDisplay(sTimeRec, sizeof(sTimeRec), g_iRecBufferFrame/66);
-				ToTimeDisplay(sTimeTotal, sizeof(sTimeTotal), BUFFER_SIZE/66);
-				
-				FormatEx(sFrameInfo, sizeof(sFrameInfo), "%T\n%T: %d / %d (%.1f%)\n%T: %s/%s", "Recorder Active", iClient, "Frame", iClient, g_iRecBufferFrame, BUFFER_SIZE, fBuffPercent, "Time", iClient, sTimeRec, sTimeTotal);
-				Handle hBuffer = StartMessageOne("KeyHintText", g_iClientOfInterest);
-				BfWriteByte(hBuffer, 1); // Channel
-				BfWriteString(hBuffer, sFrameInfo);
-				EndMessage();
-			}
-			
-			float fPos[3];
-			float fAbsVel[3];
-			Entity_GetAbsOrigin(iClient, fPos);
-			Entity_GetAbsVelocity(iClient, fAbsVel);
-			
-			int iButtonsMod = iButtons;
-			int iWeaponIndex = GetEntPropEnt(iClient, Prop_Send, "m_hActiveWeapon");
-			for (int i=0; i<=5; i++) {
-				if (GetPlayerWeaponSlot(iClient, i) == iWeaponIndex) {
-					iButtonsMod = iButtons | (i << 26);
-					break;
-				}
-			}
-			
-			g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPosX]  = fPos[0];
-			g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPosY]  = fPos[1];
-			g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPosZ]  = fPos[2];
-			
-			g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fVelX]  = fAbsVel[0];
-			g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fVelY]  = fAbsVel[1];
-			g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fVelZ]  = fAbsVel[2];
-			
-			g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPitch] = fAng[0];
-			g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fYaw]   = fAng[1];
-			g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fRoll]  = fAng[2];
-			g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_iButn]  = iButtonsMod;
-			
-			g_iShadowBufferUsed++;
-			g_iShadowBufferIndex++;
-
-			
-
-
-		} else 
-		*/
 		if (g_iClientInstruction & INST_PLAY || g_iClientInstruction & INST_WARMUP) {
 			Obs_Mode iObserverMode = Client_GetObserverMode(g_iClientOfInterest);
 			if ((iObserverMode == OBS_MODE_IN_EYE || iObserverMode == OBS_MODE_CHASE) && !(g_iClientInstruction & INST_WARMUP)) {
@@ -1275,7 +1214,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 					StopSound(g_iClientOfInterest, SNDCHAN_STATIC, "ui/hint.wav");
 					CreateTimer(0.1, Timer_CloseHintPanel, g_iClientOfInterest, TIMER_FLAG_NO_MAPCHANGE);
 					
-					g_iLastBubbleTime[g_iClientOfInterest][1] = GetTime()-10; // Prevent showme spam
+					g_iLastBubbleTime[g_iClientOfInterest][Bubble_iTime] = GetTime()-10; // Prevent showme spam
 					doReturn();
 				}
 				
@@ -1317,368 +1256,8 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 		}
 
 		return Plugin_Changed;
-	}
-
-	/*
-	 else if (iClient == g_iClientControl) {
-		if (g_iClientInstruction & (INST_WARMUP | INST_WAIT)) {
-			TF2_SetPlayerClass(g_iClientControl, view_as<TFClassType>(g_iRecording.Class));
-			
-			if (view_as<TFClassType>(g_iRecording.Class) == TFClass_DemoMan) {
-				iWeapon = GetPlayerWeaponSlot(iClient, 1);
-			}
-			
-			fAng[0] = g_fIdleViewAngles[0];
-			fAng[1] = g_fIdleViewAngles[1];
-			fAng[2] = g_fIdleViewAngles[2];
-			
-			float fPos[3];
-			g_iRecording.getStartPos(fPos);
-			Entity_SetAbsOrigin(g_iClientControl, fPos);
-			
-			if (g_iClientInstruction & INST_WARMUP && g_iShadowBufferIndex++ > g_iWarmupFrames) {
-				g_iWarmupFrames = WARMUP_FRAMES_DEFAULT;
-				g_iClientInstruction ^= INST_WARMUP;
-				g_iClientInstruction |= INST_PLAY;
-				g_iShadowBufferIndex = 0;
-			}
-			
-			return Plugin_Changed;
-		} else if (g_iClientInstruction & INST_PLAY) {
-			if (!IsPlayerAlive(g_iClientControl)) {
-				TF2_RespawnPlayer(g_iClientControl);
-				return Plugin_Continue;
-			}
-			
-			float fPos[3];
-			float fPosEstim[3];
-			float fSpd[3];
-			float fRot[3];
-			
-			if (g_iShadowBufferIndex >= BUFFER_SIZE || g_iShadowBufferIndex >= g_iShadowBufferUsed) {
-				resetBubbleRotation(g_iRecording);
-				
-				if (g_iRecording.Next != NULL_RECORDING && g_iClientInstruction & INST_PLAYALL) {
-					g_iRecording = g_iRecording.Next;
-					
-					if (Client_IsValid(g_iClientOfInterest) && IsClientInGame(g_iClientOfInterest)) {
-						g_fPlaybackSpeed = g_fSpeed[g_iClientOfInterest];
-					} else {
-						g_fPlaybackSpeed = 1.0;
-					}
-
-					char sFilePath[PLATFORM_MAX_PATH];
-					g_iRecording.getFilePath(sFilePath, sizeof(sFilePath));
-
-					if (g_hDebug.BoolValue) {
-						int iFilePart = FindCharInString(sFilePath, '/', true);
-						CPrintToChatAll("{dodgerblue}[jb] {white}%t %d/%d: %s", "Load", g_iRecording.Idx+1, g_iRecording.Total, sFilePath[iFilePart+1]);
-					}
-					
-					if (g_iRecording.Repo && !FileExists(sFilePath)) {
-						g_iClientInstruction = INST_NOP | INST_PLAYALL;
-						fetchRecording(g_iRecording);
-					} else if(!LoadFrames(g_iRecording)) {
-						if(g_hDebug.BoolValue)
-							CPrintToChatAll("{dodgerblue}[jb] \0x1%t", "Cannot File Read");
-						g_iShadowBufferIndex = BUFFER_SIZE;
-						return Plugin_Continue;
-					}
-					
-					g_iShadowBufferIndex = 0;
-					
-					if (g_hDetectClass.BoolValue) {
-						TF2_SetPlayerClass(g_iClientControl, view_as<TFClassType>(g_iRecording.Class));
-						if (g_hRobot.BoolValue) {
-							setRobotModel(g_iClientControl);
-						}
-					}
-					
-					TF2_RegeneratePlayer(g_iClientControl);
-					SetEntProp(g_iBot, Prop_Data, "m_takedamage", 1, 1); // Buddha
-					
-					g_iRecording.getStartPos(fPos);
-					g_iRecording.getStartAng(g_fIdleViewAngles);
-					g_fIdleViewAngles[2] = 0.0;
-					fSpd[0] = 0.0;
-					fSpd[1] = 0.0;
-					fSpd[2] = 0.0;
-					TeleportEntity(g_iClientControl, fPos, g_fIdleViewAngles, fSpd);
-					
-					return Plugin_Continue;
-				}
-				
-				int iLastFrame = Math_Min(Math_Max(g_iShadowBufferUsed, BUFFER_SIZE - 1)-1, 0);
-				
-				g_fIdleViewAngles[0] = g_aShadowBuffer[iLastFrame][Snapshot_fPitch];
-				g_fIdleViewAngles[1] = g_aShadowBuffer[iLastFrame][Snapshot_fYaw];
-				g_fIdleViewAngles[2] = g_aShadowBuffer[iLastFrame][Snapshot_fRoll];
-				
-				if (Client_IsValid(g_iClientOfInterest) && IsClientInGame(g_iClientOfInterest)) {
-					PrintHintText(g_iClientOfInterest, " ");
-					StopSound(g_iClientOfInterest, SNDCHAN_STATIC, "ui/hint.wav");
-					CreateTimer(0.1, Timer_CloseHintPanel, g_iClientOfInterest, TIMER_FLAG_NO_MAPCHANGE);
-					
-					doReturn();
-				}
-				
-				doFullStop();
-				findTargetFollow();
-				
-				if(g_hDebug.BoolValue)
-					CPrintToChatAll("{dodgerblue}[jb] {white}%t", "Playback Stop");
-					
-				return Plugin_Continue;
-			}
-			
-			// Rotate bubble
-			if (g_iRecording != NULL_RECORDING) {
-				int iBubble = g_iRecording.NodeModel;
-				if (IsValidEntity(iBubble)) {
-					float fBubbleAng[3];
-					Entity_GetAbsAngles(iBubble, fBubbleAng);
-					fBubbleAng[1] -= 10.0;
-					Entity_SetAbsAngles(iBubble, fBubbleAng);
-				}
-			}
-			
-			fPos[0] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPosX];
-			fPos[1] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPosY];
-			fPos[2] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPosZ];
-			fSpd[0] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fVelX];
-			fSpd[1] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fVelY];
-			fSpd[2] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fVelZ];
-			
-			iButtons = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_iButn];
-			iButtons |= IN_RELOAD; // Autoreload
-			
-			if (iButtons & (IN_FORWARD|IN_BACK) == IN_FORWARD|IN_BACK) {
-				fVel[0] = 0.0;
-			} else if (iButtons & IN_FORWARD) {
-				fVel[0] = 400.0;
-			} else if (iButtons & IN_BACK) {
-				fVel[0] = -400.0;
-			}
-			
-			if (iButtons & (IN_MOVELEFT|IN_MOVERIGHT) == IN_MOVELEFT|IN_MOVERIGHT) {
-				fVel[1] = 0.0;
-			} else if (iButtons & IN_MOVELEFT) {
-				fVel[1] = -400.0;
-			} else if (iButtons & IN_MOVERIGHT) {
-				fVel[1] = 400.0;
-			}
-			
-			fRot[0] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPitch];
-			fRot[1] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fYaw];
-			fRot[2] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fRoll];
-			
-			int iWeaponSlot = (iButtons >>> 26) & 7;
-			if (g_iShadowBufferIndex == 0 || ((g_aShadowBuffer[g_iShadowBufferIndex-1][Snapshot_iButn]>>>26)&7) != iWeaponSlot) {
-				iWeapon = GetPlayerWeaponSlot(g_iClientControl, iWeaponSlot);
-			}
-
-			if (iButtons & (1 << 29)) {
-				PrintToServer("%N doing build 2", g_iClientControl);
-				FakeClientCommand(g_iClientControl, "build 2");
-			}
-			
-			iButtons ^= view_as<int>(!(7 << 26));
-			
-			
-			
-			if (g_iShadowBufferIndex == 0) {
-				Entity_SetAbsOrigin(iClient, fPos);
-			}
-			
-			if (g_iShadowBufferIndex+1 < g_iShadowBufferUsed) {
-				static float fPosNext[3];
-				fPosNext[0] = g_aShadowBuffer[g_iShadowBufferIndex+1][Snapshot_fPosX];
-				fPosNext[1] = g_aShadowBuffer[g_iShadowBufferIndex+1][Snapshot_fPosY];
-				fPosNext[2] = g_aShadowBuffer[g_iShadowBufferIndex+1][Snapshot_fPosZ];
-				
-				static float fPosTween[3];
-				fPosTween[0] = (1.0-g_fShadowBufferAlpha)*fPos[0] + g_fShadowBufferAlpha*fPosNext[0];
-				fPosTween[1] = (1.0-g_fShadowBufferAlpha)*fPos[1] + g_fShadowBufferAlpha*fPosNext[1];
-				fPosTween[2] = (1.0-g_fShadowBufferAlpha)*fPos[2] + g_fShadowBufferAlpha*fPosNext[2];
-				
-				Entity_GetAbsOrigin(iClient, fPos);
-				fSpd[0] = (fPosTween[0]-fPos[0])*66;
-				fSpd[1] = (fPosTween[1]-fPos[1])*66;
-				fSpd[2] = (fPosTween[2]-fPos[2])*66;
-				
-				static float fRotNext[3];
-				fRotNext[0] = g_aShadowBuffer[g_iShadowBufferIndex+1][Snapshot_fPitch];
-				fRotNext[1] = g_aShadowBuffer[g_iShadowBufferIndex+1][Snapshot_fYaw];
-				fRotNext[2] = g_aShadowBuffer[g_iShadowBufferIndex+1][Snapshot_fRoll];
-				
-				
-				//fRot[0] = (1.0-g_fShadowBufferAlpha)*fRot[0] + g_fShadowBufferAlpha*fRotNext[0];
-				//fRot[1] = (1.0-g_fShadowBufferAlpha)*fRot[1] + g_fShadowBufferAlpha*fRotNext[1];
-				//fRot[2] = (1.0-g_fShadowBufferAlpha)*fRot[2] + g_fShadowBufferAlpha*fRotNext[2];
-				
-				
-				fRot[0] = tweenAngles(g_fShadowBufferAlpha, fRot[0], fRotNext[0]);
-				fRot[1] = tweenAngles(g_fShadowBufferAlpha, fRot[1], fRotNext[1]);
-				fRot[2] = tweenAngles(g_fShadowBufferAlpha, fRot[2], fRotNext[2]);
-				
-				Entity_GetAbsOrigin(iClient, fPosEstim);
-				if (GetVectorDistance(fPosEstim, fPosTween) > g_hBotMaxError.FloatValue) {
-					Entity_SetAbsOrigin(iClient, fPosTween);
-					if(g_hDebug.BoolValue) {
-						CPrintToChatAll("{dodgerblue}[jb] {white}%t: %.1f", "Checkpoint Error Threshold", GetVectorDistance(fPosEstim, fPosTween));
-					}
-				
-				}
-			}
-	 
-			Entity_SetAbsVelocity(iClient, fSpd);
-			Entity_SetAbsAngles(iClient, fRot);
-			
-			if (g_hTrail.BoolValue && g_iShadowBufferIndex > 0) {
-				float fEyePos[3];
-				GetClientEyePosition(iClient, fEyePos);
-				float fZOffset = (fEyePos[2] - fPosEstim[2])/2;
-				
-				float fPtPrev[3];
-				fPtPrev[0] = g_aShadowBuffer[g_iShadowBufferIndex-1][Snapshot_fPosX];
-				fPtPrev[1] = g_aShadowBuffer[g_iShadowBufferIndex-1][Snapshot_fPosY];
-				fPtPrev[2] = view_as<float>(g_aShadowBuffer[g_iShadowBufferIndex-1][Snapshot_fPosZ]) + fZOffset;
-				
-				float fPtCurr[3];
-				fPtCurr[0] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPosX];
-				fPtCurr[1] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPosY];
-				fPtCurr[2] = view_as<float>(g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPosZ]) + fZOffset;
-
-				if (GetVectorDistance(fPtPrev, fPtCurr) < 100.0) {
-					TE_SetupBeamPoints(fPtPrev, fPtCurr, g_iTrailLaser, g_iTrailHalo, 0, 66, g_fTrailLife, 25.0, 25.0, 1, 1.0, g_iTrailColor, 0);
-					TE_SendToAllInRangeVisible(fPtCurr);
-				}
-			}
-			
-			if (g_iClientOfInterest == -1) {
-				g_iShadowBufferIndex++;
-			} else {
-				g_fShadowBufferAlpha += g_fPlaybackSpeed;
-				if (g_fShadowBufferAlpha > 1.0) {
-					g_iShadowBufferIndex++;
-					g_fShadowBufferAlpha = g_fShadowBufferAlpha-1.0;
-				}
-			}
-			
-			return Plugin_Changed;
-		} else if (g_iTargetFollow > 0 && ((Client_IsValid(g_iTargetFollow) && IsClientInGame(g_iTargetFollow) && GetClientTeam(g_iTargetFollow) == GetClientTeam(g_iClientControl)) || (!Client_IsValid(g_iTargetFollow) && IsValidEntity(g_iTargetFollow)))) {
-			bool bWalkToStart;
-			float fTemp[3], fPos[3], fPosTarget[3];
-			if (Client_IsValid(g_iTargetFollow)) {
-				GetClientEyePosition(g_iTargetFollow, fPosTarget);
-				bWalkToStart = false;
-			} else {
-				Entity_GetAbsOrigin(g_iTargetFollow, fPosTarget);
-				fPosTarget[2] += 50.0;
-				bWalkToStart = true;
-			}
-			
-			GetClientEyePosition(g_iClientControl, fPos);
-			
-			float fDist = GetVectorDistance(fPosTarget, fPos);
-			
-			MakeVectorFromPoints(fPos, fPosTarget, fTemp);
-			GetVectorAngles(fTemp, g_fIdleViewAngles);
-			g_fIdleViewAngles[0] = -(180/3.14) * ArcSine(fTemp[2]/fDist);
-			
-			fTemp[2] = 0.0;
-			fDist = GetVectorLength(fTemp);
-			if (fDist > 200.0 || (bWalkToStart && fDist > 20.0)) {
-				float fAngAhead[3];
-				fAngAhead[0] = 30.0;
-				fAngAhead[1] = g_fIdleViewAngles[1];
-				
-				Handle hTr;
-				if (GetEntityFlags(g_iTargetFollow) & FL_ONGROUND) {
-					hTr = TR_TraceRayFilterEx(fPos, fPosTarget, MASK_SHOT_HULL, RayType_EndPoint, traceHitEnvironment);
-					if (TR_DidHit(hTr)) {
-						if (fDist > 2000.0) {
-							Entity_GetAbsOrigin(g_iTargetFollow, fTemp);
-							Entity_SetAbsOrigin(g_iClientControl, fTemp);
-						}
-					}
-					delete hTr;
-				}
-				
-				hTr = TR_TraceRayFilterEx(fPos, fAngAhead, MASK_SHOT_HULL, RayType_Infinite, traceHitEnvironment);
-				if (TR_DidHit(hTr)) {
-					TR_GetEndPosition(fTemp, hTr);
-					
-					if (GetVectorDistance(fPos, fTemp) < 200.0 || (fPosTarget[2] < fPos[2] && GetEntityFlags(g_iTargetFollow) & FL_ONGROUND)) {
-						iButtons |= IN_FORWARD;
-						fVel[0] = 400.0;
-					}
-				}
-				delete hTr;
-				
-				int iWeaponMelee;
-				if (TF2_GetPlayerClass(g_iClientControl) == TFClass_DemoMan) {
-					iWeaponMelee = GetPlayerWeaponSlot(g_iClientControl, TFWeaponSlot_Secondary);
-				} else {
-					iWeaponMelee = GetPlayerWeaponSlot(g_iClientControl, TFWeaponSlot_Primary);
-				}
-				
-				if(IsValidEntity(iWeaponMelee)) {
-					SetEntPropEnt(g_iClientControl, Prop_Send, "m_hActiveWeapon", iWeaponMelee);
-				}
-				
-			} else if (bWalkToStart && fDist <= 20.0) { 
-				g_iShadowBufferIndex = 0;
-				g_iClientInstruction = INST_PLAY;
-				g_iClientOfInterest = -1;
-				g_iClientInstructionPost = INST_NOP;
-				g_iTargetFollow = g_iClientFollow;
-				SetAllBubbleAlpha(50);
-			} else if (g_iTargetFollow != g_iClientControl && fDist < 90.0) {
-				float fAngBehind[3];
-				fAngBehind[0] = 30.0;
-				fAngBehind[1] = g_fIdleViewAngles[1] + 180.0;
-				
-				Handle hTr = TR_TraceRayFilterEx(fPos, fAngBehind, MASK_SHOT_HULL, RayType_Infinite, traceHitEnvironment);
-				if (TR_DidHit(hTr)) {
-					TR_GetEndPosition(fPosTarget, hTr);
-					
-					if (GetVectorDistance(fPos, fPosTarget) < 200.0) {
-						iButtons |= IN_BACK;
-						fVel[0] = -400.0;
-					}
-				}
-				delete hTr;
-				
-				int iWeaponMelee = GetPlayerWeaponSlot(g_iClientControl, TFWeaponSlot_Melee);
-				if(IsValidEntity(iWeaponMelee)) {
-					SetEntPropEnt(g_iClientControl, Prop_Send, "m_hActiveWeapon", iWeaponMelee);
-				}
-				
-				if (Client_IsValid(g_iTargetFollow)) {
-					int iTargetButtons = GetClientButtons(g_iTargetFollow);
-					iButtons |= iTargetButtons & IN_ATTACK;
-				}
-			} else {
-				if (Client_IsValid(g_iTargetFollow)) {
-					Entity_GetAbsVelocity(g_iTargetFollow, fTemp);
-					
-					if (FloatAbs(fPosTarget[2] - fPos[2]) < 500.0 && GetVectorLength(fTemp) < 300.0) {
-						int iTargetButtons = GetClientButtons(g_iTargetFollow);
-						iButtons |= iTargetButtons & IN_JUMP;
-					}
-				}
-			}
-		}
-		
-		fAng[0] = g_fIdleViewAngles[0];
-		fAng[1] = g_fIdleViewAngles[1];
-		fAng[2] = g_fIdleViewAngles[2];
-		
-		return Plugin_Changed;
-	}*/
-	else if (iButtons & g_iCallKeyMask && (GetTime()-g_iLastBubbleTime[iClient][1]) < 10) {
-		g_iLastBubbleTime[iClient][1] = GetTime();
+	} else if (iButtons & g_iCallKeyMask && (GetTime()-g_iLastBubbleTime[iClient][Bubble_iTime]) < 10) {
+		g_iLastBubbleTime[iClient][Bubble_iTime] = GetTime();
 		FakeClientCommand(iClient, "showme");
 	}
 	
@@ -1992,9 +1571,6 @@ public Action cmdRecord(int iClient, int iArgC) {
 
 	if (g_iClientInstruction == INST_RECD) {
 		if (g_iClientOfInterest == iClient) {
-			if (g_iRecording != NULL_RECORDING) {
-				g_iRecording.Timestamp = GetTime();
-			}
 			doFullStop();
 			CPrintToChat(iClient, "{dodgerblue}[jb] {white}%t {white}(%d %t)", "Rec Stop", g_iRecBufferFrame, "Frames");
 			g_iClientOfInterest = 0;
@@ -2028,6 +1604,7 @@ public Action cmdRecord(int iClient, int iArgC) {
 
 	Recording iRec = Recording.Instance();
 	g_hRecBufferFrames = iRec.Frames;
+	iRec.Timestamp = GetTime();
 
 	// TODO: Bot count vs. RecClient count mismatch
 	char sClassName[128];
@@ -3032,14 +2609,35 @@ public Action cmdShowMe(int iClient, int iArgC) {
 	GetClientEyePosition(iClient, fPos);
 	
 	Recording iClosestRecord;
-	if (GetTime()-g_iLastBubbleTime[iClient][1] < 10) {
+	if (GetTime()-g_iLastBubbleTime[iClient][Bubble_iTime] < 10) {
 		char sKey[32];
-		IntToString(g_iLastBubbleTime[iClient][0], sKey, sizeof(sKey));
+		IntToString(g_iLastBubbleTime[iClient][Bubble_iEnt], sKey, sizeof(sKey));
 		g_hBubbleLookup.GetValue(sKey, iClosestRecord);
+
+		if (!IsRecordingVisible(iClosestRecord, iClient)) {
+			return Plugin_Handled;
+		}
 	} else {
 		FindResult iFind;
 		if (view_as<TFTeam>(GetClientTeam(iClient)) > TFTeam_Spectator) {
-			iFind = findNearestRecording(fPos, TF2_GetPlayerClass(iClient), iClosestRecord);
+			TFClassType iClass = TF2_GetPlayerClass(iClient);
+
+			int iEquipFilterItemDefIdx = 0;
+			int iWeapon = 0;
+			switch (iClass) {
+				case TFClass_Soldier: {
+					iWeapon = GetPlayerWeaponSlot(iClient, TFWeaponSlot_Primary);
+				}
+				case TFClass_DemoMan: {
+					iWeapon = GetPlayerWeaponSlot(iClient, TFWeaponSlot_Secondary);
+				}
+			}
+
+			if (iWeapon && IsValidEntity(iWeapon)) {
+				iEquipFilterItemDefIdx = GetItemDefIndex(iWeapon);
+			}
+
+			iFind = findNearestRecording(fPos, iClass, iClosestRecord, iEquipFilterItemDefIdx);
 		} else {
 			iFind = findNearestRecording(fPos, TFClass_Unknown, iClosestRecord);
 		}
@@ -3350,38 +2948,7 @@ public Action cmdUpgrade(int iClient, int iArgC) {
 }
 
 //////// Custom callbacks ////////
-/*
-public Action CommandListener_Build(int iClient, const char[] sCommand,  int iArgC) {
-	
-	
-	char sArgs[32];
-	GetCmdArgString(sArgs, sizeof(sArgs));
-	
-		
-	if (iClient == g_iClientOfInterest && iArgC >= 1 && g_iClientInstruction & INST_RECD) {
-		
-		
-		char sArg1[32];
-		GetCmdArg(1, sArg1, sizeof(sArg1));
 
-		if (sArg1[0] == '2') {
-			PrintToServer("%N did %s, argc=%d", iClient, sCommand, iArgC);
-			g_aShadowBuffer[g_iShadowBufferIndex-1][Snapshot_iButn] |= 1 << 29;
-		}
-	}
-}
-
-public Action Event_BuiltObject(Event hEvent, const char[] sName, bool bDontBroadcast) {
-	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));	
-	if (iClient == g_iClientOfInterest && g_iClientInstruction & INST_RECD) {
-		int iEntity = hEvent.GetInt("index");
-		
-		float fPos[3], fAng[3];
-		Entity_GetAbsOrigin(iEntity, fPos);
-		Entity_GetAbsAngles(iEntity, fAng);
-	}
-}
-*/
 public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
 	int iBotID = -1;
@@ -3412,7 +2979,7 @@ public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroa
 		return Plugin_Handled;
 	} else if ((iBotID = g_hRecordingBots.FindValue(iClient, RecBot_iEnt)) != -1) {
 		Client_SetFOV(iClient, g_hFOV.IntValue);
-		//SetEntProp(iClient, Prop_Send, "m_iDefaultFOV", g_iFOV);
+		
 		SetEntProp(iClient, Prop_Data, "m_takedamage", 1, 1); // Buddha
 	
 		if (g_hOutline.BoolValue) {
@@ -3760,14 +3327,14 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		}
 		StopSound(iOther, SNDCHAN_STATIC, "ui/hint.wav");
 		
-		if (g_hDebug.BoolValue && (iEntityRef != g_iLastBubbleTime[iOther][0] || GetTime()-g_iLastBubbleTime[iOther][1] > 10)) {
+		if (g_hDebug.BoolValue && (iEntityRef != g_iLastBubbleTime[iOther][Bubble_iEnt] || GetTime()-g_iLastBubbleTime[iOther][1] > 10)) {
 			char sFilePath[PLATFORM_MAX_PATH];
 			iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
 			CPrintToChat(iOther, "{dodgerblue}[jb] {white}ID: %d | %t | %s%t (%s) | %t: %s | %t:\n	%s", iRecID, (iRecording.Repo ? "Repository" : "Local"), sClass, "Recording", sTimeTotal, "Author", sAuthID, "File", sFilePath);
 		}
 
-		g_iLastBubbleTime[iOther][0] = iEntityRef;
-		g_iLastBubbleTime[iOther][1] = GetTime();
+		g_iLastBubbleTime[iOther][Bubble_iEnt] = iEntityRef;
+		g_iLastBubbleTime[iOther][Bubble_iTime] = GetTime();
 	}
 	
 	return Plugin_Continue;
@@ -3775,8 +3342,8 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 
 public Action Hook_EndTouchInfo(int iEntity, int iOther) {
 	if (Client_IsValid(iOther) && !IsFakeClient(iOther) && g_bBubble[iOther]) {
-		int iTimeDiff = GetTime() - g_iLastBubbleTime[iOther][1];
-		if (EntIndexToEntRef(iEntity) == g_iLastBubbleTime[iOther][0] && iTimeDiff < 10) {
+		int iTimeDiff = GetTime() - g_iLastBubbleTime[iOther][Bubble_iTime];
+		if (EntIndexToEntRef(iEntity) == g_iLastBubbleTime[iOther][Bubble_iEnt] && iTimeDiff < 10) {
 			PrintHintText(iOther, " ");
 			StopSound(iOther, SNDCHAN_STATIC, "ui/hint.wav");
 			CreateTimer(0.1, Timer_CloseHintPanel, iOther, TIMER_FLAG_NO_MAPCHANGE);
@@ -4357,7 +3924,7 @@ void EquipRec(int iBotID, Recording iRecording, bool bImmediate = true) {
 	}
 }
 
-FindResult findNearestRecording(float fPos[3], TFClassType iClass, Recording &iClosestRecord) {
+FindResult findNearestRecording(float fPos[3], TFClassType iClass, Recording &iClosestRecord, int iEquipFilterItemDefIdx=0) {
 	bool bSearchedClass = false;
 	
 	iClosestRecord = NULL_RECORDING;
@@ -4379,6 +3946,24 @@ FindResult findNearestRecording(float fPos[3], TFClassType iClass, Recording &iC
 			}
 
 			bSearchedClass = true;
+
+			if (iEquipFilterItemDefIdx && iClass == TFClass_Soldier) {
+				int iSlot, iItemDefIdx;
+				iRecording.GetEquipFilter(iSlot, iItemDefIdx);
+
+				if (iItemDefIdx) {
+					if (iItemDefIdx != iEquipFilterItemDefIdx) {
+						continue;
+					}
+				} else {
+					// Skip stock if searching for Original or Beggar's Bazooka recordings
+					switch (iEquipFilterItemDefIdx) {
+						case 513, 730: {
+							continue;
+						}
+					}
+				}
+			}
 			
 			iClientInfo.GetStartPos(fPosRecord);
 			fPosRecord[2] += 20.0; // In case origin is buried inside ground due to floating-point imprecision
@@ -4640,6 +4225,20 @@ bool LoadRecording(Recording iRecording) {
 		}
 
 		hClientInfo.Push(iClientInfo);
+	}
+
+	if (hClientInfo.Length) {
+		ClientInfo iClientInfo = hClientInfo.Get(0);
+		if (iClientInfo.Class == TFClass_Soldier) {
+			int iItemDefIdx = iClientInfo.GetEquipItemDefIdx(TFWeaponSlot_Primary);
+			// Add filter if recording has Original or Beggar's Bazooka
+			switch (iItemDefIdx) {
+				case 513, 730: {
+					iRecording.SetEquipFilter(TFWeaponSlot_Primary, iItemDefIdx);
+				}
+			}
+			
+		}
 	}
 
 	hFile.Seek(0x20, SEEK_SET);
