@@ -3,7 +3,7 @@
 //#define DEBUG
 
 #define PLUGIN_AUTHOR		"AI"
-#define PLUGIN_VERSION		"0.2.2"
+#define PLUGIN_VERSION		"0.2.3"
 
 #define CAMERA_MODEL		"models/combine_scanner.mdl"
 
@@ -49,10 +49,11 @@ public void OnPluginStart() {
 	RegConsoleCmd("sm_foresight",	cmdForesight, "Explore in spirit form");
 	RegConsoleCmd("sm_fs",			cmdForesight, "Explore in spirit form");
 
-	HookEvent("player_death", Event_PlayerDeath);
-	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
+	HookEvent("player_death", Event_PlayerChangeState);
+	HookEvent("player_spawn", Event_PlayerChangeState, EventHookMode_Pre);
 	
-	HookEvent("player_changeclass", Event_PlayerChangeClass);
+	HookEvent("player_changeclass", Event_PlayerChangeState);
+	HookEvent("player_team", Event_PlayerChangeState);
 
 	LoadTranslations("common.phrases");
 
@@ -89,14 +90,7 @@ public void OnMapEnd() {
 public void OnClientDisconnect(int iClient) {
 	FSCamera iCamera = g_iActiveCamera[iClient];
 	if (iCamera != NULL_CAMERA) {
-		g_iActiveCamera[iClient] = NULL_CAMERA;
-		int iCameraIdx = g_hCameras.FindValue(iCamera);
-		if (iCameraIdx != -1) {
-			g_hCameras.Erase(iCameraIdx);
-		}
-		
-		DisableCamera(iCamera);
-		FSCamera.Destroy(iCamera);
+		DisableForesight(iCamera);
 	}
 }
 
@@ -132,8 +126,10 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 
 	float fVelDesired[3];
 
-	float fFwd[3], fRight[3], fUp[3];
-	GetAngleVectors(fAngDesired, fFwd, fRight, fUp);
+	float fFwd[3], fRight[3];
+	GetAngleVectors(fAngDesired, fFwd, fRight, NULL_VECTOR);
+
+	float fUp[3] = {0.0, 0.0, 1.0};
 
 	float fSpeed = g_hSpeed.FloatValue;
 	ScaleVector(fFwd, fSpeed * (float((iButtons & IN_FORWARD) != 0) - float((iButtons & IN_BACK) != 0)));
@@ -166,29 +162,11 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 
 // Custom callbacks
 
-public Action Event_PlayerChangeClass(Event hEvent, const char[] sName, bool bDontBroadcast) {
+public Action Event_PlayerChangeState(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
-	if (g_iActiveCamera[iClient]) {
-		DisableCamera(g_iActiveCamera[iClient]);
+	if (g_iActiveCamera[iClient] != NULL_CAMERA) {
+		DisableForesight(g_iActiveCamera[iClient]);
 	}	
-	
-	return Plugin_Continue;
-}
-
-public Action Event_PlayerDeath(Event hEvent, const char[] sName, bool bDontBroadcast) {
-	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
-	if (g_iActiveCamera[iClient]) {
-		DisableCamera(g_iActiveCamera[iClient]);
-	}
-
-	return Plugin_Continue;
-}
-
-public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroadcast) {
-	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
-	if (g_iActiveCamera[iClient]) {
-		DisableCamera(g_iActiveCamera[iClient]);
-	}
 	
 	return Plugin_Continue;
 }
@@ -201,7 +179,7 @@ public Action cmdForesight(int iClient, int iArgC) {
 		return Plugin_Handled;
 	}
 
-	if (!(GetEntityFlags(iClient) & FL_ONGROUND)) {
+	if (!IsPlayerAlive(iClient) || !(GetEntityFlags(iClient) & FL_ONGROUND)) {
 		return Plugin_Handled;
 	}
 
@@ -289,12 +267,9 @@ float Clamp(float fValue, float fMin, float fMax) {
 }
 
 void Cleanup() {
-	for (int i=0; i<g_hCameras.Length; i++) {
-		FSCamera iCamera = g_hCameras.Get(i);
-		DisableCamera(iCamera);
-		FSCamera.Destroy(iCamera);
+	while (g_hCameras.Length) {
+		DisableForesight(g_hCameras.Get(0));
 	}
-	g_hCameras.Clear();
 
 	Array_Fill(g_iActiveCamera, sizeof(g_iActiveCamera), NULL_CAMERA);
 }
@@ -309,6 +284,7 @@ void DisableCamera(FSCamera iCamera) {
 		int iViewControl = EntRefToEntIndex(iCamera.ViewControl);
 		if (IsValidEntity(iViewControl)) {
 			AcceptEntityInput(iViewControl, "Disable");
+			Entity_Kill(iViewControl);
 		}
 
 		SetEntityFlags(iClient, GetEntityFlags(iClient) & ~(FL_FROZEN | FL_ATCONTROLS));
@@ -337,18 +313,29 @@ void DisableCamera(FSCamera iCamera) {
 }
 
 void DisableForesight(FSCamera iCamera) {
-	g_hCameras.Erase(g_hCameras.FindValue(iCamera));
+	if (iCamera == NULL_CAMERA) {
+		return;
+	}
+
+	int iCameraIdx = g_hCameras.FindValue(iCamera);
+	if (iCameraIdx != -1) {
+		g_hCameras.Erase(iCameraIdx);
+	}
+
 	DisableCamera(iCamera);
 	FSCamera.Destroy(iCamera);
 
 	int iClient = iCamera.Client;
-	Client_SetObserverTarget(iClient, -1);
-	Client_SetObserverMode(iClient, OBS_MODE_NONE);
-	SetEntityMoveType(iClient, MOVETYPE_WALK);
+	if (IsClientInGame(iClient)) {
+		Client_SetObserverTarget(iClient, -1);
+		Client_SetObserverMode(iClient, OBS_MODE_NONE);
+		SetEntityMoveType(iClient, MOVETYPE_WALK);
+	
+		Client_SetHideHud(iClient, 0);
+
+		PrintHintText(iClient, " ");
+		StopSound(iClient, SNDCHAN_STATIC, "ui/hint.wav");
+	}
 
 	g_iActiveCamera[iClient] = NULL_CAMERA;
-	Client_SetHideHud(iClient, 0);
-
-	PrintHintText(iClient, " ");
-	StopSound(iClient, SNDCHAN_STATIC, "ui/hint.wav");
 }
