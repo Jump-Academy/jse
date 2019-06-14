@@ -3749,8 +3749,9 @@ void doReturn() {
 			Client_SetObserverMode(g_iClientOfInterest, OBS_MODE_ROAMING);
 			FakeClientCommand(g_iClientOfInterest, "spec_mode 6");
 		} else {
-			doRespawn(g_iClientOfInterest); // Wipes COI in doFullStop()
-			doReturnSpectators(g_iClientOfInterest);
+			int iCOI = g_iClientOfInterest;
+			doRespawn(iCOI); // Wipes COI in doFullStop()
+			doReturnSpectators(iCOI);
 		}
 	}
 }
