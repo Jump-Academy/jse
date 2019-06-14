@@ -1013,7 +1013,7 @@ public void OnGameFrame() {
 						for (int i=0; i<g_hRecordingEntities.Length; i++) {
 							int iArr[RecEnt_Size];
 							g_hRecordingEntities.GetArray(i, iArr, sizeof(iArr));
-							
+
 							if (iArr[RecEnt_iAssign] == -1 && iArr[RecEnt_iOwner] == iOwnerEnt && iArr[RecEnt_iType] == iEntType) {
 								iRecEntIdx = i;
 
@@ -3315,6 +3315,7 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		char sAuthorName[32];
 		char sAuthID[24];
 		char sClass[32];
+		char sEquipName[64];
 
 		ArrayList hClientInfo = iRecording.ClientInfo;
 		if (!IsRecordingVisible(iRecording, iOther)) {
@@ -3330,27 +3331,26 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 			TF2_GetClassName(view_as<TFClassType>(iClientInfo.Class), sClass, sizeof(sClass));
 			sClass[0] = CharToUpper(sClass[0]);
 			Format(sClass, sizeof(sClass), "%T", sClass, iOther);
-		}
 
+			if (iClientInfo.Class == TFClass_Soldier) {
+				int iSlot, iItemDefIdx;
+				iRecording.GetEquipFilter(iSlot, iItemDefIdx);
+
+				switch (iItemDefIdx) {
+					case 513:
+						strcopy(sEquipName, sizeof(sEquipName), "\nLoadout: Original");
+					case 730:
+						strcopy(sEquipName, sizeof(sEquipName), "\nLoadout: Beggar's Bazooka");
+				}
+			}
+		}
+		
 		if (!sAuthorName[0] && !sAuthID[0]) {
 			FormatEx(sAuthID, sizeof(sAuthID), "%T", "Unknown", iOther);
 		}
 
 		char sTimeTotal[32];
 		ToTimeDisplay(sTimeTotal, sizeof(sTimeTotal), iRecording.FramesExpected/66);
-		
-		char sEquipName[64];
-		if (hClientInfo.Length && view_as<ClientInfo>(hClientInfo.Get(0)).Class == TFClass_Soldier) {
-			int iSlot, iItemDefIdx;
-			iRecording.GetEquipFilter(iSlot, iItemDefIdx);
-
-			switch (iItemDefIdx) {
-				case 513:
-					strcopy(sEquipName, sizeof(sEquipName), "\nLoadout: Original");
-				case 730:
-					strcopy(sEquipName, sizeof(sEquipName), "\nLoadout: Beggar's Bazooka");
-			}
-		}
 
 		int iRecID = g_hRecordings.FindValue(iRecording);
 		if (g_iCallKeyMask) {
