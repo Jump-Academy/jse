@@ -35,7 +35,7 @@
 #define RecEnt_iAssign			5
 #define RecEnt_Size				6
 
-#define MAX_REC_ENT_FAIL_FRAMES 10
+#define MAX_REC_ENT_FAIL_FRAMES 3
 
 #define RecEntFail_iRecEnt		0
 #define RecEntFail_iCount		1
@@ -559,7 +559,8 @@ public void OnEntityDestroyed(int iEntity) {
 		int iIdx = g_hRecordingEntities.FindValue(EntIndexToEntRef(iEntity), RecEnt_iRef);
 		if (iIdx != -1) {
 			if (g_iClientInstruction & INST_PAUSE) {
-				RespawnRecEnt(iIdx);
+				// Do lookup since destroyed entities have owner entity field set as -1
+				CloneProjectile(iEntity, g_hRecordingEntities.Get(iIdx, RecEnt_iOwner));
 			}
 
 			g_hRecordingEntities.Erase(iIdx);
@@ -740,16 +741,6 @@ public void OnGameFrame() {
 			g_iRecBufferIdx += 11;
 		}
 
-		/*
-		if (g_iRecBufferIdx+10*g_hRecordingEntities.Length >= BUFFER_SIZE) {
-			doFullStop();
-
-			CPrintToChatList(g_hRecordingClients, "{dodgerblue}[jb] {white}%t", "Buffer Full");
-			g_hRecordingClients.Clear();
-			return;
-		}
-		*/
-
 		for (int i=0; i<g_hRecordingEntities.Length; i++) {
 			int iArr[RecEnt_Size];
 			g_hRecordingEntities.GetArray(i, iArr, sizeof(iArr));
@@ -805,6 +796,19 @@ public void OnGameFrame() {
 			g_iClientInstruction ^= INST_WARMUP;
 			g_iClientInstruction |= INST_PLAY;
 			g_iRecBufferIdx = 0;
+
+			for (int i=0; i<g_hRecordingBots.Length; i++) {
+				int iClient = g_hRecordingBots.Get(i, RecBot_iEnt);
+
+				for (int iSlot = TFWeaponSlot_Primary; iSlot <= TFWeaponSlot_Item2; iSlot++) {
+					int iCurrentWeapon = GetPlayerWeaponSlot(iClient, iSlot);
+					if (IsValidEntity(iCurrentWeapon)) {
+						float fTime = GetGameTime();
+						SetEntPropFloat(iCurrentWeapon, Prop_Send, "m_flNextPrimaryAttack", fTime);
+						SetEntPropFloat(iCurrentWeapon, Prop_Send, "m_flNextSecondaryAttack", fTime);
+					}
+				}
+			}
 		}
 	} else if (g_iClientInstruction & (INST_PLAY | INST_REWIND)) {
 		static float fPos[3];
@@ -1004,12 +1008,13 @@ public void OnGameFrame() {
 					int iRecEntIdx = g_hRecordingEntities.FindValue(iRecordingEnt, RecEnt_iAssign);
 					if (iRecEntIdx == -1) {
 						iEntity = INVALID_ENT_REFERENCE;
-
+						int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot_iEnt);
+						
 						for (int i=0; i<g_hRecordingEntities.Length; i++) {
 							int iArr[RecEnt_Size];
 							g_hRecordingEntities.GetArray(i, iArr, sizeof(iArr));
-
-							if (iArr[RecEnt_iAssign] == -1 && iArr[RecEnt_iOwner] == g_hRecordingBots.Get(iOwner) && iArr[RecEnt_iType] == iEntType) {
+							
+							if (iArr[RecEnt_iAssign] == -1 && iArr[RecEnt_iOwner] == iOwnerEnt && iArr[RecEnt_iType] == iEntType) {
 								iRecEntIdx = i;
 
 								iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iRef));
@@ -1020,7 +1025,8 @@ public void OnGameFrame() {
 
 						if (iRecEntIdx == -1) {
 							#if defined DEBUG
-							PrintToServer("Got iRecEnt[%d] block but found no usable entity", iRecordingEnt);
+							char sClassName[64];
+							g_hRecordingEntTypes.GetString(iEntType, sClassName, sizeof(sClassName));
 							#endif
 							
 							int iRecEntFailIdx = g_hRecEntFail.FindValue(iRecordingEnt, RecEntFail_iRecEnt);
@@ -1030,8 +1036,31 @@ public void OnGameFrame() {
 								iArr[RecEntFail_iCount]		= 1;
 								iArr[RecEntFail_iInitTick]	= GetGameTickCount();
 								g_hRecEntFail.PushArray(iArr);
+
+								#if defined DEBUG
+								PrintToServer("Got iRecEnt[%d] block but found no usable entity (%s), total: %d", iRecordingEnt, sClassName, g_hRecEntFail.Length);
+								#endif
 							} else {
-								g_hRecEntFail.Set(iRecEntFailIdx, g_hRecEntFail.Get(iRecEntFailIdx, RecEntFail_iCount)+1, RecEntFail_iCount);
+								int iFailCount = g_hRecEntFail.Get(iRecEntFailIdx, RecEntFail_iCount);
+								#if defined DEBUG
+								PrintToServer("Got iRecEnt[%d] block but found no usable entity (%s) (%d), total: %d", iRecordingEnt, sClassName, iFailCount, g_hRecEntFail.Length);
+								#endif
+
+								if (iFailCount + 1 >= MAX_REC_ENT_FAIL_FRAMES) {
+									g_hRecEntFail.Erase(iRecEntFailIdx);
+
+									iEntity = CreateProjectile(sClassName, fPos, fAng, fVel, iOwnerEnt);
+									if (IsValidEntity(iEntity)) {
+										RegisterRecEnt(iEntity, iOwnerEnt, iRecordingEnt);
+										DispatchSpawn(iEntity);
+									}
+
+									#if defined DEBUG
+									PrintToServer("Trying to respawn iEntType type %d: '%s'", iEntType, sClassName);
+									#endif
+								} else {
+									g_hRecEntFail.Set(iRecEntFailIdx, iFailCount+1, RecEntFail_iCount);
+								}
 							}
 						}
 					} else {
@@ -1093,6 +1122,7 @@ public void OnGameFrame() {
 			TeleportEntity(iEntity, NULL_VECTOR, fAng, fVel);
 		}
 		
+		/*
 		for (int i=0; i<g_hRecEntFail.Length; i++) {
 			if (g_hRecEntFail.Get(i, RecEntFail_iCount) > MAX_REC_ENT_FAIL_FRAMES) {
 				#if defined DEBUG
@@ -1108,6 +1138,7 @@ public void OnGameFrame() {
 				continue;
 			}
 		}
+		*/
 		
 		if (g_iClientInstruction & INST_PAUSE) {
 			g_iRecBufferIdx = iRecBufferIdxBackup;
@@ -3309,7 +3340,7 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		ToTimeDisplay(sTimeTotal, sizeof(sTimeTotal), iRecording.FramesExpected/66);
 		
 		char sEquipName[64];
-		if (view_as<ClientInfo>(iRecording.ClientInfo.Get(0)).Class == TFClass_Soldier) {
+		if (hClientInfo.Length && view_as<ClientInfo>(hClientInfo.Get(0)).Class == TFClass_Soldier) {
 			int iSlot, iItemDefIdx;
 			iRecording.GetEquipFilter(iSlot, iItemDefIdx);
 
@@ -3376,49 +3407,15 @@ public Action Hook_TouchFlag(int iEntity, int iOther) {
 public Action Hook_RocketSpawn(int iEntity) {
 	int iOwnerEnt = Entity_GetOwner(iEntity);
 
-	//PrintToServer("Hook_RocketSpawn callback for entity %d owned by %N", iEntity, iOwnerEnt);
-
 	if (!Client_IsValid(iOwnerEnt)) {
 		return Plugin_Continue;
 	}
 
 	int iRecBot = -1;
 	int iRecOwner = IsFakeClient(iOwnerEnt) ? (iRecBot = g_hRecordingBots.FindValue(iOwnerEnt, RecBot_iEnt)) : g_hRecordingClients.FindValue(iOwnerEnt);
+	
 	if (iRecOwner != -1) {
-		// Check for duplicate hook callback
-		int iRef = EntIndexToEntRef(iEntity);
-		/*
-		if (iRecBot != -1) {
-			int iIdx;
-			if ((iIdx = g_hRecEntSpawnList.FindValue(iRef)) == -1) {
-				AcceptEntityInput(iEntity, "Kill");
-				return Plugin_Handled;
-			}
-
-			g_hRecEntSpawnList.Erase(iIdx);
-		}
-		*/
-
-		if (g_hRecordingEntities.FindValue(iRef, RecEnt_iRef) != -1) {
-			return Plugin_Continue;
-		}
-
-		int iEntType = g_hRecordingEntTypes.FindString("tf_projectile_rocket");
-		if (iEntType == -1) {
-			iEntType = g_hRecordingEntTypes.Length;
-			g_hRecordingEntTypes.PushString("tf_projectile_rocket");
-		}
-
-		int iArr[RecEnt_Size];
-		iArr[RecEnt_iID			] = g_iRecordingEntTotal++ % 256;
-		iArr[RecEnt_iRef		] = iRef;
-		iArr[RecEnt_iType		] = iEntType;
-		iArr[RecEnt_iMoveType	] = view_as<int>(GetEntityMoveType(iEntity));
-		iArr[RecEnt_iOwner		] = iOwnerEnt;
-		iArr[RecEnt_iAssign		] = -1;
-		g_hRecordingEntities.PushArray(iArr, sizeof(iArr));
-
-		//PrintToServer("New rocket ID=%d, iRef=%d, iType=%d, iOwner=%d", iArr[RecEnt_iID], iArr[RecEnt_iRef], iArr[RecEnt_iType], iArr[RecEnt_iOwner]);
+		RegisterRecEnt(iEntity, iOwnerEnt);
 	}
 
 	if (iRecBot != -1) {
@@ -3457,34 +3454,9 @@ public Action Hook_ProjectileSpawn(int iEntity) {
 
 	int iRecBot = -1;
 	int iRecOwner = IsFakeClient(iOwnerEnt) ? (iRecBot = g_hRecordingBots.FindValue(iOwnerEnt, RecBot_iEnt)) : g_hRecordingClients.FindValue(iOwnerEnt);
+	
 	if (iRecOwner != -1) {
-		// Check for duplicate hook callback
-		int iRef = EntIndexToEntRef(iEntity);
-		if (g_hRecordingEntities.FindValue(iRef, RecEnt_iRef) != -1) {
-			return Plugin_Continue;
-		}
-
-		char sClassName[128];
-		GetEntityClassname(iEntity, sClassName, sizeof(sClassName));
-
-		//PrintToServer("Hook_ProjectileSpawn entity %d: %s", iEntity, sClassName);
-
-		int iEntType = g_hRecordingEntTypes.FindString(sClassName);
-		if (iEntType == -1) {
-			iEntType = g_hRecordingEntTypes.Length;
-			g_hRecordingEntTypes.PushString(sClassName);
-		}
-
-		int iArr[RecEnt_Size];
-		iArr[RecEnt_iID			] = g_iRecordingEntTotal++ % 256;
-		iArr[RecEnt_iRef		] = iRef;
-		iArr[RecEnt_iType		] = iEntType;
-		iArr[RecEnt_iMoveType	] = view_as<int>(GetEntityMoveType(iEntity));
-		iArr[RecEnt_iOwner		] = iOwnerEnt;
-		iArr[RecEnt_iAssign		] = -1;
-		g_hRecordingEntities.PushArray(iArr, sizeof(iArr));
-
-		// PrintToServer("New %s ID=%d, iEntity=%d, iRef=%d, iType=%d, m_iType=%d, m_spawnflags=%d, iOwner=%d", sClassName, iArr[RecEnt_iID], iEntity, iArr[RecEnt_iRef], iArr[RecEnt_iType], GetEntProp(iEntity, Prop_Send, "m_iType"), GetEntProp(iEntity, Prop_Data, "m_spawnflags"), iArr[RecEnt_iOwner]);
+		RegisterRecEnt(iEntity, iOwnerEnt);
 	}
 
 	if (iRecBot != -1) {
@@ -5141,16 +5113,13 @@ bool IsRecordingVisible(Recording iRecording, int iClient) {
 	return false;
 }
 
-int RespawnRecEnt(int iRecEntIdx) {
-	int iArr[RecEnt_Size];
-	g_hRecordingEntities.GetArray(iRecEntIdx, iArr, sizeof(iArr));
+int CloneProjectile(int iEntity, int iOwner=-1) {
+	if (iOwner == -1) {
+		iOwner = Entity_GetOwner(iEntity);
+	}
 
 	char sClassName[128];
-	g_hRecordingEntTypes.GetString(iArr[RecEnt_iType], sClassName, sizeof(sClassName));
-	
-	PrintToServer("Respawning iRecEnt[%d]: %s", iRecEntIdx, sClassName);
-
-	int iEntity = EntRefToEntIndex(iArr[RecEnt_iRef]);
+	GetEntityClassname(iEntity, sClassName, sizeof(sClassName));
 
 	float fPos[3];
 	float fAng[3];
@@ -5173,10 +5142,12 @@ int RespawnRecEnt(int iRecEntIdx) {
 
 	iEntity = CreateEntityByName(sClassName);
 	if (IsValidEntity(iEntity)) {
-		Entity_SetOwner(iEntity, iArr[RecEnt_iOwner]);
-		int iTeam = GetClientTeam(iArr[RecEnt_iOwner]);
-		
-		SetEntProp(iEntity, Prop_Send, "m_iTeamNum", iTeam);
+		Entity_SetOwner(iEntity, iOwner);
+
+		if (Client_IsValid(iOwner)) {
+			SetEntProp(iEntity, Prop_Send, "m_iTeamNum", GetClientTeam(iOwner));
+		}
+
 		SetEntProp(iEntity, Prop_Send, "m_hLauncher", iLauncher);
 		SetEntProp(iEntity, Prop_Send, "m_hOriginalLauncher", iOriginalLauncher);
 		
@@ -5200,17 +5171,58 @@ int RespawnRecEnt(int iRecEntIdx) {
 	return -1;
 }
 
+int CreateProjectile(char[] sClassName, float fPos[3], float fAng[3], float fVel[3], int iOwner) {
+	int iEntity = CreateEntityByName(sClassName);
+	if (IsValidEntity(iEntity)) {
+		SetEntProp(iEntity, Prop_Send, "m_iTeamNum", GetClientTeam(iOwner));
+		Entity_SetOwner(iEntity, iOwner);
+		Entity_SetAbsOrigin(iEntity, fPos);
+		Entity_SetAbsAngles(iEntity, fAng);
+		Entity_SetAbsVelocity(iEntity, fVel);
+
+		if (StrEqual(sClassName, "tf_projectile_pipe_remote")) {
+			SetEntPropEnt(iEntity, Prop_Send, "m_hThrower", iOwner);
+			SetEntProp(iEntity, Prop_Send, "m_iType", 1);
+		}
+	}
+
+	return iEntity;
+}
+
+void RegisterRecEnt(int iEntity, int iOwnerEnt, int iAssign=-1) {
+	// Check for duplicate hook callback
+	int iRef = EntIndexToEntRef(iEntity);
+	if (g_hRecordingEntities.FindValue(iRef, RecEnt_iRef) != -1) {
+		return;
+	}
+
+	char sClassName[128];
+	GetEntityClassname(iEntity, sClassName, sizeof(sClassName));
+
+	int iEntType = g_hRecordingEntTypes.FindString(sClassName);
+	if (iEntType == -1) {
+		iEntType = g_hRecordingEntTypes.Length;
+		g_hRecordingEntTypes.PushString(sClassName);
+	}
+
+	int iArr[RecEnt_Size];
+	iArr[RecEnt_iID			] = g_iRecordingEntTotal++ % 256;
+	iArr[RecEnt_iRef		] = iRef;
+	iArr[RecEnt_iType		] = iEntType;
+	iArr[RecEnt_iMoveType	] = view_as<int>(GetEntityMoveType(iEntity));
+	iArr[RecEnt_iOwner		] = iOwnerEnt;
+	iArr[RecEnt_iAssign		] = iAssign;
+	g_hRecordingEntities.PushArray(iArr, sizeof(iArr));
+}
+
 void RespawnFrameRecEnt(int iFrame) {
-	ArrayList hRecEnts = new ArrayList();
 	for (int i=0; i<g_hRecordingEntities.Length; i++) {
 		int iRecEntIdx = EntRefToEntIndex(g_hRecordingEntities.Get(i, RecEnt_iRef));
-		hRecEnts.Push(iRecEntIdx);
+		if (IsValidEntity(iRecEntIdx)) {
+			AcceptEntityInput(iRecEntIdx, "Kill");
+		}
 	}
 	g_hRecordingEntities.Clear();
-
-	for (int i=0; i<hRecEnts.Length; i++) {
-		AcceptEntityInput(hRecEnts.Get(i), "Kill");
-	}
 
 	int iRecBufferIdx = g_hRecBufferFrames.Get(iFrame) + 1; // Skip FRAME header
 	
@@ -5221,8 +5233,9 @@ void RespawnFrameRecEnt(int iFrame) {
 
 	int iEntType;
 	int iOwner = -1;
-	//int iRecordingEnt = -1;
+	int iRecordingEnt = -1;
 	while (iRecBufferIdx < g_hRecBuffer.Length && view_as<RecBlockType>(g_hRecBuffer.Get(iRecBufferIdx) & 0xFF) == ENTITY) {
+		iRecordingEnt	= (g_hRecBuffer.Get(iRecBufferIdx  ) >>  8) & 0xFF;
 		iEntType 		= (g_hRecBuffer.Get(iRecBufferIdx  ) >> 16) & 0xFF;
 		iOwner			= (g_hRecBuffer.Get(iRecBufferIdx++) >> 24) & 0xFF;
 		
@@ -5253,27 +5266,13 @@ void RespawnFrameRecEnt(int iFrame) {
 
 		//PrintToServer("Respawning for iRecEnt[%d] block, class=%s, owner=%N", iRecordingEnt, sClassName, iOwner);
 
-		int iEntity = CreateEntityByName(sClassName);
+		PrintToServer("Trying to respawn iEntType type %d: '%s'", iEntType, sClassName);
+		int iEntity = CreateProjectile(sClassName, fPos, fAng, fVel, iOwner);
 		if (IsValidEntity(iEntity)) {
-			SetEntProp(iEntity, Prop_Send, "m_iTeamNum", GetClientTeam(iOwner));
-			Entity_SetOwner(iEntity, iOwner);
-			Entity_SetAbsOrigin(iEntity, fPos);
-			Entity_SetAbsAngles(iEntity, fAng);
-			Entity_SetAbsVelocity(iEntity, fVel);
-
-			if (StrEqual(sClassName, "tf_projectile_pipe_remote")) {
-				SetEntPropEnt(iEntity, Prop_Send, "m_hThrower", iOwner);
-				SetEntProp(iEntity, Prop_Send, "m_iType", 1);
-			}
-
-			//g_hRecEntSpawnList.Push(EntIndexToEntRef(iEntity));
+			RegisterRecEnt(iEntity, iOwner, iRecordingEnt);
 			DispatchSpawn(iEntity);
-
-			PrintToServer("Trying to respawn iEntType type %d: '%s'", iEntType, sClassName);
 		}
 	}
-
-	delete hRecEnts;
 }
 
 bool PrepareBots(Recording iRecording) {
@@ -5306,6 +5305,10 @@ bool PrepareBots(Recording iRecording) {
 
 		TFClassType iRecClass = iClientInfo.Class;
 		TFTeam iRecTeam = iClientInfo.Team;
+
+		if (iRecClass == TFClass_DemoMan) {
+			g_aClientState[iRecBot][ClientState_iButtons] = TFWeaponSlot_Secondary << 26;
+		}
 
 		bool bRespawnRequired = !IsPlayerAlive(iRecBot);
 
