@@ -1009,7 +1009,7 @@ public void OnGameFrame() {
 					if (iRecEntIdx == -1) {
 						iEntity = INVALID_ENT_REFERENCE;
 						int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot_iEnt);
-						
+
 						for (int i=0; i<g_hRecordingEntities.Length; i++) {
 							int iArr[RecEnt_Size];
 							g_hRecordingEntities.GetArray(i, iArr, sizeof(iArr));
@@ -1066,7 +1066,7 @@ public void OnGameFrame() {
 					} else {
 						iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iRef));
 
-						int iRecEntFailIdx = g_hRecEntFail.FindValue(iRecEntIdx, RecEntFail_iRecEnt);
+						int iRecEntFailIdx = g_hRecEntFail.FindValue(iRecordingEnt, RecEntFail_iRecEnt);
 						if (iRecEntFailIdx != -1) {
 							g_hRecEntFail.Erase(iRecEntFailIdx);
 						}
@@ -1122,23 +1122,13 @@ public void OnGameFrame() {
 			TeleportEntity(iEntity, NULL_VECTOR, fAng, fVel);
 		}
 		
-		/*
+		int iTick = GetGameTickCount();
 		for (int i=0; i<g_hRecEntFail.Length; i++) {
-			if (g_hRecEntFail.Get(i, RecEntFail_iCount) > MAX_REC_ENT_FAIL_FRAMES) {
-				#if defined DEBUG
-				PrintToServer("Respawning missing recording entities");
-				#endif
-
-				RespawnFrameRecEnt(g_iRecBufferFrame);
-				break;
-			}
-
-			if (GetGameTickCount() - g_hRecEntFail.Get(i, RecEntFail_iInitTick) > MAX_REC_ENT_FAIL_FRAMES) {
+			if (iTick - g_hRecEntFail.Get(i, RecEntFail_iInitTick) > MAX_REC_ENT_FAIL_FRAMES) {
 				g_hRecEntFail.Erase(i--);
 				continue;
 			}
 		}
-		*/
 		
 		if (g_iClientInstruction & INST_PAUSE) {
 			g_iRecBufferIdx = iRecBufferIdxBackup;
