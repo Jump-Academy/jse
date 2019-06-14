@@ -406,8 +406,11 @@ void parseIndex(char[] sPath) {
 			
 			int iSlot = hKV.GetNum("slot");
 			int iItemDefIdx = hKV.GetNum("itemdef", 0);
-
-			iRecording.SetEquipFilter(iSlot, iItemDefIdx);
+			switch (iItemDefIdx) {
+				case 513, 730: {
+					iRecording.SetEquipFilter(iSlot, iItemDefIdx);
+				}
+			}
 			
 			hKV.GoBack();
 		}

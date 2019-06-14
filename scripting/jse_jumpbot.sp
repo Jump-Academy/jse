@@ -5108,7 +5108,7 @@ bool IsRecordingVisible(Recording iRecording, int iClient) {
 		if (iClass == iClientInfo.Class) {
 			if (iItemDefIdx) {
 				int iWeapon = GetPlayerWeaponSlot(iClient, iSlot);
-				if (GetItemDefIndex(iWeapon) != iItemDefIdx) {
+				if (iWeapon == -1 || GetItemDefIndex(iWeapon) != iItemDefIdx) {
 					return false;
 				}
 			} else if (iClass == TFClass_Soldier) {
