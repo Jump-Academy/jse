@@ -35,7 +35,7 @@
 #define RecEnt_iAssign			5
 #define RecEnt_Size				6
 
-#define MAX_REC_ENT_FAIL_FRAMES 5
+#define MAX_REC_ENT_FAIL_FRAMES 10
 
 #define RecEntFail_iRecEnt		0
 #define RecEntFail_iCount		1
@@ -1178,7 +1178,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 				*/
 			}
 			
-			if ((g_iRecBufferFrame % 22) == 0 && !(g_iClientInstruction & INST_WARMUP)) {
+			if ((g_iRecBufferFrame % 22) == 0 && !(g_iClientInstruction & INST_WARMUP) && g_hRecBufferFrames != null) {
 				char sTimePlay[32];
 				char sTimeTotal[32];
 				
@@ -2320,7 +2320,7 @@ public Action cmdPause(int iClient, int iArgC) {
 
 	// TODO: Translate
 	if (!(g_iClientInstruction & (INST_RECD | INST_PLAY))) {
-		CReplyToCommand(iClient, "{dodgerblue}[jb] {white} Cannot use outside of playback or recording");
+		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Cannot use outside of playback or recording");
 		return Plugin_Handled;
 	}
 
@@ -3308,21 +3308,34 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		char sTimeTotal[32];
 		ToTimeDisplay(sTimeTotal, sizeof(sTimeTotal), iRecording.FramesExpected/66);
 		
+		char sEquipName[64];
+		if (view_as<ClientInfo>(iRecording.ClientInfo.Get(0)).Class == TFClass_Soldier) {
+			int iSlot, iItemDefIdx;
+			iRecording.GetEquipFilter(iSlot, iItemDefIdx);
+
+			switch (iItemDefIdx) {
+				case 513:
+					strcopy(sEquipName, sizeof(sEquipName), "\nLoadout: Original");
+				case 730:
+					strcopy(sEquipName, sizeof(sEquipName), "\nLoadout: Beggar's Bazooka");
+			}
+		}
+
 		int iRecID = g_hRecordings.FindValue(iRecording);
 		if (g_iCallKeyMask) {
 			if (iRecording.Repo) {
-				PrintHintText(iOther, "%t (%s)\n%t: %s\n%t", "Class Recording", sClass, sTimeTotal, "Author", (sAuthorName[0] ? sAuthorName : sAuthID), "Press Review", g_sCallKeyLabel);
+				PrintHintText(iOther, "%t (%s)%s\n%t: %s\n%t", "Class Recording", sClass, sTimeTotal, sEquipName, "Author", (sAuthorName[0] ? sAuthorName : sAuthID), "Press Review", g_sCallKeyLabel);
 			} else {
-				PrintHintText(iOther, "[%d] %t (%s)\n%t: %s\n%t", iRecID, "Class Recording", sClass, sTimeTotal, "Author", (sAuthorName[0] ? sAuthorName : sAuthID), "Press Review", g_sCallKeyLabel);
+				PrintHintText(iOther, "[%d] %t (%s)%s\n%t: %s\n%t", iRecID, "Class Recording", sClass, sTimeTotal, sEquipName, "Author", (sAuthorName[0] ? sAuthorName : sAuthID), "Press Review", g_sCallKeyLabel);
 			}
 		} else {
 			char sCmd[32];
 			g_hBotCallSignShort.GetString(sCmd, sizeof(sCmd));
 			
 			if (iRecording.Repo) {
-				PrintHintText(iOther, "%t (%s)\n%t: %s\n%t", "Class Recording", sClass, sTimeTotal, "Author", (sAuthorName[0] ? sAuthorName : sAuthID), "Type Review", sCmd);
+				PrintHintText(iOther, "%t (%s)%s\n%t: %s\n%t", "Class Recording", sClass, sTimeTotal, sEquipName, "Author", (sAuthorName[0] ? sAuthorName : sAuthID), "Type Review", sCmd);
 			} else {
-				PrintHintText(iOther, "[%d] %t (%s)\n%t: %s\n%t", iRecID, "Class Recording", sClass, sTimeTotal, "Author", (sAuthorName[0] ? sAuthorName : sAuthID), "Type Review", sCmd);
+				PrintHintText(iOther, "[%d] %t (%s)%s\n%t: %s\n%t", iRecID, "Class Recording", sClass, sTimeTotal, sEquipName, "Author", (sAuthorName[0] ? sAuthorName : sAuthID), "Type Review", sCmd);
 			}
 		}
 		StopSound(iOther, SNDCHAN_STATIC, "ui/hint.wav");
