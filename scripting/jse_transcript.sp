@@ -42,7 +42,7 @@ public void DB_Callback_CreateTable(Database hDatabase, DBResultSet hResultSet, 
 
 public void DB_Callback_LogProgress(Database hDatabase, DBResultSet hResultSet, char[] sError, any aData) {
 	if (hResultSet == null) {
-		SetFailState("Database error while logging progress for player %N: %s", aData, sError);
+		LogError("Database error while logging progress for player %N: %s", aData, sError);
 		return;
 	}
 }
