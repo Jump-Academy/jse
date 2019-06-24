@@ -10,6 +10,9 @@ JSE is a set of modular plugins for enabling standard features present in most T
 * JumpBOT
 * Marker
 * Show Keys
+* Tracker
+* Transcript
+* Scoreboard
 
 ## Required
 * Sourcemod
@@ -19,6 +22,7 @@ JSE is a set of modular plugins for enabling standard features present in most T
 * [AutoExecConfig](https://github.com/Impact123/AutoExecConfig)
 * [Bot Controller](https://github.com/VoiDeD/sourcemod-botcontroller)
 * [Multi Colors](https://github.com/Bara/Multi-Colors)
+* [REST in Pawn](https://github.com/ErikMinekus/sm-ripext)
 * [SMLib](https://github.com/bcserv/smlib/tree/transitional_syntax)
 * [Socket](https://github.com/JoinedSenses/sm-ext-socket/tree/patch-1)
 * [TF2Attributes](https://github.com/FlaminSarge/tf2attributes)

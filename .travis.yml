@@ -11,8 +11,6 @@ matrix:
     - env: SOURCEMOD=1.10
 
 env:
-  - SOURCEMOD=1.8
-  - SOURCEMOD=1.9
   - SOURCEMOD=1.10
 
 before_script:
@@ -27,6 +25,10 @@ before_script:
   - wget https://raw.githubusercontent.com/JoinedSenses/sm-ext-socket/patch-1/socket.inc -O scripting/include/socket.inc
   - wget https://raw.githubusercontent.com/FlaminSarge/tf2attributes/master/tf2attributes.inc -O scripting/include/tf2attributes.inc
   - wget https://raw.githubusercontent.com/asherkin/TF2Items/master/pawn/tf2items.inc -O scripting/include/tf2items.inc
+  - mkdir scripting/include/ripext
+  - wget https://raw.githubusercontent.com/ErikMinekus/sm-ripext/master/pawn/scripting/include/ripext.inc -O scripting/include/ripext.inc
+  - wget https://raw.githubusercontent.com/ErikMinekus/sm-ripext/master/pawn/scripting/include/ripext/http.inc -O scripting/include/ripext/http.inc
+  - wget https://raw.githubusercontent.com/ErikMinekus/sm-ripext/master/pawn/scripting/include/ripext/json.inc -O scripting/include/ripext/json.inc
   - wget https://bitbucket.org/GoD_Tony/updater/raw/default/include/updater.inc -O scripting/include/updater.inc
   - wget https://github.com/bcserv/smlib/archive/transitional_syntax.zip -O smlib.zip
   - unzip smlib.zip
@@ -35,4 +37,4 @@ before_script:
   - chmod +x spcomp
 
 script:
-- ./compile.sh jse_core.sp jse_jumpbot.sp jse_showkeys.sp
+- ./compile.sh jse_core.sp jse_foresight.sp jse_jumpbot.sp jse_marker.sp jse_scoreboard.sp jse_showkeys.sp jse_tracker.sp jse_transcript.sp
