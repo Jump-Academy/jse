@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR		"AI"
-#define PLUGIN_VERSION		"0.2.2"
+#define PLUGIN_VERSION		"0.2.3"
 
 #define Annotation_sText	0
 #define Annotation_fPosX	8
@@ -40,16 +40,18 @@ public void OnPluginStart() {
 	CreateConVar("jse_marker_version", PLUGIN_VERSION, "Jump Server Essentials marker version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 	g_hLimit = CreateConVar("jse_marker_limit", "1", "Marker limit per player", FCVAR_NONE, true, 0.0, true, float(ANNOTATIONS_CLIENT_MAX));
 
-	RegConsoleCmd("sm_mark",		cmdMark, "Mark a foresight annotation");
-	RegConsoleCmd("sm_pmark",		cmdPlayerMark, "Mark a foresight annotation on a player");
-	RegConsoleCmd("sm_unmark",		cmdUnmark, "Remove a foresight annotation");
-	RegConsoleCmd("sm_unmarkall",	cmdUnmarkAll, "Remove all foresight annotations");
+	RegConsoleCmd("sm_mark",		cmdMark, "Mark a personal annotation");
+	RegConsoleCmd("sm_pmark",		cmdPlayerMark, "Mark a personal annotation on a player");
+	RegConsoleCmd("sm_unmark",		cmdUnmark, "Remove a personal annotation");
+	RegConsoleCmd("sm_unmarkall",	cmdUnmarkAll, "Remove all personal annotations");
 
 	HookEvent("player_spawn", Event_PlayerSpawn);
 
 	if (LibraryExists("updater")) {
 		Updater_AddPlugin(UPDATE_URL);
 	}
+
+	LoadTranslations("common.phrases.txt");
 }
 
 public void OnPluginEnd() {
