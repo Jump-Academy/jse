@@ -33,6 +33,8 @@ enum struct HashedCheckpoint {
 	int iTimestamp;
 }
 
+ConVar g_hCVProximity;
+
 Checkpoint g_eNearestCheckpoint[MAXPLAYERS+1];
 Checkpoint g_eLastCheckpoint[MAXPLAYERS+1];
 ArrayList g_hProgress[MAXPLAYERS+1];
@@ -51,6 +53,7 @@ public Plugin myinfo = {
 
 public void OnPluginStart() {
 	CreateConVar("jse_tracker_version", PLUGIN_VERSION, "Jump Server Essentials tracker version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
+	g_hCVProximity = CreateConVar("jse_tracker_proximity", "1000.0", "Max distance to check near checkpoints", FCVAR_NOTIFY, true, 0.0);
 	
 	RegConsoleCmd("sm_whereami", cmdWhereAmI, "Locate calling player");
 	RegConsoleCmd("sm_whereis", cmdWhereIs, "Locate player");
@@ -217,6 +220,7 @@ public void HTTPRequestCallback_FetchedLayout(HTTPResponse hResponse, any aValue
 }
 
 // Natives
+
 public int Native_IsLoaded(Handle hPlugin, int iArgC) {
 	return g_bLoaded;
 }
@@ -358,11 +362,11 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 			int iClientsCount = GetClientsInRange(fOrigin, RangeType_Visibility, iClients, sizeof(iClients));
 			for (int k = 0; k < iClientsCount; k++) {
 				int iClient = iClients[k];
-				if (GetClientTeam(iClient) > view_as<int>(TFTeam_Spectator) && GetEntityFlags(iClient) & FL_ONGROUND) {
+				if (GetClientTeam(iClient) > view_as<int>(TFTeam_Spectator)) {
 					GetClientEyePosition(iClient, fPos);
 
 					float fDist = GetVectorDistance(fPos, fOrigin);
-					if ((fDist < fMinDist[iClient]) && IsVisible(fPos, fOrigin)) {
+					if ((fDist < g_hCVProximity.FloatValue) && (fDist < fMinDist[iClient]) && IsVisible(fPos, fOrigin)) {
 						g_eNearestCheckpoint[iClient].iCourse = iCourseIter;
 						g_eNearestCheckpoint[iClient].iJump = iJumpIter;
 						g_eNearestCheckpoint[iClient].iControlPoint = NULL_CONTROLPOINT;
@@ -380,11 +384,11 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 			int iClientsCount = GetClientsInRange(fOrigin, RangeType_Visibility, iClients, sizeof(iClients));
 			for (int k = 0; k < iClientsCount; k++) {
 				int iClient = iClients[k];
-				if (GetClientTeam(iClient) > view_as<int>(TFTeam_Spectator) && GetEntityFlags(iClient) & FL_ONGROUND) {
+				if (GetClientTeam(iClient) > view_as<int>(TFTeam_Spectator)) {
 					GetClientEyePosition(iClient, fPos);
 
 					float fDist = GetVectorDistance(fPos, fOrigin);
-					if ((fDist < fMinDist[iClient]) && IsVisible(fPos, fOrigin)) {
+					if ((fDist < g_hCVProximity.FloatValue) && (fDist < fMinDist[iClient]) && IsVisible(fPos, fOrigin)) {
 						g_eNearestCheckpoint[iClient].iCourse = iCourseIter;
 						g_eNearestCheckpoint[iClient].iJump = NULL_JUMP;
 						g_eNearestCheckpoint[iClient].iControlPoint = iControlPointItr;
@@ -424,6 +428,8 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 							eHashedCheckpoint.iTimestamp = GetTime();
 							g_hProgress[i].PushArray(eHashedCheckpoint);
 
+							SortADTArray(g_hProgress[i], Sort_Ascending, Sort_Integer);
+
 							Call_StartForward(g_hCheckpointReachedForward);
 							Call_PushCell(i);
 							Call_PushCell(iCourseIter);
@@ -447,6 +453,8 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 							eHashedCheckpoint.iTimestamp = GetTime();
 							g_hProgress[i].PushArray(eHashedCheckpoint);
 
+							SortADTArray(g_hProgress[i], Sort_Ascending, Sort_Integer);
+
 							Call_StartForward(g_hCheckpointReachedForward);
 							Call_PushCell(i);
 							Call_PushCell(iCourseIter);
@@ -457,28 +465,32 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 					}
 				}
 
-				eHashedCheckpoint.iHash = iProgress0;
-				eHashedCheckpoint.iTimestamp = GetTime();
-				g_hProgress[i].PushArray(eHashedCheckpoint);
 
-				SortADTArray(g_hProgress[i], Sort_Ascending, Sort_Integer);
+				if (GetEntityFlags(i) & FL_ONGROUND) {
+					eHashedCheckpoint.iHash = iProgress0;
+					eHashedCheckpoint.iTimestamp = GetTime();
+					g_hProgress[i].PushArray(eHashedCheckpoint);
 
-				Call_StartForward(g_hCheckpointReachedForward);
-				Call_PushCell(i);
-				Call_PushCell(iCourseIter);
-				Call_PushCell(iJumpIter0);
-				Call_PushCell(iControlPointIter);
-				Call_Finish();
+
+					SortADTArray(g_hProgress[i], Sort_Ascending, Sort_Integer);
+
+					Call_StartForward(g_hCheckpointReachedForward);
+					Call_PushCell(i);
+					Call_PushCell(iCourseIter);
+					Call_PushCell(iJumpIter0);
+					Call_PushCell(iControlPointIter);
+					Call_Finish();
+				}
 			}
 		}
 		
 	}
 	
-
 	return Plugin_Continue;
 }
 
 // Helpers
+
 void FetchMapData() {
 	char sMapName[32];
 	GetCurrentMap(sMapName, sizeof(sMapName));
