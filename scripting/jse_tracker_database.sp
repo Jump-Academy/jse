@@ -305,11 +305,11 @@ void DB_AddJump(Transaction hTxn, int iCourse, int iJump, char[] sIdentifier, in
 	if (sIdentifier[0]) {
 		g_hDatabase.Format(sQuery, sizeof(sQuery), \
 			"INSERT IGNORE INTO `jse_map_jumps`(`map_id`, `course_id`, `jump`, `identifier`)"
-		...	"SELECT %d, `id`, %d, '%s' FROM `jse_map_courses` WHERE `course`=%d", g_iMapID, iJump, sIdentifier, iCourse);
+		...	"SELECT %d, `id`, %d, '%s' FROM `jse_map_courses` WHERE `map_id`=%d AND `course`=%d", g_iMapID, iJump, sIdentifier, g_iMapID, iCourse);
 	} else {
 		g_hDatabase.Format(sQuery, sizeof(sQuery), \
 			"INSERT IGNORE INTO `jse_map_jumps`(`map_id`, `course_id`, `jump`, `x`, `y`, `z`)"
-		...	"SELECT %d, `id`, %d, %d, %d, %d FROM `jse_map_courses` WHERE `course`=%d", g_iMapID, iJump, iX, iY, iZ, iCourse);
+		...	"SELECT %d, `id`, %d, %d, %d, %d FROM `jse_map_courses` WHERE `map_id`=%d AND `course`=%d", g_iMapID, iJump, iX, iY, iZ, g_iMapID, iCourse);
 	}
 
 	hTxn.AddQuery(sQuery, iCourse);
@@ -321,11 +321,11 @@ void DB_AddControlPoint(Transaction hTxn, int iCourse, char[] sIdentifier, int i
 	if (sIdentifier[0]) {
 		g_hDatabase.Format(sQuery, sizeof(sQuery), \
 			"INSERT IGNORE INTO `jse_map_controlpoints`(`map_id`, `course_id`, `identifier`)"
-		...	"SELECT %d, `id`, '%s' FROM `jse_map_courses` WHERE `course`=%d", g_iMapID, sIdentifier, iCourse);
+		...	"SELECT %d, `id`, '%s' FROM `jse_map_courses` WHERE `map_id`=%d AND `course`=%d", g_iMapID, sIdentifier, g_iMapID, iCourse);
 	} else {
 		g_hDatabase.Format(sQuery, sizeof(sQuery), \
 			"INSERT IGNORE INTO `jse_map_controlpoints`(`map_id`, `course_id`, `x`, `y`, `z`)"
-		...	"SELECT %d, `id`, %d, %d, %d FROM `jse_map_courses` WHERE `course`=%d", g_iMapID, iX, iY, iZ, iCourse);
+		...	"SELECT %d, `id`, %d, %d, %d FROM `jse_map_courses` WHERE `map_id`=%d AND `course`=%d", g_iMapID, iX, iY, iZ, g_iMapID, iCourse);
 	}
 
 	hTxn.AddQuery(sQuery, iCourse);
