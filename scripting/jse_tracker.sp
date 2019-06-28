@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.0"
+#define PLUGIN_VERSION "0.1.1"
 
 #define API_URL "https://api.jumpacademy.tf/mapinfo_json"
 
@@ -694,35 +694,91 @@ public Action cmdWhereIs(int iClient, int iArgC) {
 }
 
 public Action cmdProgress(int iClient, int iArgC) {
-	char sArg1[32];
-	GetCmdArg(1, sArg1, sizeof(sArg1));
-	
-	int iTarget = FindTarget(iClient, sArg1, false, false);
-	if (iTarget != -1) {
-		if (!g_hProgress[iTarget].Length) {
-			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}%N has not been to any jumps.", iTarget);
+	if (!g_hCourses.Length) {
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}No courses were found for this map.");
+		return Plugin_Handled;
+	}
+
+	char sTargetName[MAX_TARGET_LENGTH];
+	int iTargetList[MAXPLAYERS], iTargetCount;
+	bool bTnIsML;
+
+	if (iArgC == 1) {
+		char sArg1[32];
+		GetCmdArg(1, sArg1, sizeof(sArg1));
+	 
+		if ((iTargetCount = ProcessTargetString(
+				sArg1,
+				iClient,
+				iTargetList,
+				MAXPLAYERS,
+				COMMAND_FILTER_NO_IMMUNITY,
+				sTargetName,
+				sizeof(sTargetName),
+				bTnIsML)) <= 0) {
+			ReplyToTargetError(iClient, iTargetCount);
 			return Plugin_Handled;
 		}
 
-		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}%N has been on:", iTarget);
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing progress for %s:", sTargetName);
+	} else {
+		iTargetList[iTargetCount++] = iClient;
+
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing your progress:");
+	}
+
+	char sBuffer[4096];
+	for (int i = 0; i < iTargetCount; i++) {
+		int iTarget = iTargetList[i];
+
+		if (!g_hProgress[iTarget].Length) {
+			if (iArgC) {
+				CReplyToCommand(iClient, "{dodgerblue}- %N has not been to any jumps.", iTarget);
+			} else {
+				CReplyToCommand(iClient, "{dodgerblue}- You have not been to any jumps.");
+			}
+
+			continue;
+		}
+
+		if (iArgC) {
+			FormatEx(sBuffer, sizeof(sBuffer), "{white}- %N:\n", iTarget);
+		}
 
 		ArrayList hProgress = g_hProgress[iTarget];
-		for (int i=0; i<hProgress.Length; i++) {
-			Course iCourse;
-			Jump iJump;
-			ControlPoint iControlPoint;
 
-			FromProgressHash(hProgress.Get(i, HashedCheckpoint::iHash), iCourse, iJump, iControlPoint);
-
+		for (int j=0; j<g_hCourses.Length; j++) {
+			Course iCourse = g_hCourses.Get(j);
 			char sCourseName[128];
 			iCourse.GetName(sCourseName, sizeof(sCourseName));
 
-			if (iJump) {
-				CReplyToCommand(iClient, "\t{white}%s jump %d", sCourseName, iJump.iNumber);
-			} else if (iControlPoint != NULL_CONTROLPOINT) {
-				CReplyToCommand(iClient, "\t{white}%s control point", sCourseName);
+			int iJumpCount = 0;
+			int iJumpsTotal = iCourse.hJumps.Length;
+
+			for (int k=0; k<hProgress.Length; k++) {
+				Course iCourseItr;
+				Jump iJumpItr;
+				ControlPoint iControlPointItr;
+
+				FromProgressHash(hProgress.Get(k, HashedCheckpoint::iHash), iCourseItr, iJumpItr, iControlPointItr);
+
+				if (iCourse == iCourseItr) {
+					if (iControlPointItr) {
+						Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\t\t{lime}Completed\n", sBuffer, sCourseName, iJumpsTotal, iJumpsTotal);
+						iJumpCount = 0;
+						break;
+					} else {
+						iJumpCount++;
+					}
+				}
+			}
+
+			if (iJumpCount) {
+				Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\n", sBuffer, sCourseName, iJumpCount, iJumpsTotal);
 			}
 		}
+
+		CReplyToCommand(iClient, sBuffer);
 	}
 
 	return Plugin_Handled;
