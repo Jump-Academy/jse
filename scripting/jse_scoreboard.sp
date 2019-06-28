@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.0"
+#define PLUGIN_VERSION "0.1.1"
 
 #include <sourcemod>
 #include <sdktools>
@@ -45,20 +45,22 @@ public void OnPluginStart()
 	if (g_hSDKResetScores == null) {
 		SetFailState("Failed to load jse.scores gamedata");
 	}
-}
 
-public void OnPluginEnd() {
-	for (int i = 1; i <= MaxClients; i++) {
-		if (IsClientInGame(i)) {
-			ResetScore(i);
+	// Late load
+	if (GetClientCount(true) && IsTrackerLoaded()) {
+		for (int i = 1; i <= MaxClients; i++) {
+			g_iScore[i] = ComputeScore(i);
+			AddScore(i, g_iScore[i]);
 		}
 	}
 }
 
-public void OnMapStart() {
-	for (int i = 1; i <= MaxClients; i++) {
-		ResetScore(i);
-	}
+public void OnPluginEnd() {
+	ResetAllClients();
+}
+
+public void OnMapEnd() {
+	ResetAllClients();
 }
 
 public void OnClientDisconnect(int iClient) {
@@ -80,16 +82,23 @@ public Action Hook_ChangeTeamClass(Event hEvent, const char[] sName, bool bDontB
 }
 
 public Action Hook_RoundStart(Event hEvent, const char[] sName, bool bDontBroadcast) {
-	OnMapStart();
+	ResetAllClients();
 }
 
 public void OnCheckpointReached(int iClient, Course iCourse, Jump iJump, ControlPoint iControlPoint) {
 	if (iControlPoint || (iJump && iJump.iNumber > 1)) {
+		g_iScore[iClient]++;
 		AddScore(iClient, 1);
 	}
 }
 
 // Helpers
+
+void ResetAllClients() {
+	for (int i = 1; i <= MaxClients; i++) {
+		ResetClient(i);
+	}
+}
 
 void ResetClient(int iClient) {
 	if (IsClientInGame(iClient)) {
@@ -114,6 +123,23 @@ void AddScore(int iClient, int iScore) {
 			AcceptEntityInput(iEntity, "Kill");
 		}
 	}
+}
+
+int ComputeScore(int iClient) {
+	ArrayList hProgress = new ArrayList(sizeof(Checkpoint));
+	GetPlayerProgress(iClient, hProgress);
+
+	int iScore = 0;
+	for (int i=0; i<hProgress.Length; i++) {
+		Jump iJump = hProgress.Get(i, Checkpoint::iJump);
+		if (!iJump || iJump.iNumber > 1) {
+			iScore++;
+		}
+	}
+
+	delete hProgress;
+
+	return iScore;
 }
 
 void ResetScore(int iClient) {
