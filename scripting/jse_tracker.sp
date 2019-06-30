@@ -3,11 +3,12 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.1"
+#define PLUGIN_VERSION "0.1.2"
 
 #define API_URL "https://api.jumpacademy.tf/mapinfo_json"
 
 #include <sourcemod>
+#include <sdkhooks>
 #include <sdktools>
 #include <smlib/clients>
 #include <smlib/entities>
@@ -34,10 +35,13 @@ enum struct HashedCheckpoint {
 }
 
 ConVar g_hCVProximity;
+ConVar g_hCVTeleSettleTime;
 
 Checkpoint g_eNearestCheckpoint[MAXPLAYERS+1];
 Checkpoint g_eLastCheckpoint[MAXPLAYERS+1];
 ArrayList g_hProgress[MAXPLAYERS+1];
+
+float g_fLastTeleport[MAXPLAYERS+1];
 
 HTTPClient g_hHTTPClient;
 
@@ -54,6 +58,7 @@ public Plugin myinfo = {
 public void OnPluginStart() {
 	CreateConVar("jse_tracker_version", PLUGIN_VERSION, "Jump Server Essentials tracker version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 	g_hCVProximity = CreateConVar("jse_tracker_proximity", "1000.0", "Max distance to check near checkpoints", FCVAR_NOTIFY, true, 0.0);
+	g_hCVTeleSettleTime = CreateConVar("jse_tracker_tele_settle_time", "1.0", "Time in seconds to ignore checkpoints after touching a teleport trigger", FCVAR_NOTIFY, true, 0.0);
 	
 	RegConsoleCmd("sm_whereami", cmdWhereAmI, "Locate calling player");
 	RegConsoleCmd("sm_whereis", cmdWhereIs, "Locate player");
@@ -67,6 +72,8 @@ public void OnPluginStart() {
 	g_hHTTPClient.Timeout = 5;
 
 	g_hCourses = new ArrayList();
+
+	HookEvent("teamplay_round_start", Event_RoundStart);
 
 	LoadTranslations("common.phrases");
 
@@ -101,6 +108,7 @@ public void OnMapStart() {
 	}
 
 	if (Client_GetCount(true, false)) {
+		SetupTeleportHook();
 		SetupTimer();
 	}
 }
@@ -132,6 +140,18 @@ public void OnClientDisconnect(int iClient) {
 }
 
 // Custom Callbacks
+
+public Action Event_RoundStart(Event hEvent, const char[] sName, bool bDontBroadcast) {
+	SetupTeleportHook();
+}
+
+public Action Hook_TeleportStartTouch(int iEntity, int iOther) {
+	if (Client_IsValid(iOther)) {
+		g_fLastTeleport[iOther] = GetGameTime();
+	}
+
+	return Plugin_Continue;
+}
 
 public void HTTPRequestCallback_FetchedLayout(HTTPResponse hResponse, any aValue, const char[] sError) {
 	char sMapName[32];
@@ -191,7 +211,6 @@ public void HTTPRequestCallback_FetchedLayout(HTTPResponse hResponse, any aValue
 			}
 
 			DB_AddJump(hTxn, iCourseID, j+1, sBuffer, iX, iY, iZ);
-
 			delete hWaypointData;
 		}
 
@@ -339,6 +358,7 @@ public Action Timer_Refetch(Handle hTimer) {
 
 public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 	int iTime = GetTime();
+	float fGameTime = GetGameTime();
 
 	for (int i=1; i<=MaxClients; i++) {
 		g_eNearestCheckpoint[i].iCourse = NULL_COURSE;
@@ -362,7 +382,7 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 			int iClientsCount = GetClientsInRange(fOrigin, RangeType_Visibility, iClients, sizeof(iClients));
 			for (int k = 0; k < iClientsCount; k++) {
 				int iClient = iClients[k];
-				if (GetClientTeam(iClient) > view_as<int>(TFTeam_Spectator)) {
+				if (GetClientTeam(iClient) > view_as<int>(TFTeam_Spectator) && (fGameTime - g_fLastTeleport[iClient]) > g_hCVTeleSettleTime.FloatValue) {
 					GetClientEyePosition(iClient, fPos);
 
 					float fDist = GetVectorDistance(fPos, fOrigin);
@@ -372,7 +392,6 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 						g_eNearestCheckpoint[iClient].iControlPoint = NULL_CONTROLPOINT;
 						fMinDist[iClient] = fDist;
 					}
-
 				}
 			}
 		}
@@ -384,7 +403,7 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 			int iClientsCount = GetClientsInRange(fOrigin, RangeType_Visibility, iClients, sizeof(iClients));
 			for (int k = 0; k < iClientsCount; k++) {
 				int iClient = iClients[k];
-				if (GetClientTeam(iClient) > view_as<int>(TFTeam_Spectator)) {
+				if (GetClientTeam(iClient) > view_as<int>(TFTeam_Spectator) && (fGameTime - g_fLastTeleport[iClient]) > g_hCVTeleSettleTime.FloatValue) {
 					GetClientEyePosition(iClient, fPos);
 
 					float fDist = GetVectorDistance(fPos, fOrigin);
@@ -520,6 +539,8 @@ void ResetClient(int iClient) {
 	g_eLastCheckpoint[iClient].iTimestamp = 0;
 
 	g_hProgress[iClient].Clear();
+
+	g_fLastTeleport[iClient] = 0.0;
 }
 
 bool LocatePosition(float fPos[3], Course &iCourse, Jump &iJump, ControlPoint &iControlPoint, float fMinDist=view_as<float>(0x7F800000)) {
@@ -577,6 +598,14 @@ bool IsVisible(float fPos[3], float fPosTarget[3]) {
 
 public bool TraceFilter_Environment(int iEntity, int iMask) {
 	return false;
+}
+
+
+void SetupTeleportHook() {
+	int iEntity = INVALID_ENT_REFERENCE;
+	while ((iEntity = FindEntityByClassname(iEntity, "trigger_teleport")) != INVALID_ENT_REFERENCE) {
+		SDKHook(iEntity, SDKHook_StartTouch, Hook_TeleportStartTouch);
+	}
 }
 
 void SetupTimer() {
@@ -733,9 +762,9 @@ public Action cmdProgress(int iClient, int iArgC) {
 
 		if (!g_hProgress[iTarget].Length) {
 			if (iArgC) {
-				CReplyToCommand(iClient, "{dodgerblue}- %N has not been to any jumps.", iTarget);
+				CReplyToCommand(iClient, "{white}- %N has not been to any jumps.", iTarget);
 			} else {
-				CReplyToCommand(iClient, "{dodgerblue}- You have not been to any jumps.");
+				CReplyToCommand(iClient, "{white}- You have not been to any jumps.");
 			}
 
 			continue;
@@ -774,7 +803,7 @@ public Action cmdProgress(int iClient, int iArgC) {
 			}
 
 			if (iJumpCount) {
-				Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\n", sBuffer, sCourseName, iJumpCount, iJumpsTotal);
+				Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\n", sBuffer, sCourseName, iJumpCount, iJumpsTotal);				
 			}
 		}
 
