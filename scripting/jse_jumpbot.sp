@@ -248,6 +248,8 @@ int g_iPerspective[MAXPLAYERS + 1] = {1, ...};
 
 Handle g_hSDKGetMaxClip1;
 
+Handle g_hClientRestoreForward;
+
 public Plugin myinfo = {
 	name = "Jump Server Essentials - JumpBot",
 	author = PLUGIN_AUTHOR,
@@ -394,6 +396,8 @@ public void OnPluginStart() {
 	LoadTranslations("common.phrases");
 	LoadTranslations("jse_jumpbot.phrases");
 	
+	g_hClientRestoreForward = CreateGlobalForward("OnPostPlaybackClientRestore", ET_Ignore, Param_Cell);
+
 	if (LibraryExists("updater")) {
 		Updater_AddPlugin(UPDATE_URL);
 	}
@@ -3725,6 +3729,11 @@ void doReturn() {
 			FakeClientCommand(g_iClientOfInterest, "spec_mode 6");
 		} else {
 			int iCOI = g_iClientOfInterest;
+
+			Call_StartForward(g_hClientRestoreForward);
+			Call_PushCell(iCOI);
+			Call_Finish();
+
 			doRespawn(iCOI); // Wipes COI in doFullStop()
 			doReturnSpectators(iCOI);
 		}

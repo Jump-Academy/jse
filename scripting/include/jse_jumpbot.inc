@@ -218,3 +218,9 @@ native bool JSE_JB_PlayRecording(Recording iRecording, int iClient=0, bool bResp
  * @note				Client will auto respawn after playback just like normal queue behavior
  */
 native bool JSE_JB_PlayRecordingQueueClient(Recording iRecording, int iClient, int iPerspective=-1);
+
+/**
+ * Called when client is finished viewing a recording and is about to be respawned.
+ * @param iClient		Client being restored
+ */
+forward void OnPostPlaybackClientRestore(int iClient);
