@@ -501,7 +501,6 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 					eHashedCheckpoint.iTimestamp = GetTime();
 					g_hProgress[i].PushArray(eHashedCheckpoint);
 
-
 					SortADTArray(g_hProgress[i], Sort_Ascending, Sort_Integer);
 
 					Call_StartForward(g_hCheckpointReachedForward);
@@ -767,7 +766,7 @@ public Action cmdProgress(int iClient, int iArgC) {
 		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing your progress:");
 	}
 
-	char sBuffer[4096];
+	char sBuffer[256];
 	for (int i = 0; i < iTargetCount; i++) {
 		int iTarget = iTargetList[i];
 
@@ -787,6 +786,7 @@ public Action cmdProgress(int iClient, int iArgC) {
 
 		ArrayList hProgress = g_hProgress[iTarget];
 
+		int iLineCount = 1;
 		for (int j=0; j<g_hCourses.Length; j++) {
 			Course iCourse = g_hCourses.Get(j);
 			char sCourseName[128];
@@ -806,6 +806,7 @@ public Action cmdProgress(int iClient, int iArgC) {
 					if (iControlPointItr) {
 						Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\t\t{lime}Completed\n", sBuffer, sCourseName, iJumpsTotal, iJumpsTotal);
 						iJumpCount = 0;
+						iLineCount++;
 						break;
 					} else {
 						iJumpCount++;
@@ -814,11 +815,24 @@ public Action cmdProgress(int iClient, int iArgC) {
 			}
 
 			if (iJumpCount) {
-				Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\n", sBuffer, sCourseName, iJumpCount, iJumpsTotal);				
+				Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\n", sBuffer, sCourseName, iJumpCount, iJumpsTotal);
+				iLineCount++;
+			}
+
+			if (iLineCount >= 3) {
+				int iLength = strlen(sBuffer);
+				sBuffer[iLength-1] = '\0'; // Remove newline
+				
+				CReplyToCommand(iClient, sBuffer);
+
+				sBuffer[0] = '\0';
+				iLineCount = 0;
 			}
 		}
 
-		CReplyToCommand(iClient, sBuffer);
+		if (sBuffer[0]) {
+			CReplyToCommand(iClient, sBuffer);
+		}
 	}
 
 	return Plugin_Handled;
