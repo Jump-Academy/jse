@@ -149,5 +149,5 @@ native bool GetPlayerNearestCheckpoint(int iClient, Course &iCourse, Jump &iJump
 native bool GetPlayerNewestCheckpoint(int iClient, Course &iCourse, Jump &iJump, ControlPoint &iControlPoint, int &iTimestamp=0);
 native bool GetPlayerLastCheckpoint(int iClient, Course &iCourse, Jump &iJump, ControlPoint &iControlPoint, int &iTimestamp=0);
 
-native int GetPlayerProgress(int iClient, ArrayList hProgress);
+native ArrayList GetPlayerProgress(int iClient);
 native void ResetPlayerProgress(int iClient);

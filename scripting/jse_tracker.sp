@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.2"
+#define PLUGIN_VERSION "0.1.3"
 
 #define API_URL "https://api.jumpacademy.tf/mapinfo_json"
 
@@ -267,6 +267,11 @@ public int Native_GetPlayerNearestCheckpoint(Handle hPlugin, int iArgC) {
 
 		return true;
 	}
+
+	SetNativeCellRef(2, NULL_COURSE);
+	SetNativeCellRef(3, NULL_JUMP);
+	SetNativeCellRef(4, NULL_CONTROLPOINT);
+	SetNativeCellRef(5, 0);
 	
 	return false;
 }
@@ -301,6 +306,11 @@ public int Native_GetPlayerNewestCheckpoint(Handle hPlugin, int iArgC) {
 		return true;
 	}
 
+	SetNativeCellRef(2, NULL_COURSE);
+	SetNativeCellRef(3, NULL_JUMP);
+	SetNativeCellRef(4, NULL_CONTROLPOINT);
+	SetNativeCellRef(5, 0);
+
 	return false;
 }
 
@@ -315,6 +325,11 @@ public int Native_GetPlayerLastCheckpoint(Handle hPlugin, int iArgC) {
 
 		return true;
 	}
+
+	SetNativeCellRef(2, NULL_COURSE);
+	SetNativeCellRef(3, NULL_JUMP);
+	SetNativeCellRef(4, NULL_CONTROLPOINT);
+	SetNativeCellRef(5, 0);
 	
 	return false;
 }
@@ -322,11 +337,7 @@ public int Native_GetPlayerLastCheckpoint(Handle hPlugin, int iArgC) {
 public int Native_GetPlayerProgress(Handle hPlugin, int iArgC) {
 	int iClient = GetNativeCell(1);
 
-	ArrayList hList = GetNativeCell(2);
-	if (hList.BlockSize != sizeof(Checkpoint)) {
-		LogError("ArrayList block must match Checkpoint enum-struct size");
-		return 0;
-	}
+	ArrayList hList = new ArrayList(sizeof(Checkpoint));
 
 	Checkpoint eCheckpoint;
 	HashedCheckpoint eHashedCheckpoint;
@@ -340,7 +351,7 @@ public int Native_GetPlayerProgress(Handle hPlugin, int iArgC) {
 		hList.PushArray(eCheckpoint);
 	}
 
-	return hList.Length;
+	return view_as<int>(hList);
 }
 
 public int Native_ResetPlayerProgress(Handle hPlugin, int iArgC) {

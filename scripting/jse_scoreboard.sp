@@ -126,8 +126,7 @@ void AddScore(int iClient, int iScore) {
 }
 
 int ComputeScore(int iClient) {
-	ArrayList hProgress = new ArrayList(sizeof(Checkpoint));
-	GetPlayerProgress(iClient, hProgress);
+	ArrayList hProgress = GetPlayerProgress(iClient);
 
 	int iScore = 0;
 	for (int i=0; i<hProgress.Length; i++) {
