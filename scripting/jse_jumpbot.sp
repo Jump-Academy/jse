@@ -5097,8 +5097,13 @@ bool IsRecordingVisible(Recording iRecording, int iClient) {
 					return false;
 				}
 			} else if (iClass == TFClass_Soldier) {
+				int iWeapon = GetPlayerWeaponSlot(iClient, TFWeaponSlot_Primary);
+				if (iWeapon == -1) {
+					return false;
+				}
+				
 				// Hide stock recording if player is equipped with Original or Beggar's Bazooka
-				switch (GetItemDefIndex(GetPlayerWeaponSlot(iClient, TFWeaponSlot_Primary))) {
+				switch (GetItemDefIndex(iWeapon)) {
 					case 513, 730: {
 						return false;
 					}
