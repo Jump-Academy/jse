@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.3"
+#define PLUGIN_VERSION "0.1.4"
 
 #define API_URL "https://api.jumpacademy.tf/mapinfo_json"
 
@@ -36,6 +36,7 @@ enum struct HashedCheckpoint {
 
 ConVar g_hCVProximity;
 ConVar g_hCVTeleSettleTime;
+ConVar g_hCVInterval;
 
 Checkpoint g_eNearestCheckpoint[MAXPLAYERS+1];
 Checkpoint g_eLastCheckpoint[MAXPLAYERS+1];
@@ -59,6 +60,7 @@ public void OnPluginStart() {
 	CreateConVar("jse_tracker_version", PLUGIN_VERSION, "Jump Server Essentials tracker version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 	g_hCVProximity = CreateConVar("jse_tracker_proximity", "1000.0", "Max distance to check near checkpoints", FCVAR_NOTIFY, true, 0.0);
 	g_hCVTeleSettleTime = CreateConVar("jse_tracker_tele_settle_time", "1.0", "Time in seconds to ignore checkpoints after touching a teleport trigger", FCVAR_NOTIFY, true, 0.0);
+	g_hCVInterval = CreateConVar("jse_tracker_interval", "0.5", "Time in seconds between progress checks", FCVAR_NOTIFY, true, 0.0);
 	
 	RegConsoleCmd("sm_whereami", cmdWhereAmI, "Locate calling player");
 	RegConsoleCmd("sm_whereis", cmdWhereIs, "Locate player");
@@ -83,6 +85,8 @@ public void OnPluginStart() {
 
 	g_hTrackerLoadedForward = CreateGlobalForward("OnTrackerLoaded", ET_Ignore, Param_Cell);
 	g_hCheckpointReachedForward = CreateGlobalForward("OnCheckpointReached", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+
+	AutoExecConfig(true, "jse_tracker");
 }
 
 public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErrMax) {
@@ -620,7 +624,7 @@ void SetupTeleportHook() {
 
 void SetupTimer() {
 	if (g_hTimer == null) {
-		g_hTimer = CreateTimer(0.1, Timer_TrackPlayers, INVALID_HANDLE, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+		g_hTimer = CreateTimer(g_hCVInterval.FloatValue, Timer_TrackPlayers, INVALID_HANDLE, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 	}
 }
 
@@ -682,6 +686,10 @@ public Action cmdWhereAmI(int iClient, int iArgC) {
 		char sCourseName[128];
 		iCourse.GetName(sCourseName, sizeof(sCourseName));
 
+		if (!sCourseName[0]) {
+			FormatEx(sCourseName, sizeof(sCourseName), "Course %d", iCourse.iNumber);
+		}
+
 		char sBuffer[128];
 		if (iJump) {
 			FormatEx(sBuffer, sizeof(sBuffer), "jump %d", iJump.iNumber);
@@ -715,6 +723,10 @@ public Action cmdWhereIs(int iClient, int iArgC) {
 		if (LocatePlayer(iTarget, iCourse, iJump, iControlPoint)) {
 			char sCourseName[128];
 			iCourse.GetName(sCourseName, sizeof(sCourseName));
+
+			if (!sCourseName[0]) {
+				FormatEx(sCourseName, sizeof(sCourseName), "Course %d", iCourse.iNumber);
+			}
 
 			char sBuffer[128];
 			if (iJump) {
@@ -792,6 +804,10 @@ public Action cmdProgress(int iClient, int iArgC) {
 			char sCourseName[128];
 			iCourse.GetName(sCourseName, sizeof(sCourseName));
 
+			if (!sCourseName[0]) {
+				FormatEx(sCourseName, sizeof(sCourseName), "Course %d", iCourse.iNumber);
+			}
+			
 			int iJumpCount = 0;
 			int iJumpsTotal = iCourse.hJumps.Length;
 
