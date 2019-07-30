@@ -79,8 +79,11 @@ public void OnPluginStart() {
 
 	LoadTranslations("common.phrases");
 
+	// Late load
 	for (int i=1; i<=MaxClients; i++) {
-		g_hProgress[i] = new ArrayList(sizeof(HashedCheckpoint));
+		if (IsClientInGame(i)) {
+			g_hProgress[i] = new ArrayList(sizeof(HashedCheckpoint));
+		}
 	}
 
 	g_hTrackerLoadedForward = CreateGlobalForward("OnTrackerLoaded", ET_Ignore, Param_Cell);
@@ -132,11 +135,14 @@ public void OnMapEnd() {
 }
 
 public void OnClientPutInServer(int iClient) {
+	g_hProgress[iClient] = new ArrayList(sizeof(HashedCheckpoint));
+
 	SetupTimer();
 }
 
 public void OnClientDisconnect(int iClient) {
 	ResetClient(iClient);
+	delete g_hProgress[iClient];
 
 	if (!Client_GetCount(true, false)) {
 		delete g_hTimer;
@@ -284,6 +290,10 @@ public int Native_GetPlayerNewestCheckpoint(Handle hPlugin, int iArgC) {
 	int iClient = GetNativeCell(1);
 
 	ArrayList hProgress = g_hProgress[iClient];
+	if (hProgress == null) {
+		return false;
+	}
+
 	int iCheckpoints = hProgress.Length;
 	if (iCheckpoints) {
 		int iLatestTime = hProgress.Get(0, HashedCheckpoint::iTimestamp);
@@ -341,12 +351,16 @@ public int Native_GetPlayerLastCheckpoint(Handle hPlugin, int iArgC) {
 public int Native_GetPlayerProgress(Handle hPlugin, int iArgC) {
 	int iClient = GetNativeCell(1);
 
+	ArrayList hProgress = g_hProgress[iClient];
+	if (hProgress == null) {
+		return 0; // null
+	}
+
 	ArrayList hList = new ArrayList(sizeof(Checkpoint));
 
 	Checkpoint eCheckpoint;
 	HashedCheckpoint eHashedCheckpoint;
 
-	ArrayList hProgress = g_hProgress[iClient];
 	for (int i=0; i<hProgress.Length; i++) {
 		hProgress.GetArray(i, eHashedCheckpoint, sizeof(HashedCheckpoint));
 		FromProgressHash(eHashedCheckpoint.iHash, eCheckpoint.iCourse, eCheckpoint.iJump, eCheckpoint.iControlPoint);
@@ -436,6 +450,10 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 	HashedCheckpoint eHashedCheckpoint;
 
 	for (int i=1; i<=MaxClients; i++) {
+		if (!IsClientInGame(i)) {
+			continue;
+		}
+
 		Course iCourseIter = g_eNearestCheckpoint[i].iCourse;
 		if (iCourseIter) {
 			Jump iJumpIter0 = g_eNearestCheckpoint[i].iJump;
@@ -552,7 +570,9 @@ void ResetClient(int iClient) {
 	g_eLastCheckpoint[iClient].iControlPoint = NULL_CONTROLPOINT;
 	g_eLastCheckpoint[iClient].iTimestamp = 0;
 
-	g_hProgress[iClient].Clear();
+	if (g_hProgress[iClient] != null) {
+		g_hProgress[iClient].Clear();
+	}
 
 	g_fLastTeleport[iClient] = 0.0;
 }
