@@ -3,14 +3,21 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"0.1.0"
+#define PLUGIN_VERSION	"0.2.0"
+
+#include <tf2>
+#include <tf2_stocks>
 
 #include <jse_tracker>
 #include <smlib/clients>
 #include <multicolors>
 
 #define JUMPS_OVERRIDE 			"jse_teleport_jumps"
+#define PLAYERS_OVERRIDE 		"jse_teleport_players"
 #define MULTITARGET_OVERRIDE	"jse_teleport_multitarget"
+
+ConVar g_hCVGotoProgressed;
+ConVar g_hCVGotoPlayerProgressed;
 
 public Plugin myinfo = {
 	name = "Jump Server Essentials - Teleport",
@@ -22,11 +29,15 @@ public Plugin myinfo = {
 
 public void OnPluginStart() {
 	CreateConVar("jse_teleport_version", PLUGIN_VERSION, "Jump Server Essentials teleport version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
+	g_hCVGotoProgressed = CreateConVar("jse_teleport_goto_progressed", "1", "Allow goto teleport to jumps reached by player", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_hCVGotoPlayerProgressed = CreateConVar("jse_teleport_goto_player_progressed", "1", "Allow goto teleport to players on jumps reached by player", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 
-	RegAdminCmd("sm_goto", cmdGoto, ADMFLAG_GENERIC, "Teleport self");
+	RegConsoleCmd("sm_goto", cmdGoto, "Teleport self");
+
 	RegAdminCmd("sm_bring", cmdBring, ADMFLAG_GENERIC, "Teleport player to aim");
 	RegAdminCmd("sm_send", cmdSend, ADMFLAG_GENERIC, "Teleport player");
 
+	LoadTranslations("core.phrases");
 	LoadTranslations("common.phrases");
 }
 
@@ -104,10 +115,25 @@ void GotoJump(int iClient, Course iCourse, Jump iJump, bool bNotify=true) {
 
 	if (bNotify) {
 		if (iCourse.hJumps.Length > 1) {
-			CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have been teleported to {limegreen}%s, Jump %d", sBuffer, iJump.iNumber);
+			CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have been teleported to {limegreen}%s, Jump %d.", sBuffer, iJump.iNumber);
 		} else {
-			CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have been teleported to {limegreen}%s", sBuffer);
+			CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have been teleported to {limegreen}%s.", sBuffer);
 		}
+	}
+}
+
+void GotoControlPoint(int iClient, Course iCourse, bool bNotify=true) {
+	float fOrigin[3];
+	iCourse.iControlPoint.GetOrigin(fOrigin);
+	fOrigin[2] += 10.0;
+
+	TeleportEntity(iClient, fOrigin, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
+
+	char sBuffer[128];
+	GetCourseName(iCourse, sBuffer, sizeof(sBuffer));
+
+	if (bNotify) {
+		CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have been teleported to {limegreen}%s control point.", sBuffer);
 	}
 }
 
@@ -126,6 +152,79 @@ void GetCourseName(Course iCourse, char[] sBuffer, int iLength) {
 			FormatEx(sBuffer, iLength, "Course %d", iCourseNumber);
 		}
 	}
+}
+
+void GetCourseJumpString(char[] sBuffer, int iLength, Course iCourse, Jump iJump) {
+	char sCourseName[128];
+	iCourse.GetName(sCourseName, sizeof(sCourseName));
+
+	if (!sCourseName[0]) {
+		FormatEx(sCourseName, sizeof(sCourseName), "Course %d", iCourse.iNumber);
+	}
+
+	char sJumpName[128];
+	if (iJump) {
+		FormatEx(sJumpName, sizeof(sJumpName), "jump %d", iJump.iNumber);
+	} else {
+		FormatEx(sJumpName, sizeof(sJumpName), "control point");
+	}
+
+	Format(sBuffer, iLength, "%s %s", sCourseName, sJumpName);
+}
+
+bool CheckProgress(int iClient, Jump iJump=NULL_JUMP, ControlPoint iControlPoint=NULL_CONTROLPOINT) {
+	if (!iJump && !iControlPoint) {
+		return false;
+	}
+
+	TFTeam iTeam = view_as<TFTeam>(GetClientTeam(iClient));
+	TFClassType iClass = TF2_GetPlayerClass(iClient);
+
+	ArrayList hProgress = GetPlayerProgress(iClient);
+
+	bool bFound = false;
+	for (int i=0; i<hProgress.Length && !bFound; i++) {
+		Checkpoint eCheckpoint;
+		hProgress.GetArray(i, eCheckpoint, sizeof(Checkpoint));
+
+		bFound = (eCheckpoint.iTeam == iTeam && eCheckpoint.iClass == iClass) && (iJump ? eCheckpoint.iJump == iJump : eCheckpoint.iControlPoint == iControlPoint);
+	}
+
+	delete hProgress;
+
+	return bFound;
+}
+
+bool CheckSafeTeleportTarget(int iClient, int iTarget, bool bNotify=true) {
+	if (!(IsClientInGame(iTarget) && IsPlayerAlive(iTarget))) {
+		if (bNotify) {
+			CPrintToChat(iClient, "{dodgerblue}[jse] {white}%t", "Target must be alive");
+		}
+
+		return false;
+	}
+
+	if (CheckCommandAccess(iClient, "sm_bring", ADMFLAG_GENERIC, true)) {
+		return true;
+	}
+
+	if (GetClientTeam(iTarget) != GetClientTeam(iClient)) {
+		if (bNotify) {
+			CPrintToChat(iClient, "{dodgerblue}[jse] {white}Player team does not match.");
+		}
+
+		return false;
+	}
+
+	if (!CheckCommandAccess(iClient, PLAYERS_OVERRIDE, ADMFLAG_GENERIC) && TF2_GetPlayerClass(iTarget) != TF2_GetPlayerClass(iClient)) {
+		if (bNotify) {
+			CPrintToChat(iClient, "{dodgerblue}[jse] {white}Player class does not match.");
+		}
+		
+		return false;
+	}
+
+	return true;
 }
 
 // Commands
@@ -154,7 +253,7 @@ public Action cmdBring(int iClient, int iArgC) {
 			iClient,
 			iTargetList,
 			MAXPLAYERS,
-			COMMAND_FILTER_NO_IMMUNITY,
+			COMMAND_FILTER_ALIVE,
 			sTargetName,
 			sizeof(sTargetName),
 			bTnIsML)) <= 0) {
@@ -181,7 +280,7 @@ public Action cmdBring(int iClient, int iArgC) {
 	if (bTnIsML) {
 		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported %t to aim.", sTargetName);
 	} else {
-		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported %s to aim", sTargetName);
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported %s to aim.", sTargetName);
 	}
 
 	return Plugin_Handled;
@@ -193,19 +292,54 @@ public Action cmdGoto(int iClient, int iArgC) {
 		return Plugin_Handled;
 	}
 
+	bool bCanTeleToPlayers = CheckCommandAccess(iClient, PLAYERS_OVERRIDE, ADMFLAG_GENERIC);
+	bool bCanTeleToAllJumps = CheckCommandAccess(iClient, JUMPS_OVERRIDE, ADMFLAG_GENERIC);
+
 	switch (iArgC) {
 		case 1: {
 			char sArg1[MAX_NAME_LENGTH];
 			GetCmdArg(1, sArg1, sizeof(sArg1));
 
-			int iTarget = FindTarget(iClient, sArg1, false, true);
+			int iTarget = FindTarget(iClient, sArg1, false, false);
 			if (iTarget != -1) {
-				GotoPlayer(iClient, iTarget);
+				if (!CheckSafeTeleportTarget(iClient, iTarget)) {
+					return Plugin_Handled;		
+				}
+
+				if (!g_hCVGotoPlayerProgressed.BoolValue && !bCanTeleToPlayers) {
+					CReplyToCommand(iClient, "{dodgerblue}[jse] {white}%t", "No Access");
+					return Plugin_Handled;
+				}
+
+				if (bCanTeleToPlayers) {
+					GotoPlayer(iClient, iTarget);
+				} else {
+					Course iCourse;
+					Jump iJump;
+					ControlPoint iControlPoint;
+
+					if (GetPlayerNearestCheckpoint(iTarget, iCourse, iJump, iControlPoint)) {
+						if (CheckProgress(iClient, iJump, iControlPoint)) {
+							if (iJump) {
+								GotoJump(iClient, iCourse, iJump);
+							} else {
+								GotoControlPoint(iClient, iCourse);
+							}
+						} else {
+							char sBuffer[256];
+							GetCourseJumpString(sBuffer, sizeof(sBuffer), iCourse, iJump);
+
+							CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have not been to %N's location before: %s", iTarget, sBuffer);
+						}
+					} else {
+						CPrintToChat(iClient, "{dodgerblue}[jse] {white}%N is not found near any jump.", iTarget);
+					}
+				}
 			}
 		}
 		case 2: {
-			if (!CheckCommandAccess(iClient, JUMPS_OVERRIDE, ADMFLAG_GENERIC)) {
-				ReplyToCommand(iClient, "{dodgerblue}[jse] {white}You do not have permission to teleport to jumps.");
+			if (!g_hCVGotoProgressed.BoolValue && !bCanTeleToAllJumps) {
+				CReplyToCommand(iClient, "{dodgerblue}[jse] {white}%t", "No Access");
 				return Plugin_Handled;
 			}
 
@@ -228,7 +362,16 @@ public Action cmdGoto(int iClient, int iArgC) {
 			if (iCourse) {
 				ArrayList hJumps = iCourse.hJumps;
 				if (1 <= iJumpNumber && iJumpNumber <= hJumps.Length) {
-					GotoJump(iClient, iCourse, hJumps.Get(iJumpNumber-1));
+					Jump iJump = hJumps.Get(iJumpNumber-1);
+
+					if (!bCanTeleToAllJumps) {
+						if (!CheckProgress(iClient, iJump)) {
+							CReplyToCommand(iClient, "{dodgerblue}[jse] {white}You have not yet reached this jump.");
+							return Plugin_Handled;
+						}
+					}
+
+					GotoJump(iClient, iCourse, iJump);
 				} else {
 					CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Cannot find specified jump number.");
 				}
@@ -237,10 +380,17 @@ public Action cmdGoto(int iClient, int iArgC) {
 			}
 		}
 		default: {
-			PrintToConsole(iClient, "[jse] Usage: sm_goto [target]");
+			if (!(g_hCVGotoProgressed.BoolValue || bCanTeleToAllJumps || g_hCVGotoPlayerProgressed.BoolValue || bCanTeleToPlayers)) {
+				CReplyToCommand(iClient, "{dodgerblue}[jse] {white}%t", "No Access");
+				return Plugin_Handled;
+			}
 
-			if (CheckCommandAccess(iClient, JUMPS_OVERRIDE, ADMFLAG_GENERIC)) {
+			if (g_hCVGotoProgressed.BoolValue || bCanTeleToAllJumps) {
 				PrintToConsole(iClient, "[jse] Usage: sm_goto <course #> <jump #>");
+			}
+
+			if (g_hCVGotoPlayerProgressed.BoolValue || bCanTeleToPlayers) {
+				PrintToConsole(iClient, "[jse] Usage: sm_goto [target]");
 			}
 
 			SendMainMenu(iClient, MenuHandler_GotoMain, MenuHandler_GotoPlayer);
@@ -268,7 +418,7 @@ public Action cmdSend(int iClient, int iArgC) {
 					iClient,
 					iTargetList,
 					MAXPLAYERS,
-					COMMAND_FILTER_NO_IMMUNITY,
+					COMMAND_FILTER_ALIVE,
 					sTargetName,
 					sizeof(sTargetName),
 					bTnIsML)) <= 0) {
@@ -293,7 +443,7 @@ public Action cmdSend(int iClient, int iArgC) {
 				if (bTnIsML) {
 					CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported %t to %N.", sTargetName, iTarget);
 				} else {
-					CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported %s to %N", sTargetName, iTarget);
+					CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported %s to %N.", sTargetName, iTarget);
 				}
 			}
 		}
@@ -312,7 +462,7 @@ public Action cmdSend(int iClient, int iArgC) {
 					iClient,
 					iTargetList,
 					MAXPLAYERS,
-					COMMAND_FILTER_NO_IMMUNITY,
+					COMMAND_FILTER_ALIVE,
 					sTargetName,
 					sizeof(sTargetName),
 					bTnIsML)) <= 0) {
@@ -350,9 +500,9 @@ public Action cmdSend(int iClient, int iArgC) {
 					GetCourseName(iCourse, sBuffer, sizeof(sBuffer));
 
 					if (bTnIsML) {
-						CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported %t to {limegreen}%s, Jump %d", sTargetName, sBuffer, iJump.iNumber);
+						CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported %t to {limegreen}%s, Jump %d.", sTargetName, sBuffer, iJump.iNumber);
 					} else {
-						CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported %s to {limegreen}%s, Jump %d", sTargetName, sBuffer, iJump.iNumber);
+						CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported %s to {limegreen}%s, Jump %d.", sTargetName, sBuffer, iJump.iNumber);
 					}
 				} else {
 					CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Cannot find specified jump number.");
@@ -373,8 +523,9 @@ public Action cmdSend(int iClient, int iArgC) {
 // Menus
 
 void SendMainMenu(int iClient, MenuHandler fnMainHandler, MenuHandler fnPlayerHandler) {
-	if (!IsTrackerLoaded() || !CheckCommandAccess(iClient, JUMPS_OVERRIDE, ADMFLAG_GENERIC)) {
+	if (!IsTrackerLoaded()) {
 		SendPlayerMenu(iClient, fnPlayerHandler);
+
 		return;
 	}
 
@@ -404,7 +555,7 @@ void SendPlayerMenu(int iClient, MenuHandler fnHandler, bool bBackButton=true) {
 
 	char sKey[8], sBlock[1+MAX_NAME_LENGTH];
 	for (int i=1; i<=MaxClients; i++) {
-		if (IsClientInGame(i) && i != iClient) {
+		if (i != iClient && CheckSafeTeleportTarget(iClient, i, false)) {
 			GetClientName(i, sBlock, MAX_NAME_LENGTH);
 			sBlock[MAX_NAME_LENGTH] = i & 0xFF;
 			hPlayers.PushArray(view_as<any>(sBlock));
@@ -418,7 +569,7 @@ void SendPlayerMenu(int iClient, MenuHandler fnHandler, bool bBackButton=true) {
 
 		int iTarget = sBlock[MAX_NAME_LENGTH] & 0xFF;
 		IntToString(iTarget, sKey, sizeof(sKey));
-		hMenu.AddItem(sKey, sBlock, CanUserTarget(iClient, iTarget) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
+		hMenu.AddItem(sKey, sBlock);
 	}
 
 	delete hPlayers;
@@ -426,17 +577,41 @@ void SendPlayerMenu(int iClient, MenuHandler fnHandler, bool bBackButton=true) {
 	hMenu.Display(iClient, 0);
 }
 
-void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJumpHandler) {
-	ArrayList hCourses = GetTrackerCourses();
+void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJumpHandler, bool bBackButton=true) {
+	ArrayList hCourses = GetTrackerCourses().Clone();
 
 	if (hCourses.Length == 1) {
 		SendJumpMenu(iClient, fnJumpHandler, hCourses.Get(0));
 		return;
 	}
 
+	if (!CheckCommandAccess(iClient, JUMPS_OVERRIDE, ADMFLAG_GENERIC)) {
+		hCourses.Clear();
+
+		ArrayList hProgress = GetPlayerProgress(iClient);
+		for (int i=0; i<hProgress.Length; i++) {
+			Checkpoint eCheckpoint;
+			hProgress.GetArray(i, eCheckpoint, sizeof(Checkpoint));
+
+			if (hCourses.FindValue(eCheckpoint.iCourse) == -1) {
+				hCourses.Push(eCheckpoint.iCourse);
+			}
+		}
+		delete hProgress;
+
+		if (!hCourses.Length) {
+			CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have not been to any jumps.");
+
+			SendMainMenu(iClient, MenuHandler_GotoMain, MenuHandler_GotoPlayer);
+
+			delete hCourses;
+			return;
+		}
+	}
+
 	Menu hMenu = new Menu(fnCourseHandler);
 	hMenu.SetTitle("Select Course");
-	hMenu.ExitBackButton = true;
+	hMenu.ExitBackButton = bBackButton;
 	hMenu.ExitButton = true;
 
 	ArrayList hBonusCourses = new ArrayList();
@@ -464,6 +639,7 @@ void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJump
 	}
 
 	delete hBonusCourses;
+	delete hCourses;
 
 	hMenu.Display(iClient, 0);
 
@@ -477,14 +653,41 @@ void SendJumpMenu(int iClient, MenuHandler fnHandler, Course iCourse) {
 	hMenu.ExitBackButton = true;
 	hMenu.ExitButton = true;
 
-	char sKey[8], sBuffer[128];
-	for (int i=0; i<hJumps.Length; i++) {
-		Jump iJump = hJumps.Get(i);
-		FormatEx(sBuffer, sizeof(sBuffer), "Jump %d", iJump.iNumber);
+	char sKey[12], sBuffer[128];
 
-		int iKey = view_as<int>(iJump) << 16 | view_as<int>(iCourse);
-		IntToString(iKey, sKey, sizeof(sKey));
-		hMenu.AddItem(sKey, sBuffer);
+	if (CheckCommandAccess(iClient, JUMPS_OVERRIDE, ADMFLAG_GENERIC)) {
+		for (int i=0; i<hJumps.Length; i++) {
+			Jump iJump = hJumps.Get(i);
+			FormatEx(sBuffer, sizeof(sBuffer), "Jump %d", iJump.iNumber);
+
+			int iKey = ((view_as<int>(iJump) & 0xFFFF) << 16) | ((view_as<int>(iCourse) & 0xFFFF));
+			IntToString(iKey, sKey, sizeof(sKey));
+			hMenu.AddItem(sKey, sBuffer);
+		}
+	} else {
+		ArrayList hProgress = GetPlayerProgress(iClient);
+		for (int i=0; i<hProgress.Length; i++) {
+			Checkpoint eCheckpoint;
+			hProgress.GetArray(i, eCheckpoint, sizeof(Checkpoint));
+
+			if (eCheckpoint.iCourse == iCourse) {
+				int iKey;
+
+				if (eCheckpoint.iJump) {
+					FormatEx(sBuffer, sizeof(sBuffer), "Jump %d", eCheckpoint.iJump.iNumber);
+
+					iKey = (view_as<int>(eCheckpoint.iJump) & 0xFFFF) << 16 | (view_as<int>(iCourse) & 0xFFFF);
+				} else {
+					FormatEx(sBuffer, sizeof(sBuffer), "Control Point");
+
+					iKey = view_as<int>(iCourse) & 0xFFFF;
+				}
+
+				IntToString(iKey, sKey, sizeof(sKey));
+				hMenu.AddItem(sKey, sBuffer);
+			}
+		}
+		delete hProgress;
 	}
 
 	hMenu.Display(iClient, 0);
@@ -541,7 +744,38 @@ public int MenuHandler_GotoPlayer(Menu hMenu, MenuAction iAction, int iClient, i
 			char sKey[8];
 			hMenu.GetItem(iOption, sKey, sizeof(sKey));
 
-			GotoPlayer(iClient, StringToInt(sKey));
+			int iTarget = StringToInt(sKey);
+
+			if (CheckSafeTeleportTarget(iClient, iTarget)) {
+				if (CheckCommandAccess(iClient, JUMPS_OVERRIDE, ADMFLAG_GENERIC)) {
+					GotoPlayer(iClient, iTarget);
+				} else {
+					Course iCourse;
+					Jump iJump;
+					ControlPoint iControlPoint;
+
+					if (GetPlayerNearestCheckpoint(iTarget, iCourse, iJump, iControlPoint)) {
+						if (CheckProgress(iClient, iJump, iControlPoint)) {
+							if (iJump) {
+								GotoJump(iClient, iCourse, iJump);
+							} else {
+								GotoControlPoint(iClient, iCourse);
+							}
+						} else {
+							char sBuffer[256];
+							GetCourseJumpString(sBuffer, sizeof(sBuffer), iCourse, iJump);
+
+							CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have not been to %N's location before: %s", iTarget, sBuffer);
+
+							SendPlayerMenu(iClient, MenuHandler_GotoPlayer);
+						}
+					} else {
+						CPrintToChat(iClient, "{dodgerblue}[jse] {white}%N is not found near any jump.", iTarget);
+
+						SendPlayerMenu(iClient, MenuHandler_GotoPlayer);
+					}
+				}
+			}
 		}
 
 		case MenuAction_Cancel: {
@@ -586,13 +820,18 @@ public int MenuHandler_GotoCourse(Menu hMenu, MenuAction iAction, int iClient, i
 public int MenuHandler_GotoJump(Menu hMenu, MenuAction iAction, int iClient, int iOption) {
 	switch (iAction) {
 		case MenuAction_Select: {
-			char sKey[8];
+			char sKey[12];
 			hMenu.GetItem(iOption, sKey, sizeof(sKey));
 
 			int iKey = StringToInt(sKey);
 			Course iCourse = view_as<Course>(iKey & 0xFFFF);
 			Jump iJump = view_as<Jump>((iKey >> 16) & 0xFFFF);
-			GotoJump(iClient, iCourse, iJump);
+
+			if (iJump) {
+				GotoJump(iClient, iCourse, iJump);
+			} else {
+				GotoControlPoint(iClient, iCourse);
+			}
 		}
 
 		case MenuAction_Cancel: {
