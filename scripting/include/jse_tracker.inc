@@ -126,6 +126,8 @@ methodmap Course {
 }
 
 enum struct Checkpoint {
+	TFTeam iTeam;
+	TFClassType iClass;
 	Course iCourse;
 	Jump iJump;
 	ControlPoint iControlPoint;
@@ -146,8 +148,8 @@ native int GetTrackerMapID();
 native ArrayList GetTrackerCourses();
 
 native bool GetPlayerNearestCheckpoint(int iClient, Course &iCourse, Jump &iJump, ControlPoint &iControlPoint, int &iTimestamp=0);
-native bool GetPlayerNewestCheckpoint(int iClient, Course &iCourse, Jump &iJump, ControlPoint &iControlPoint, int &iTimestamp=0);
-native bool GetPlayerLastCheckpoint(int iClient, Course &iCourse, Jump &iJump, ControlPoint &iControlPoint, int &iTimestamp=0);
+native bool GetPlayerNewestCheckpoint(int iClient, Course &iCourse, Jump &iJump, ControlPoint &iControlPoint, int &iTimestamp=0, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown);
+native bool GetPlayerLastCheckpoint(int iClient, Course &iCourse, Jump &iJump, ControlPoint &iControlPoint, int &iTimestamp=0, TFTeam &iTeam, TFClassType &iClass);
 
 native ArrayList GetPlayerProgress(int iClient);
 native void ResetPlayerProgress(int iClient);
