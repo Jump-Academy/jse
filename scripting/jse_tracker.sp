@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.2.0"
+#define PLUGIN_VERSION "0.2.1"
 
 #define API_URL "https://api.jumpacademy.tf/mapinfo_json"
 
@@ -322,7 +322,7 @@ public int Native_GetPlayerNewestCheckpoint(Handle hPlugin, int iArgC) {
 		Course iCourse;
 		Jump iJump;
 		ControlPoint iControlPoint;
-		FromProgressHash(iLatestHash, iCourse, iJump, iControlPoint);
+		FromProgressHash(iLatestHash, iCourse, iJump, iControlPoint, iTeam, iClass);
 
 		SetNativeCellRef(2, iCourse);
 		SetNativeCellRef(3, iJump);
@@ -387,10 +387,10 @@ public int Native_GetPlayerProgress(Handle hPlugin, int iArgC) {
 			continue;
 		}
 
-		eCheckpoint.iTeam = eHashedCheckpoint.iTeam;
-		eCheckpoint.iClass = eHashedCheckpoint.iClass;
+		eCheckpoint.iTeam = iTeam;
+		eCheckpoint.iClass = iClass;
 
-		FromProgressHash(eHashedCheckpoint.iHash, eCheckpoint.iCourse, eCheckpoint.iJump, eCheckpoint.iControlPoint);
+		FromProgressHash(eHashedCheckpoint.iHash, eCheckpoint.iCourse, eCheckpoint.iJump, eCheckpoint.iControlPoint, iTeam, iClass);
 		eCheckpoint.iTimestamp = eHashedCheckpoint.iTimestamp;
 
 		hList.PushArray(eCheckpoint);
@@ -487,6 +487,9 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 			continue;
 		}
 
+		TFTeam iTeam = view_as<TFTeam>(GetClientTeam(i));
+		TFClassType iClass = TF2_GetPlayerClass(i);
+
 		Course iCourseIter = g_eNearestCheckpoint[i].iCourse;
 		if (iCourseIter) {
 			Jump iJumpIter0 = g_eNearestCheckpoint[i].iJump;
@@ -494,26 +497,26 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 			ControlPoint iControlPointIter = g_eNearestCheckpoint[i].iControlPoint;
 
 			if (iTime > g_eLastCheckpoint[i].iTimestamp) {
-				g_eLastCheckpoint[i].iTeam = view_as<TFTeam>(GetClientTeam(i));
-				g_eLastCheckpoint[i].iClass = TF2_GetPlayerClass(i);
+				g_eLastCheckpoint[i].iTeam = iTeam;
+				g_eLastCheckpoint[i].iClass = iClass;
 				g_eLastCheckpoint[i].iCourse = iCourseIter;
 				g_eLastCheckpoint[i].iJump = iJumpIter0;
 				g_eLastCheckpoint[i].iControlPoint = iControlPointIter;
 				g_eLastCheckpoint[i].iTimestamp = iTime;
 			}
 
-			int iProgress0 = ToProgressHash(iCourseIter, iJumpIter0, g_eNearestCheckpoint[i].iControlPoint);
+			int iProgress0 = ToProgressHash(iCourseIter, iJumpIter0, g_eNearestCheckpoint[i].iControlPoint, iTeam, iClass);
 			if (g_hProgress[i].FindValue(iProgress0, HashedCheckpoint::iHash) == -1) {
 				if (iControlPointIter) {
 					ArrayList hJumps = iCourseIter.hJumps;
 					for (int j=0; j<hJumps.Length; j++) {
 						Jump iJumpIter = hJumps.Get(j);
 
-						int iProgress = ToProgressHash(iCourseIter, iJumpIter, NULL_CONTROLPOINT);
+						int iProgress = ToProgressHash(iCourseIter, iJumpIter, NULL_CONTROLPOINT, iTeam, iClass);
 						if (g_hProgress[i].FindValue(iProgress, HashedCheckpoint::iHash) == -1) {
 							eHashedCheckpoint.iHash = iProgress;
-							eHashedCheckpoint.iTeam = view_as<TFTeam>(GetClientTeam(i));
-							eHashedCheckpoint.iClass = TF2_GetPlayerClass(i);
+							eHashedCheckpoint.iTeam = iTeam;
+							eHashedCheckpoint.iClass = iClass;
 							eHashedCheckpoint.iTimestamp = GetTime();
 							g_hProgress[i].PushArray(eHashedCheckpoint);
 
@@ -536,11 +539,11 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 							break;
 						}
 
-						int iProgress = ToProgressHash(iCourseIter, iJumpIter, NULL_CONTROLPOINT);
+						int iProgress = ToProgressHash(iCourseIter, iJumpIter, NULL_CONTROLPOINT, iTeam, iClass);
 						if (g_hProgress[i].FindValue(iProgress, HashedCheckpoint::iHash) == -1) {
 							eHashedCheckpoint.iHash = iProgress;
-							eHashedCheckpoint.iTeam = view_as<TFTeam>(GetClientTeam(i));
-							eHashedCheckpoint.iClass = TF2_GetPlayerClass(i);
+							eHashedCheckpoint.iTeam = iTeam;
+							eHashedCheckpoint.iClass = iClass;
 							eHashedCheckpoint.iTimestamp = GetTime();
 							g_hProgress[i].PushArray(eHashedCheckpoint);
 
@@ -559,8 +562,8 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 
 				if (GetEntityFlags(i) & FL_ONGROUND) {
 					eHashedCheckpoint.iHash = iProgress0;
-					eHashedCheckpoint.iTeam = view_as<TFTeam>(GetClientTeam(i));
-					eHashedCheckpoint.iClass = TF2_GetPlayerClass(i);
+					eHashedCheckpoint.iTeam = iTeam;
+					eHashedCheckpoint.iClass = iClass;
 					eHashedCheckpoint.iTimestamp = GetTime();
 					g_hProgress[i].PushArray(eHashedCheckpoint);
 
@@ -575,7 +578,6 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 				}
 			}
 		}
-		
 	}
 	
 	return Plugin_Continue;
@@ -689,22 +691,48 @@ void SetupTimer() {
 	}
 }
 
-int ToProgressHash(Course iCourse, Jump iJump, ControlPoint iControlPoint) {
-	int iCourseNumber = iCourse.iNumber & 0xFF;
-	int iJumpNumber = iJump ? iJump.iNumber & 0xFF : 0;
-	int iCapped = view_as<int>(iControlPoint != NULL_CONTROLPOINT) & 0xFF;
+/*
+	Progress hash 32-bit map
 
-	return (iCourseNumber << 24) | (iCapped << 16) | (iJumpNumber << 8);
+	lo                                   hi
+	1111 1111 1111 1111 1111 1111 1111 1111
+	rrrr mmss sppp aaaa ttjj jjjj jjcc cccc
+
+	info      * bits  range
+    -----------------------
+	course    c  6     64
+	jump      j  8     256
+
+	team      t  2     4
+	class     a  4     16
+
+	primary   p  3     8
+	secondary s  3     8
+	melee     m  2     4
+
+	reserved  r  4     16
+*/
+
+int ToProgressHash(Course iCourse, Jump iJump, ControlPoint iControlPoint, TFTeam iTeam, TFClassType iClass, int iPrimary=0, int iSecondary=0, int iMelee=0) {
+	int iCourseNumber = iCourse.iNumber & 0xFF;
+	int iJumpNumber = iControlPoint ? 0 : iJump.iNumber & 0xFF;
+	
+	return (iCourseNumber << 26) | (iJumpNumber << 18) | (view_as<int>(iTeam) << 16) | (view_as<int>(iClass) << 12) | (iPrimary << 9) | (iSecondary << 6) | (iMelee << 4);
 }
 
-bool FromProgressHash(int iProgressHash, Course &iCourse, Jump &iJump, ControlPoint &iControlPoint) {
-	int iCourseNumber 	=  (iProgressHash >> 24) & 0xFF;
-	bool bCapped 		= ((iProgressHash >>  16) & 0xFF) != 0;
-	int iJumpNumber 	=  (iProgressHash >>  8) & 0xFF;
+bool FromProgressHash(int iProgressHash, Course &iCourse, Jump &iJump, ControlPoint &iControlPoint, TFTeam &iTeam, TFClassType &iClass, int &iPrimary=0, int &iSecondary=0, int &iMelee=0) {
+	int iCourseNumber 	= (iProgressHash >>> 26);
+	int iJumpNumber 	= (iProgressHash >>> 18) & 0x3F;
 
-	// Restore unsigned to signed (short)
-	if (iCourseNumber > 127) {
-		iCourseNumber = iCourseNumber-256;
+	iTeam 			= view_as<TFTeam>(     (iProgressHash >>> 16) & 0x3);
+	iClass			= view_as<TFClassType>((iProgressHash >>> 12) & 0xF);
+	iPrimary		= (iProgressHash >>> 9) & 0x7;
+	iSecondary		= (iProgressHash >>> 6) & 0x7;
+	iMelee			= (iProgressHash >>> 4) & 0x3;
+
+	// Restore unsigned to signed
+	if (iCourseNumber > 31) {
+		iCourseNumber = iCourseNumber-64;
 	}
 
 	iCourse = NULL_COURSE;
@@ -723,10 +751,10 @@ bool FromProgressHash(int iProgressHash, Course &iCourse, Jump &iJump, ControlPo
 		return false;
 	}
 
-	if (bCapped) {
-		iControlPoint = iCourse.iControlPoint;
-	} else {
+	if (iJumpNumber) {
 		iJump = iCourse.hJumps.Get(iJumpNumber-1);
+	} else {
+		iControlPoint = iCourse.iControlPoint;
 	}
 
 	return true;
@@ -867,7 +895,7 @@ public Action cmdProgress(int iClient, int iArgC) {
 		}
 
 		ArrayList hProgress = g_hProgress[iTarget];
-		
+
 		HashedCheckpoint eHashedCheckpoint;
 
 		int iLineCount = 1;
@@ -895,7 +923,7 @@ public Action cmdProgress(int iClient, int iArgC) {
 				Jump iJumpItr;
 				ControlPoint iControlPointItr;
 
-				FromProgressHash(eHashedCheckpoint.iHash, iCourseItr, iJumpItr, iControlPointItr);
+				FromProgressHash(eHashedCheckpoint.iHash, iCourseItr, iJumpItr, iControlPointItr, iTeam, iClass);
 
 				if (iCourse == iCourseItr) {
 					if (iControlPointItr) {
