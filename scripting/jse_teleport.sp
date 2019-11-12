@@ -653,6 +653,8 @@ void SendJumpMenu(int iClient, MenuHandler fnHandler, Course iCourse) {
 	hMenu.ExitBackButton = true;
 	hMenu.ExitButton = true;
 
+	bool bCompleted = false;
+
 	char sKey[12], sBuffer[128];
 
 	if (CheckCommandAccess(iClient, JUMPS_OVERRIDE, ADMFLAG_GENERIC)) {
@@ -664,8 +666,10 @@ void SendJumpMenu(int iClient, MenuHandler fnHandler, Course iCourse) {
 			IntToString(iKey, sKey, sizeof(sKey));
 			hMenu.AddItem(sKey, sBuffer);
 		}
+
+		bCompleted = true;
 	} else {
-		bool bCompleted = false;
+		
 
 		ArrayList hProgress = GetPlayerProgress(iClient);
 		for (int i=0; i<hProgress.Length; i++) {
@@ -689,14 +693,14 @@ void SendJumpMenu(int iClient, MenuHandler fnHandler, Course iCourse) {
 			}
 		}
 		delete hProgress;
+	}
 
-		if (bCompleted) {
-			FormatEx(sBuffer, sizeof(sBuffer), "Control Point");
-			int iKey = view_as<int>(iCourse) & 0xFFFF;
+	if (bCompleted) {
+		FormatEx(sBuffer, sizeof(sBuffer), "Control Point");
+		int iKey = view_as<int>(iCourse) & 0xFFFF;
 
-			IntToString(iKey, sKey, sizeof(sKey));
-			hMenu.AddItem(sKey, sBuffer);
-		}
+		IntToString(iKey, sKey, sizeof(sKey));
+		hMenu.AddItem(sKey, sBuffer);
 	}
 
 	hMenu.Display(iClient, 0);
