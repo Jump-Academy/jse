@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"0.2.0"
+#define PLUGIN_VERSION	"0.2.1"
 
 #include <tf2>
 #include <tf2_stocks>
@@ -665,6 +665,8 @@ void SendJumpMenu(int iClient, MenuHandler fnHandler, Course iCourse) {
 			hMenu.AddItem(sKey, sBuffer);
 		}
 	} else {
+		bool bCompleted = false;
+
 		ArrayList hProgress = GetPlayerProgress(iClient);
 		for (int i=0; i<hProgress.Length; i++) {
 			Checkpoint eCheckpoint;
@@ -678,9 +680,8 @@ void SendJumpMenu(int iClient, MenuHandler fnHandler, Course iCourse) {
 
 					iKey = (view_as<int>(eCheckpoint.iJump) & 0xFFFF) << 16 | (view_as<int>(iCourse) & 0xFFFF);
 				} else {
-					FormatEx(sBuffer, sizeof(sBuffer), "Control Point");
-
-					iKey = view_as<int>(iCourse) & 0xFFFF;
+					bCompleted = true;
+					continue;
 				}
 
 				IntToString(iKey, sKey, sizeof(sKey));
@@ -688,6 +689,14 @@ void SendJumpMenu(int iClient, MenuHandler fnHandler, Course iCourse) {
 			}
 		}
 		delete hProgress;
+
+		if (bCompleted) {
+			FormatEx(sBuffer, sizeof(sBuffer), "Control Point");
+			int iKey = view_as<int>(iCourse) & 0xFFFF;
+
+			IntToString(iKey, sKey, sizeof(sKey));
+			hMenu.AddItem(sKey, sBuffer);
+		}
 	}
 
 	hMenu.Display(iClient, 0);
