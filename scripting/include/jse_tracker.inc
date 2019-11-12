@@ -3,6 +3,8 @@
 #endif
 #define _JSE_TRACKER_included
 
+#include <tf2>
+
 public SharedPlugin __pl_jse_tracker = 
 {
 	name = "jse_tracker",
