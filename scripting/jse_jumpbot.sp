@@ -4695,6 +4695,10 @@ void setRobotModel(int iClient) {
 	char sClassName[10];
 	
 	TFClassType iClass = TF2_GetPlayerClass(iClient);
+	if (!iClass) {
+		return;
+	}
+	
 	if (iClass == TFClass_DemoMan) {
 		strcopy(sClassName, sizeof(sClassName), "demo"); // MvM model uses demo for short
 	} else {
