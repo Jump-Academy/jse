@@ -93,6 +93,7 @@
 #include <clientprefs>
 
 #include <autoexecconfig>
+#include <botcontroller>
 #include <multicolors>
 #include <sha1>
 #include <smlib/arrays>
@@ -100,15 +101,13 @@
 #include <tf2attributes>
 #include <tf2items>
 #include <socket>
+
 #include <jse_jumpbot>
 
 #undef REQUIRE_PLUGIN
 #include <updater>
 #include <jse_core>
 #include <jse_showkeys>
-
-#undef REQUIRE_EXTENSIONS
-#include <botcontroller>
 
 #pragma newdecls required
 
@@ -166,7 +165,6 @@ Handle g_hCookieInteract;
 Handle g_hCookieSpeed;
 Handle g_hCookiePerspective;
 
-bool g_bBCExtension;
 bool g_bSocketExtension;
 
 int g_iClientInstruction;
@@ -463,15 +461,12 @@ public void OnLibraryAdded(const char[] sName) {
 		g_bShowKeysAvailable = true;
 	} else if (StrEqual(sName, "updater")) {
 		Updater_AddPlugin(UPDATE_URL);
-	} else if (StrEqual(sName, "botcontroller")) {
-		g_bBCExtension = true;
 	} else if (StrEqual(sName, "socket.ext")) {
 		g_bSocketExtension = true;
 	}
 }
 
 public void OnAllPluginsLoaded() {
-	g_bBCExtension = LibraryExists("botcontroller");
 	g_bSocketExtension = GetExtensionFileStatus("socket.ext") == 1;
 }
 
@@ -1316,36 +1311,6 @@ public void OnClientPostAdminCheck(int iClient) {
 	
 	if (!IsFakeClient(iClient) && !g_hRecordingBots.Length) {
 		CreateTimer(1.0, Timer_SetupBot, 0, TIMER_FLAG_NO_MAPCHANGE);
-		return;
-	}
-	
-	if (IsFakeClient(iClient) && !IsClientSourceTV(iClient) && !IsClientReplay(iClient)) {
-		bool bChecked = false;
-		if (g_bBCExtension && !g_hRecordingBots.Length) {
-			bChecked = true;
-		} else {
-			char sName[MAX_NAME_LENGTH];
-			char sBotName[MAX_NAME_LENGTH];
-			g_hBotName.GetString(sBotName, sizeof(sBotName));
-			GetClientName(iClient, sName, sizeof(sName));
-			
-			bChecked = StrContains(sName, sBotName) == 0;
-		}
-
-		if (bChecked) {
-			setupBotImmunity(iClient);
-
-			any aArr[RecBot_Size];
-			aArr[RecBot_iEnt] = iClient;
-			aArr[RecBot_hEquip] = new DataPack();
-			g_hRecordingBots.PushArray(aArr);
-
-			#if defined DEBUG
-			PrintToServer("%N added go RecBots list, len=%d", iClient, g_hRecordingBots.Length);
-			#endif
-
-			CreateTimer(5.0, Timer_BotJoinExecute, iClient, TIMER_FLAG_NO_MAPCHANGE);
-		}			
 	}
 }
 
@@ -3225,15 +3190,24 @@ public Action Timer_SetupBot(Handle hTimer) {
 	char sBotName[MAX_NAME_LENGTH];
 	g_hBotName.GetString(sBotName, sizeof(sBotName));
 	
-	if (g_bBCExtension) {
-		int iRecBot = BotController_CreateBot(sBotName);
+	int iRecBot = BotController_CreateBot(sBotName);
 
-		if (!Client_IsValid(iRecBot)) {
-			SetFailState("%t", "Cannot Create Bot");
-		}
-	} else {
-		ServerCommand("sv_cheats 1; bot -name \"%s\" -class soldier; sv_cheats 0", sBotName);
+	if (!Client_IsValid(iRecBot)) {
+		SetFailState("%t", "Cannot Create Bot");
 	}
+
+	setupBotImmunity(iRecBot);
+
+	any aArr[RecBot_Size];
+	aArr[RecBot_iEnt] = iRecBot;
+	aArr[RecBot_hEquip] = new DataPack();
+	g_hRecordingBots.PushArray(aArr);
+
+	#if defined DEBUG
+	PrintToServer("%N added go RecBots list, len=%d", iRecBot, g_hRecordingBots.Length);
+	#endif
+
+	CreateTimer(5.0, Timer_BotJoinExecute, iRecBot, TIMER_FLAG_NO_MAPCHANGE);
 	
 	if (g_hQueueTimer == null) {
 		g_hQueueTimer = CreateTimer(1.0, Timer_Queue, 0, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
@@ -3653,17 +3627,6 @@ void clearRecEntities() {
 		}
 	}
 	g_hRecordingEntities.Clear();
-}
-
-void CPrintToChatList(ArrayList hClients, const char[] sMessage, any ...) {
-	char sBuffer[MAX_MESSAGE_LENGTH];
-	VFormat(sBuffer, sizeof(sBuffer), sMessage, 3);
-
-	for (int i=0; i<hClients.Length; i++) {
-		int iClient = hClients.Get(i);
-
-		CPrintToChat(iClient, sBuffer);
-	}
 }
 
 void doPlayerQueueAdd(int iClient, Recording iRecording, Obs_Mode iMode) {
