@@ -28,8 +28,9 @@ void fetchRecording(Recording iRecording, bool bPrefetchOnly = false) {
 	
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), CACHE_FOLDER);
-	if(!DirExists(sPath))
+	if (!DirExists(sPath)) {
 		CreateDirectory(sPath, 509);
+	}
 	
 	File hFile = OpenFile(sFilePath, "wb");
 	if (hFile == null) {
@@ -73,8 +74,9 @@ void fetchRepository() {
 	
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), CACHE_FOLDER);
-	if(!DirExists(sPath))
+	if (!DirExists(sPath)) {
 		CreateDirectory(sPath, 509);
+	}
 	
 	BuildPath(Path_SM, sPath, sizeof(sPath), "%s/%s", CACHE_FOLDER, INDEX_FILE_NAME);
 	File hFile = OpenFile(sPath, "w");
@@ -153,7 +155,7 @@ public int OnSocketError(Handle hSocket, const int iErrorType, const int iErrorN
 		}
 	}
 	
-	if(g_hDebug.BoolValue && Client_IsValid(g_iClientOfInterest) && IsClientInGame(g_iClientOfInterest)) {
+	if (g_hDebug.BoolValue && Client_IsValid(g_iClientOfInterest) && IsClientInGame(g_iClientOfInterest)) {
 		CPrintToChat(g_iClientOfInterest, "{dodgerblue}[jb] {white}%t", "Download Fail");
 	}
 	

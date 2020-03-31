@@ -422,9 +422,9 @@ public void OnPluginStart() {
 	
 	char sFilePath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sFilePath, sizeof(sFilePath), "gamedata/jse.regen.txt");
-	if(FileExists(sFilePath)) {
+	if (FileExists(sFilePath)) {
 		Handle hGameConf = LoadGameConfigFile("jse.regen");
-		if(hGameConf != INVALID_HANDLE ) {
+		if (hGameConf != INVALID_HANDLE ) {
 			StartPrepSDKCall(SDKCall_Entity);
 			PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CTFWeaponBase::GetMaxClip1");
 			PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_ByValue);
@@ -847,8 +847,8 @@ public void OnGameFrame() {
 				if (g_iRecording.Repo && !FileExists(sFilePath)) {
 					g_iClientInstruction = INST_NOP | INST_PLAYALL;
 					fetchRecording(g_iRecording);
-				} else if(!LoadFrames(g_iRecording)) {
-					if(g_hDebug.BoolValue)
+				} else if (!LoadFrames(g_iRecording)) {
+					if (g_hDebug.BoolValue)
 						CPrintToChatAll("{dodgerblue}[jb] \0x1%t", "Cannot File Read");
 					g_iRecBufferIdx = 0;
 					g_iRecording = NULL_RECORDING;
@@ -898,7 +898,7 @@ public void OnGameFrame() {
 				doFullStop();
 				findTargetFollow();
 
-				if(g_hDebug.BoolValue) {
+				if (g_hDebug.BoolValue) {
 					CPrintToChatAll("{dodgerblue}[jb] {white}%t", "Playback Stop");
 				}
 			}
@@ -1779,7 +1779,7 @@ public Action cmdSave(int iClient, int iArgC) {
 	
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), g_sRecSubDir);
-	if(!DirExists(sPath)) {
+	if (!DirExists(sPath)) {
 		CreateDirectory(sPath, 509);
 	}
 	
@@ -1843,7 +1843,7 @@ public Action cmdStateSave(int iClient, int iArgC) {
 	char sPath[PLATFORM_MAX_PATH];
 	char sPathTemp[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), g_sRecSubDir);
-	if(!DirExists(sPath))
+	if (!DirExists(sPath))
 		CreateDirectory(sPath, 509);
 	
 	char sFileName[32];
@@ -2171,7 +2171,7 @@ public Action cmdDelete(int iClient, int iArgC) {
 		
 		char sFilePathTrash[PLATFORM_MAX_PATH];
 		BuildPath(Path_SM, sFilePathTrash, sizeof(sFilePathTrash), TRASH_FOLDER);
-		if(!DirExists(sFilePathTrash)) {
+		if (!DirExists(sFilePathTrash)) {
 			CreateDirectory(sFilePathTrash, 509); // Octal 775
 		}
 		
@@ -2956,8 +2956,9 @@ public Action cmdUpgrade(int iClient, int iArgC) {
 	
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), CACHE_FOLDER);
-	if(!DirExists(sPath))
+	if (!DirExists(sPath)) {
 		CreateDirectory(sPath, 509);
+	}
 	
 	BuildPath(Path_SM, sPath, sizeof(sPath), "%s/hashes.txt", CACHE_FOLDER);
 	
@@ -4359,7 +4360,7 @@ ArrayList GetSaveStates() {
 
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), g_sRecSubDir);
-	if(!DirExists(sPath)) {
+	if (!DirExists(sPath)) {
 		CreateDirectory(sPath, 509);
 	}
 
@@ -4485,8 +4486,7 @@ void ResetBubbleRotation(Recording iRecording) {
 
 bool SaveFile(char[] sFilePath) {
 	File hFile = OpenFile(sFilePath, "wb");
-	if(hFile == null)
-	{
+	if (hFile == null) {
 		//CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t: %s", "Cannot File Write", sPath);
 		return false;
 	}
