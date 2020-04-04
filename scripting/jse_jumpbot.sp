@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"1.0.0-rc1"
+#define PLUGIN_VERSION	"1.0.0-rc2"
 
 #define UPDATE_URL		"http://jumpacademy.tf/plugins/jse/jumpbot/updatefile.txt"
 #define API_HOST		"api.jumpacademy.tf"
@@ -402,7 +402,7 @@ public void OnPluginStart() {
 	
 	// For manual late plugin load
 	if (GetGameTime() > 5.0 && GetClientCount() > 0) {
-		CreateTimer(0.0, Timer_SetupBot, 0, TIMER_FLAG_NO_MAPCHANGE);
+		SetupBot();
 		
 		for (int i = 1; i <= MaxClients; i++) {
 			if (IsClientInGame(i) && !IsFakeClient(i) && AreClientCookiesCached(i)) {
@@ -1310,11 +1310,13 @@ public void OnClientPostAdminCheck(int iClient) {
 	g_aSpawnFreeze[iClient][0] = 0;
 	
 	if (!IsFakeClient(iClient) && !g_hRecordingBots.Length) {
-		CreateTimer(1.0, Timer_SetupBot, 0, TIMER_FLAG_NO_MAPCHANGE);
+		SetupBot();
 	}
 }
 
 public void OnClientDisconnect(int iClient) {
+	doPlayerQueueRemove(iClient);
+
 	int iID = g_hRecordingClients.FindValue(iClient);
 	if (iID != -1) {
 		g_hRecordingClients.Erase(iID);
@@ -1334,31 +1336,18 @@ public void OnClientDisconnect(int iClient) {
 		g_iTargetFollow = -1;
 	}
 	
-	if (IsFakeClient(iClient)) {
-		iID = g_hRecordingBots.FindValue(iClient, RecBot_iEnt);
-		if (iID != -1) {
-			clearRecBotData(iID);
-			doFullStop();
-		}
-	}
-	
-	int iQueueIdx = g_hQueue.FindValue(iClient);
-	if (iQueueIdx != -1) {
-		g_hQueue.Erase(iQueueIdx);
-	}
-	doPlayerQueueRemove(iClient);
-	
 	int iPlayerCount = Client_GetCount(true, false);
 
-	int iBotID = g_hRecordingBots.FindValue(iClient, RecBot_iEnt);
-	if (iBotID != -1) {
-		doFullStop();
-		clearRecBotData(iBotID);
-	
-		if (!g_bShuttingDown && iPlayerCount) {
-			CreateTimer(0.0, Timer_SetupBot, 0, TIMER_FLAG_NO_MAPCHANGE);
+	if (IsFakeClient(iClient)) {
+		if ((iID = g_hRecordingBots.FindValue(iClient, RecBot_iEnt)) != -1) {
+			clearRecBotData(iID);
+			doFullStop();
+			
+			if (!g_bShuttingDown && iPlayerCount) {
+				SetupBot();
+			}
 		}
-	} else if (iPlayerCount == 0 && g_hVacate.BoolValue && g_hRecordingBots.Length) {
+	} else if (!iPlayerCount && g_hVacate.BoolValue) {
 		doFullStop();
 
 		for (int i=0; i<g_hRecordingBots.Length; i++) {
@@ -1374,7 +1363,7 @@ public void OnClientDisconnect(int iClient) {
 public void OnRebuildAdminCache(AdminCachePart iPart) {
 	for (int i=0; i<g_hRecordingBots.Length; i++) {
 		int iClient = g_hRecordingBots.Get(i, RecBot_iEnt);
-		setupBotImmunity(iClient);
+		SetupBotImmunity(iClient);
 	}
 }
 
@@ -2575,13 +2564,6 @@ public Action cmdShowMe(int iClient, int iArgC) {
 		return Plugin_Handled;
 	}
 	
-	if (!g_hRecordingBots.Length) {
-		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Setting Up");
-		Timer_SetupBot(INVALID_HANDLE);
-		
-		return Plugin_Handled;
-	}
-	
 	if (view_as<TFTeam>(GetClientTeam(iClient)) > TFTeam_Spectator && !(GetEntityFlags(iClient) & FL_ONGROUND)) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Cannot Call Air");
 		return Plugin_Handled;
@@ -3174,43 +3156,6 @@ public Action Timer_DoVoiceGo(Handle hTimer, any aData) {
 		
 		int iRandom = GetRandomInt(0, sizeof(sVoice)-1);
 		FakeClientCommand(aData, "voicemenu %s", sVoice[iRandom]);
-	}
-	
-	return Plugin_Handled;
-}
-
-public Action Timer_SetupBot(Handle hTimer) {
-	// TODO: Multiple bot setup/spawn
-	if (g_hRecordingBots.Length || g_bShuttingDown) {
-		return Plugin_Handled;
-	}
-	
-	doFullStop();
-	
-	char sBotName[MAX_NAME_LENGTH];
-	g_hBotName.GetString(sBotName, sizeof(sBotName));
-	
-	int iRecBot = BotController_CreateBot(sBotName);
-
-	if (!Client_IsValid(iRecBot)) {
-		SetFailState("%t", "Cannot Create Bot");
-	}
-
-	setupBotImmunity(iRecBot);
-
-	any aArr[RecBot_Size];
-	aArr[RecBot_iEnt] = iRecBot;
-	aArr[RecBot_hEquip] = new DataPack();
-	g_hRecordingBots.PushArray(aArr);
-
-	#if defined DEBUG
-	PrintToServer("%N added go RecBots list, len=%d", iRecBot, g_hRecordingBots.Length);
-	#endif
-
-	CreateTimer(5.0, Timer_BotJoinExecute, iRecBot, TIMER_FLAG_NO_MAPCHANGE);
-	
-	if (g_hQueueTimer == null) {
-		g_hQueueTimer = CreateTimer(1.0, Timer_Queue, 0, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 	}
 	
 	return Plugin_Handled;
@@ -4674,7 +4619,39 @@ void setRobotModel(int iClient) {
 	SetEntProp(iClient, Prop_Send, "m_bUseClassAnimations", 1);
 }
 
-void setupBotImmunity(int iClient) {
+void SetupBot() {
+	// TODO: Multiple bot setup/spawn
+	if (g_hRecordingBots.Length || g_bShuttingDown) {
+		PrintToServer("SetupBot: Already had %d bots", g_hRecordingBots.Length);
+		return;
+	}
+	
+	doFullStop();
+	
+	char sBotName[MAX_NAME_LENGTH];
+	g_hBotName.GetString(sBotName, sizeof(sBotName));
+	
+	int iRecBot = BotController_CreateBot(sBotName);
+
+	if (!Client_IsValid(iRecBot)) {
+		SetFailState("%t", "Cannot Create Bot");
+	}
+
+	SetupBotImmunity(iRecBot);
+
+	any aArr[RecBot_Size];
+	aArr[RecBot_iEnt] = iRecBot;
+	aArr[RecBot_hEquip] = new DataPack();
+	g_hRecordingBots.PushArray(aArr);
+
+	CreateTimer(5.0, Timer_BotJoinExecute, iRecBot, TIMER_FLAG_NO_MAPCHANGE);
+	
+	if (g_hQueueTimer == null) {
+		g_hQueueTimer = CreateTimer(1.0, Timer_Queue, 0, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+	}
+}
+
+void SetupBotImmunity(int iClient) {
 	AdminId iAdmin = CreateAdmin("Bot");
 	SetAdminFlag(iAdmin, Admin_Reservation, true);
 	SetAdminImmunityLevel(iAdmin, 90);
@@ -5248,7 +5225,7 @@ void RespawnFrameRecEnt(int iFrame) {
 
 bool PrepareBots(Recording iRecording) {
 	if (!g_hRecordingBots.Length) {
-		Timer_SetupBot(INVALID_HANDLE);
+		SetupBot();
 		return false;
 	}
 
