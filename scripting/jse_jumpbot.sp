@@ -108,6 +108,7 @@
 #include <updater>
 #include <jse_core>
 #include <jse_showkeys>
+#include <jse_snapshot>
 
 #pragma newdecls required
 
@@ -142,6 +143,7 @@ ConVar g_hBotCallSign;
 ConVar g_hBotCallSignShort;
 ConVar g_hBotOptionsShort;
 ConVar g_hBotCallKey;
+ConVar g_hBotCallCooldown;
 
 ConVar g_hBotMaxError;
 ConVar g_hShowMeDefault;
@@ -225,6 +227,9 @@ int g_iLastBubbleTime[MAXPLAYERS+1][Bubble_Size];
 int g_iCallKeyMask;
 char g_sCallKeyLabel[16];
 
+int g_iLastCaller;
+int g_iLastCallTime;
+
 bool g_bCoreAvailable;
 bool g_bShowKeysAvailable;
 
@@ -246,7 +251,7 @@ int g_iPerspective[MAXPLAYERS + 1] = {1, ...};
 
 Handle g_hSDKGetMaxClip1;
 
-Handle g_hClientRestoreForward;
+GlobalForward g_hClientRestoreForward;
 
 public Plugin myinfo = {
 	name = "Jump Server Essentials - JumpBot",
@@ -281,6 +286,7 @@ public void OnPluginStart() {
 	g_hBotCallSignShort		= AutoExecConfig_CreateConVar("jse_jb_callsign_short", 	"jb", 				"JumpBOT short call sign, showme alternative", 											FCVAR_NONE												);
 	g_hBotOptionsShort		= AutoExecConfig_CreateConVar("jse_jb_options_short", 	"jbo", 				"JumpBOT short options, jb_options alternative", 										FCVAR_NONE												);
 	g_hBotCallKey 			= AutoExecConfig_CreateConVar("jse_jb_callkey", 		"3", 				"JumpBOT call key (0:disable, 1:+reload, 2:+attack2, 3:+attack3 (default), 4:+use)", 	FCVAR_NONE, 						true, 0.0, true, 4.0);
+	g_hBotCallCooldown		= AutoExecConfig_CreateConVar("jse_jb_call_cooldown", 	"5", 				"JumpBOT call cooldown from the same player (seconds)", 								FCVAR_NONE, 						true, 0.0			);
 	
 	g_hBotMaxError 			= AutoExecConfig_CreateConVar("jse_jb_maxerr", 			"50.0", 			"Bot max interpolation error before teleport correction", 								FCVAR_NONE, 						true, 0.0, false	);
 	g_hShowMeDefault 		= AutoExecConfig_CreateConVar("jse_jb_showme_default", 	"1", 				"Showme perspective default (0:none, 1:fp, 3:tp)", 										FCVAR_NONE, 						true, 0.0, true, 3.0);
@@ -394,7 +400,7 @@ public void OnPluginStart() {
 	LoadTranslations("common.phrases");
 	LoadTranslations("jse_jumpbot.phrases");
 	
-	g_hClientRestoreForward = CreateGlobalForward("OnPostPlaybackClientRestore", ET_Ignore, Param_Cell);
+	g_hClientRestoreForward = new GlobalForward("OnPostPlaybackClientRestore", ET_Ignore, Param_Cell);
 
 	if (LibraryExists("updater")) {
 		Updater_AddPlugin(UPDATE_URL);
@@ -574,6 +580,8 @@ public void OnMapStart() {
 	g_iClientOfInterest = -1;
 	g_iClientFollow = -1;
 	g_iTargetFollow = -1;
+	g_iLastCaller = -1;
+	g_iLastCallTime = 0;
 
 	g_hRecBuffer.Clear();
 	g_iRecBufferIdx = 0;
@@ -1320,6 +1328,11 @@ public void OnClientDisconnect(int iClient) {
 	int iID = g_hRecordingClients.FindValue(iClient);
 	if (iID != -1) {
 		g_hRecordingClients.Erase(iID);
+	}
+
+	if (iClient == g_iLastCaller) {
+		g_iLastCaller = -1;
+		g_iLastCallTime = 0;
 	}
 
 	if (iClient == g_iClientOfInterest) {
@@ -2556,7 +2569,7 @@ public Action cmdShowMe(int iClient, int iArgC) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "No Access");
 		return Plugin_Handled;
 	}
-	
+
 	if (g_iClientInstruction & INST_RECD) {
 		char sUserName[32];
 		GetClientName(g_iClientOfInterest, sUserName, sizeof(sUserName));
@@ -2574,6 +2587,10 @@ public Action cmdShowMe(int iClient, int iArgC) {
 	}
 	
 	if (g_iClientOfInterest == iClient) {
+		return Plugin_Handled;
+	}
+	
+	if (iClient == g_iLastCaller && !checkAccess(iClient) && (GetTime() - g_iLastCallTime) < g_hBotCallCooldown.FloatValue) {
 		return Plugin_Handled;
 	}
 
@@ -2728,6 +2745,9 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 	g_iRecording = iRecording;
 	g_iRecBufferFrame =  0;
 	g_iRecBufferIdx = 0;
+
+	g_iLastCaller = iClient;
+	g_iLastCallTime = GetTime();
 
 	//g_fShadowBufferAlpha = 0.0;
 	g_fPlaybackSpeed = g_fSpeed[g_iClientOfInterest];
@@ -3495,6 +3515,14 @@ public Action Hook_TouchFuncRegenerate(int iEntity, int iOther) {
 	return Plugin_Continue;
 }
 
+public Action OnSnapshotPreLoad(int iClient) {
+	if (iClient == g_iLastCaller) {
+		return Plugin_Handled;
+	}
+
+	return Plugin_Continue;
+}
+
 //////// Helpers ////////
 
 void blockFlags() {
@@ -3638,6 +3666,9 @@ void doReturn() {
 			FakeClientCommand(g_iClientOfInterest, "spec_mode 6");
 		} else {
 			int iCOI = g_iClientOfInterest;
+			
+			g_iLastCaller = iCOI;
+			g_iLastCallTime = GetTime();
 
 			Call_StartForward(g_hClientRestoreForward);
 			Call_PushCell(iCOI);
