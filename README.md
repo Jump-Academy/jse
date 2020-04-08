@@ -25,7 +25,7 @@ JSE is a set of modular plugins for enabling standard features present in most T
 * [Multi Colors](https://github.com/Bara/Multi-Colors)
 * [REST in Pawn](https://github.com/ErikMinekus/sm-ripext)
 * [SMLib](https://github.com/bcserv/smlib/tree/transitional_syntax)
-* [Socket](https://github.com/JoinedSenses/sm-ext-socket/tree/patch-1)
+* [Socket](https://github.com/JoinedSenses/sm-ext-socket)
 * [TF2Attributes](https://github.com/FlaminSarge/tf2attributes)
 * [TF2Items](https://github.com/asherkin/TF2Items)
 * [Updater](https://bitbucket.org/GoD_Tony/updater)
