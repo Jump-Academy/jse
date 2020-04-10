@@ -3,11 +3,13 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.1"
+#define PLUGIN_VERSION "0.1.2"
 
 #include <sourcemod>
 #include <sdktools>
 #include <jse_tracker>
+
+bool g_bJSECoreLoaded;
 
 int g_iScore[MAXPLAYERS + 1];
 
@@ -24,6 +26,8 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
+	CreateConVar("jse_scoreboard_version", PLUGIN_VERSION, "Jump Server Essentials scoreboard version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
+
 	AddCommandListener(CommandListener_Restart, "sm_restart");
 	
 	HookEvent("teamplay_round_start", Hook_RoundStart);
@@ -49,14 +53,22 @@ public void OnPluginStart()
 	// Late load
 	if (GetClientCount(true) && IsTrackerLoaded()) {
 		for (int i = 1; i <= MaxClients; i++) {
-			g_iScore[i] = ComputeScore(i);
-			AddScore(i, g_iScore[i]);
+			if (IsClientInGame(i)) {
+				g_iScore[i] = ComputeScore(i);
+				AddScore(i, g_iScore[i]);
+			}
 		}
 	}
 }
 
 public void OnPluginEnd() {
 	ResetAllClients();
+}
+
+public void OnAllPluginsLoaded() {
+	if (LibraryExists("jse_core")) {
+		g_bJSECoreLoaded = true;
+	}
 }
 
 public void OnMapEnd() {
@@ -85,8 +97,8 @@ public Action Hook_RoundStart(Event hEvent, const char[] sName, bool bDontBroadc
 	ResetAllClients();
 }
 
-public void OnCheckpointReached(int iClient, Course iCourse, Jump iJump, ControlPoint iControlPoint) {
-	if (iControlPoint || (iJump && iJump.iNumber > 1)) {
+public void OnNewCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint) {
+	if (!g_bJSECoreLoaded && bControlPoint || iJumpNumber > 1) {
 		g_iScore[iClient]++;
 		AddScore(iClient, 1);
 	}
@@ -128,10 +140,12 @@ void AddScore(int iClient, int iScore) {
 int ComputeScore(int iClient) {
 	ArrayList hProgress = GetPlayerProgress(iClient);
 
+	Checkpoint eCheckpoint;
+
 	int iScore = 0;
 	for (int i=0; i<hProgress.Length; i++) {
-		Jump iJump = hProgress.Get(i, Checkpoint::iJump);
-		if (!iJump || iJump.iNumber > 1) {
+		hProgress.GetArray(i, eCheckpoint, sizeof(Checkpoint));
+		if (eCheckpoint.IsControlPoint() || eCheckpoint.GetJumpNumber() > 1) {
 			iScore++;
 		}
 	}
