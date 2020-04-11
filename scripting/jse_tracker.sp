@@ -405,8 +405,8 @@ public int Native_ResolveCourseNumber(Handle hPlugin, int iArgC) {
 	int iCourseNumber = GetNativeCell(1);
 	Course iCourse = NULL_COURSE;
 
-	for (int j=0; j<g_hCourses.Length; j++) {
-		Course iCourseIter = g_hCourses.Get(j);
+	for (int i=0; i<g_hCourses.Length; i++) {
+		Course iCourseIter = g_hCourses.Get(i);
 		if (iCourseIter.iNumber == iCourseNumber) {
 			iCourse = iCourseIter;
 			break;
@@ -420,11 +420,13 @@ public int Native_ResolveJumpNumber(Handle hPlugin, int iArgC) {
 	Course iCourse = GetNativeCell(1);
 	int iJumpNumber = GetNativeCell(2);
 
-	if (!iCourse || iJumpNumber <= 0) {
+	ArrayList hJumps = iCourse.hJumps;
+
+	if (!iCourse || iJumpNumber <= 0 || iJumpNumber > hJumps.Length) {
 		return view_as<int>(NULL_JUMP);
 	}
 
-	return view_as<int>(iCourse.hJumps.Get(iJumpNumber-1));
+	return view_as<int>(hJumps.Get(iJumpNumber-1));
 }
 
 // Timers
