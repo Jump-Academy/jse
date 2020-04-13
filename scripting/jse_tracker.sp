@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.3.0"
+#define PLUGIN_VERSION "0.3.1"
 
 #define API_URL "https://api.jumpacademy.tf/mapinfo_json"
 
@@ -441,15 +441,20 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 	int iTime = GetTime();
 	float fGameTime = GetGameTime();
 
+	float fGroundPos[MAXPLAYERS+1][3];
+
 	for (int i=1; i<=MaxClients; i++) {
-		g_eNearestCheckpoint[i].Clear();
+		if (IsClientInGame(i) && IsPlayerAlive(i)) {
+			GetClientGroundPosition(i, fGroundPos[i]);
+			g_eNearestCheckpoint[i].Clear();
+		}
 	}
 
 	int iClients[MAXPLAYERS];
 	float fMinDist[MAXPLAYERS + 1] =  { view_as<float>(0x7F800000), ... }; // +inf
 	Course iActiveCourse[MAXPLAYERS + 1];
 
-	float fOrigin[3], fPos[3];
+	float fOrigin[3];
 	for (int i=0; i<g_hCourses.Length; i++) {
 		Course iCourseIter = g_hCourses.Get(i);
 		int iCourseNumber = iCourseIter.iNumber;
@@ -463,10 +468,8 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 			for (int k = 0; k < iClientsCount; k++) {
 				int iClient = iClients[k];
 				if (IsPlayerAlive(iClient) && (fGameTime - g_fLastTeleport[iClient]) > g_fTeleSettleTime) {
-					GetClientEyePosition(iClient, fPos);
-
-					float fDist = GetVectorDistance(fPos, fOrigin);
-					if ((fDist < g_fProximity) && (fDist < fMinDist[iClient]) && IsVisible(fPos, fOrigin)) {
+					float fDist = GetVectorDistance(fGroundPos[iClient], fOrigin);
+					if ((fDist < g_fProximity) && (fDist < fMinDist[iClient]) && IsVisible(fGroundPos[iClient], fOrigin)) {
 						g_eNearestCheckpoint[iClient].Init(
 							iCourseNumber,
 							j,
@@ -490,10 +493,8 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 			for (int k = 0; k < iClientsCount; k++) {
 				int iClient = iClients[k];
 				if (IsPlayerAlive(iClient) && (fGameTime - g_fLastTeleport[iClient]) > g_fTeleSettleTime) {
-					GetClientEyePosition(iClient, fPos);
-
-					float fDist = GetVectorDistance(fPos, fOrigin);
-					if ((fDist < g_fProximity) && (fDist < fMinDist[iClient]) && IsVisible(fPos, fOrigin)) {
+					float fDist = GetVectorDistance(fGroundPos[iClient], fOrigin);
+					if ((fDist < g_fProximity) && (fDist < fMinDist[iClient]) && IsVisible(fGroundPos[iClient], fOrigin)) {
 						g_eNearestCheckpoint[iClient].Init(
 							iCourseNumber,
 							0,
@@ -685,6 +686,18 @@ bool LocatePosition(float fPos[3], Course &iCourse, Jump &iJump, ControlPoint &i
 	}
 
 	return iJump || iControlPoint;
+}
+
+void GetClientGroundPosition(int iClient, float fPos[3]) {
+	float fAngDown[3] = {90.0, 0.0, 0.0};
+	GetClientEyePosition(iClient, fPos);
+
+	Handle hTr = TR_TraceRayFilterEx(fPos, fAngDown, MASK_SHOT_HULL, RayType_Infinite, TraceFilter_Environment);
+	if (TR_DidHit(hTr)) {
+		TR_GetEndPosition(fPos, hTr);
+		fPos[2] += 20.0; // Prevent clipping through ground
+	}
+	CloseHandle(hTr);
 }
 
 bool IsVisible(float fPos[3], float fPosTarget[3]) {
