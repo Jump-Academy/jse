@@ -40,7 +40,7 @@ void fetchRecording(Recording iRecording, bool bPrefetchOnly = false) {
 	
 	Handle hSocket = SocketCreate(SOCKET_TCP, OnSocketError);
 	if (hSocket == INVALID_HANDLE) {
-		LogError("%T: INVALID_HANDLE", "Socket Error", LANG_SERVER);
+		LogError("%T: INVALID_HANDLE", "Socket Error", LANG_SERVER, -1, -1);
 		return;
 	}
 	SocketSetOption(hSocket, ConcatenateCallbacks, 4096);
@@ -87,7 +87,7 @@ void fetchRepository() {
 	
 	Handle hSocket = SocketCreate(SOCKET_TCP, OnSocketError);
 	if (hSocket == INVALID_HANDLE) {
-		LogError("%T: INVALID_HANDLE", "Socket Error", LANG_SERVER);
+		LogError("%T: INVALID_HANDLE", "Socket Error", LANG_SERVER, -1, -1);
 		return;
 	}
 	
@@ -115,7 +115,7 @@ void fetchHashes(File hFile, any aData) {
 	
 	Handle hSocket = SocketCreate(SOCKET_TCP, OnSocketError);
 	if (hSocket == INVALID_HANDLE) {
-		LogError("%T: INVALID_HANDLE", "Socket Error", LANG_SERVER);
+		LogError("%T: INVALID_HANDLE", "Socket Error", LANG_SERVER, -1, -1);
 		return;
 	}
 	SocketSetOption(hSocket, ConcatenateCallbacks, 4096);
