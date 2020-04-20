@@ -33,14 +33,10 @@
 #define RecEnt_iMoveType		3
 #define RecEnt_iOwner			4
 #define RecEnt_iAssign			5
-#define RecEnt_Size				6
+#define RecEnt_iDesyncs			6
+#define RecEnt_Size				7
 
-#define MAX_REC_ENT_FAIL_FRAMES 3
-
-#define RecEntFail_iRecEnt		0
-#define RecEntFail_iCount		1
-#define RecEntFail_iInitTick	2
-#define RecEntFail_Size			3
+#define MAX_REC_ENT_DESYNCS		3
 
 #define RecBot_iEnt				0
 #define RecBot_hEquip			1
@@ -199,9 +195,7 @@ ArrayList g_hRecBuffer;
 int g_iRecBufferIdx;
 int g_iRecBufferUsed;
 int g_iRecBufferFrame;
-//ArrayList g_hRecEntSpawnList;
 ArrayList g_hRecBufferFrames;
-ArrayList g_hRecEntFail;
 int g_iRewindWaitFrames;
 int g_iStateLoadLast;
 
@@ -379,8 +373,6 @@ public void OnPluginStart() {
 	g_hRecordingEntTypes = new ArrayList(ByteCountToCells(128));
 	g_hRecordingBots = new ArrayList(RecBot_Size);
 	g_hRecBufferFrames = null;
-	//g_hRecEntSpawnList = new ArrayList();
-	g_hRecEntFail = new ArrayList(RecEntFail_Size);
 
 	strcopy(g_sRecSubDir, sizeof(g_sRecSubDir), RECORD_FOLDER);
 	
@@ -659,10 +651,8 @@ public void OnMapEnd() {
 	clearRecordings(g_hRecordings);
 	g_hRecordingClients.Clear();
 	clearRecEntities();
-	g_hRecEntFail.Clear();
 	g_hRecordingEntTypes.Clear();
 	g_iRecordingEntTotal = 0;
-	//g_hRecEntSpawnList.Clear();
 	clearRecBotData();
 	if (g_hRecBufferFrames != null) {
 		g_hRecBufferFrames.Clear();
@@ -827,7 +817,6 @@ public void OnGameFrame() {
 		if (g_iRecBufferIdx >= g_hRecBuffer.Length || (g_iRecBufferIdx >= g_iRecBufferUsed)) {
 			ResetBubbleRotation(g_iRecording);
 			clearRecEntities();
-			g_hRecEntFail.Clear();
 			
 			if (g_hPlaybackQueue.Length && g_iClientInstruction & INST_PLAYALL) {
 				g_iRecording = g_hPlaybackQueue.Get(0);
@@ -928,8 +917,6 @@ public void OnGameFrame() {
 		
 		int iRecBufferIdxBackup = g_iRecBufferIdx;
 
-		//g_hRecBufferFrames.Push(g_iRecBufferIdx);
-
 		if (view_as<RecBlockType>(g_hRecBuffer.Get(g_iRecBufferIdx) & 0xFF) == FRAME) {
 			g_iRecBufferFrame = g_hRecBuffer.Get(g_iRecBufferIdx) >> 8;
 			g_iRecBufferIdx++;
@@ -937,6 +924,11 @@ public void OnGameFrame() {
 			LogError("Cannot find start of frame at buffer index: %d", g_iRecBufferIdx);
 			doFullStop();
 			return;
+		}
+
+		for (int i=0; i<g_hRecordingEntities.Length; i++) {
+			int iDesyncs = g_hRecordingEntities.Get(i, RecEnt_iDesyncs);
+			g_hRecordingEntities.Set(i, iDesyncs+1, RecEnt_iDesyncs);
 		}
 
 		while (g_iRecBufferIdx < g_iRecBufferUsed && g_iRecBufferIdx < g_hRecBuffer.Length) {
@@ -1017,6 +1009,7 @@ public void OnGameFrame() {
 						iEntity = INVALID_ENT_REFERENCE;
 						int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot_iEnt);
 
+						// Find unassigned entity to associate
 						for (int i=0; i<g_hRecordingEntities.Length; i++) {
 							int iArr[RecEnt_Size];
 							g_hRecordingEntities.GetArray(i, iArr, sizeof(iArr));
@@ -1026,56 +1019,54 @@ public void OnGameFrame() {
 
 								iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iRef));
 								g_hRecordingEntities.Set(iRecEntIdx, iRecordingEnt, RecEnt_iAssign);
+								g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt_iDesyncs);
 								break;
 							}
 						}
 
 						if (iRecEntIdx == -1) {
-							#if defined DEBUG
-							char sClassName[64];
-							g_hRecordingEntTypes.GetString(iEntType, sClassName, sizeof(sClassName));
-							#endif
-							
-							int iRecEntFailIdx = g_hRecEntFail.FindValue(iRecordingEnt, RecEntFail_iRecEnt);
-							if (iRecEntFailIdx == -1) {
-								int iArr[RecEntFail_Size];
-								iArr[RecEntFail_iRecEnt]	= iRecordingEnt;
-								iArr[RecEntFail_iCount]		= 1;
-								iArr[RecEntFail_iInitTick]	= GetGameTickCount();
-								g_hRecEntFail.PushArray(iArr);
+							int iArr[RecEnt_Size];
+							iArr[RecEnt_iID			] = g_iRecordingEntTotal++ % 256;
+							iArr[RecEnt_iRef		] = 0;
+							iArr[RecEnt_iType		] = iEntType;
+							iArr[RecEnt_iOwner		] = iOwnerEnt;
+							iArr[RecEnt_iAssign		] = iRecordingEnt;
+							g_hRecordingEntities.PushArray(iArr, sizeof(iArr));
+						}
+					} else {
+						if (g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iRef)) {
+							g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt_iDesyncs);
 
+							iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iRef));
+						} else {
+							int iDesyncs = g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iDesyncs);
+							if (iDesyncs) {
 								#if defined DEBUG
-								PrintToServer("Got iRecEnt[%d] block but found no usable entity (%s), total: %d", iRecordingEnt, sClassName, g_hRecEntFail.Length);
-								#endif
-							} else {
-								int iFailCount = g_hRecEntFail.Get(iRecEntFailIdx, RecEntFail_iCount);
-								#if defined DEBUG
-								PrintToServer("Got iRecEnt[%d] block but found no usable entity (%s) (%d), total: %d", iRecordingEnt, sClassName, iFailCount, g_hRecEntFail.Length);
+								char sClassName[64];
+								g_hRecordingEntTypes.GetString(iEntType, sClassName, sizeof(sClassName));
+								PrintToServer("Entity block for RecEnt[%d] has no assigned entity (%s) (%d)", iRecordingEnt, sClassName, iDesyncs);
 								#endif
 
-								if (iFailCount + 1 >= MAX_REC_ENT_FAIL_FRAMES) {
-									g_hRecEntFail.Erase(iRecEntFailIdx);
+								if (iDesyncs >= MAX_REC_ENT_DESYNCS) {
+									int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot_iEnt);
+
+									#if !defined DEBUG
+									char sClassName[64];
+									g_hRecordingEntTypes.GetString(iEntType, sClassName, sizeof(sClassName));
+									#endif
 
 									iEntity = CreateProjectile(sClassName, fPos, fAng, fVel, iOwnerEnt);
 									if (IsValidEntity(iEntity)) {
-										RegisterRecEnt(iEntity, iOwnerEnt, iRecordingEnt);
+										g_hRecordingEntities.Set(iRecEntIdx, EntIndexToEntRef(iEntity), RecEnt_iRef);
+										g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt_iDesyncs);
 										DispatchSpawn(iEntity);
-									}
 
-									#if defined DEBUG
-									PrintToServer("Trying to respawn iEntType type %d: '%s'", iEntType, sClassName);
-									#endif
-								} else {
-									g_hRecEntFail.Set(iRecEntFailIdx, iFailCount+1, RecEntFail_iCount);
+										#if defined DEBUG
+										PrintToServer("Respawned RecEnt[%d] (%s)", iRecordingEnt, sClassName);
+										#endif
+									}
 								}
 							}
-						}
-					} else {
-						iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iRef));
-
-						int iRecEntFailIdx = g_hRecEntFail.FindValue(iRecordingEnt, RecEntFail_iRecEnt);
-						if (iRecEntFailIdx != -1) {
-							g_hRecEntFail.Erase(iRecEntFailIdx);
 						}
 					}
 				}
@@ -1128,12 +1119,42 @@ public void OnGameFrame() {
 
 			TeleportEntity(iEntity, NULL_VECTOR, fAng, fVel);
 		}
-		
-		int iTick = GetGameTickCount();
-		for (int i=0; i<g_hRecEntFail.Length; i++) {
-			if (iTick - g_hRecEntFail.Get(i, RecEntFail_iInitTick) > MAX_REC_ENT_FAIL_FRAMES) {
-				g_hRecEntFail.Erase(i--);
-				continue;
+
+		for (int i=0; i<g_hRecordingEntities.Length; i++) {
+			int iDesyncs = g_hRecordingEntities.Get(i, RecEnt_iDesyncs);
+			if (iDesyncs) {
+				int iEntity = g_hRecordingEntities.Get(i, RecEnt_iRef);
+				if (!iEntity) {
+					continue;
+				}
+
+				iEntity = EntRefToEntIndex(iEntity);
+				if (IsValidEntity(iEntity)) {
+					int iRecordingEnt = g_hRecordingEntities.Get(i, RecEnt_iAssign);
+					if (iRecordingEnt == -1) {
+						continue;
+					}
+
+					#if defined DEBUG
+					char sClassName[64];
+					GetEntityClassname(iEntity, sClassName, sizeof(sClassName));
+					
+					PrintToServer("Missing entity block for RecEnt[%d] (%s) (%d)", iRecordingEnt, sClassName, iDesyncs);	
+					#endif
+
+					if (iDesyncs >= MAX_REC_ENT_DESYNCS) {
+						AcceptEntityInput(iEntity, "Kill");
+						// Kill triggers OnEntityDestroyed immediately and removes from list
+						i--;
+
+						#if defined DEBUG
+						PrintToServer("Pruned orphaned RecEnt[%d] (%s)", iRecordingEnt, sClassName);
+						#endif
+					}
+
+				} else {
+					g_hRecordingEntities.Erase(i--);
+				}
 			}
 		}
 		
@@ -3594,11 +3615,17 @@ void clearRecEntities() {
 	for (int i=0; i<g_hRecordingEntities.Length; i++) {
 		int iArr[RecEnt_Size];
 		g_hRecordingEntities.GetArray(i, iArr, sizeof(iArr));
+
 		int iEntity = EntRefToEntIndex(iArr[RecEnt_iRef]);
-		if (IsValidEntity(iEntity)) {
+		if (iEntity && IsValidEntity(iEntity)) {
+			g_hRecordingEntities.Erase(i);
 			AcceptEntityInput(iEntity, "Kill");
+
+			// Kill triggers OnEntityDestroyed immediately and removes from list
+			i--;
 		}
 	}
+	
 	g_hRecordingEntities.Clear();
 }
 
@@ -3737,7 +3764,6 @@ void doFullStop() {
 
 	g_hRecordingClients.Clear();
 	clearRecEntities();
-	g_hRecEntFail.Clear();
 	g_hPlaybackQueue.Clear();
 	g_hRecBufferFrames = null;
 	
@@ -5182,6 +5208,17 @@ void RegisterRecEnt(int iEntity, int iOwnerEnt, int iAssign=-1) {
 	if (iEntType == -1) {
 		iEntType = g_hRecordingEntTypes.Length;
 		g_hRecordingEntTypes.PushString(sClassName);
+	}
+
+	for (int i=0; i<g_hRecordingEntities.Length; i++) {
+		int iArr[RecEnt_Size];
+		g_hRecordingEntities.GetArray(i, iArr, sizeof(iArr));
+
+		if (iArr[RecEnt_iOwner] == iOwnerEnt && !iArr[RecEnt_iRef] && iArr[RecEnt_iType] == iEntType) {
+			g_hRecordingEntities.Set(i, iRef, RecEnt_iRef);
+			g_hRecordingEntities.Set(i, 0, RecEnt_iDesyncs);
+			return;
+		}
 	}
 
 	int iArr[RecEnt_Size];
