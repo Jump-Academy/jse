@@ -896,7 +896,7 @@ public void OnGameFrame() {
 		}
 
 		// Rotate bubble
-		if (g_iRecording != NULL_RECORDING) {
+		if (g_iRecording) {
 			int iBubble = g_iRecording.NodeModel;
 			if (IsValidEntity(iBubble)) {
 				float fBubbleAng[3];
@@ -1224,7 +1224,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 				ToTimeDisplay(sTimeTotal, sizeof(sTimePlay), g_hRecBufferFrames.Length/66);
 
 				char sRecordingType[32];
-				if (g_iRecording != NULL_RECORDING && g_iRecording.Repo) {
+				if (g_iRecording && g_iRecording.Repo) {
 					FormatEx(sRecordingType, sizeof(sRecordingType), "%T: %T", "Source", iClient, "Repository", iClient);
 				} else {
 					FormatEx(sRecordingType, sizeof(sRecordingType), "%T: %T", "Source", iClient, "Local", iClient);
@@ -1671,7 +1671,7 @@ public Action cmdPlay(int iClient, int iArgC) {
 
 	switch (iArgC) {
 		case 0: {
-			if (iRecording == NULL_RECORDING) {
+			if (!iRecording) {
 				// TODO: Translate
 				CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Nothing to replay");
 				return Plugin_Handled;
@@ -2300,7 +2300,7 @@ public Action cmdStop(int iClient, int iArgC) {
 	
 	if (g_iClientInstruction != INST_NOP) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Terminated");
-		if (g_iClientInstruction == INST_PLAY && g_iRecording != NULL_RECORDING) {
+		if (g_iClientInstruction == INST_PLAY && g_iRecording) {
 			ResetBubbleRotation(g_iRecording);
 		}
 		
@@ -3837,7 +3837,7 @@ void Equip(int iBotID) {
 }
 
 void EquipRec(int iBotID, Recording iRecording, bool bImmediate = true) {
-	if (iRecording == NULL_RECORDING) {
+	if (!iRecording) {
 		return;
 	}
 
@@ -3923,7 +3923,7 @@ FindResult findNearestRecording(float fPos[3], TFClassType iClass, Recording &iC
 		}
 	}
 	
-	if (iClosestRecord == NULL_RECORDING) {
+	if (!iClosestRecord) {
 		if (!bSearchedClass) {
 			return NO_CLASS_RECORDING;
 		}
@@ -4422,7 +4422,7 @@ bool LoadState(Recording iRecording) {
 }
 
 void ResetBubbleRotation(Recording iRecording) {
-	if (iRecording != NULL_RECORDING) {
+	if (iRecording) {
 		int iBubble = iRecording.NodeModel;
 		if (IsValidEntity(iBubble)) {
 			// Primary author
@@ -4919,7 +4919,7 @@ void RemoveModels(Recording iRecording) {
 }
 
 bool LoadFrames(Recording iRecording) {
-	if  (iRecording == NULL_RECORDING) {
+	if  (!iRecording) {
 		return false;
 	}
 	
@@ -5062,7 +5062,7 @@ int GetItemDefIndex(int iItem) {
 }
 
 bool IsRecordingVisible(Recording iRecording, int iClient) {
-	if (IsFakeClient(iClient)) {
+	if (IsFakeClient(iClient) || !iRecording) {
 		return false;
 	}
 
@@ -5486,7 +5486,7 @@ void BuildStateMenu(Menu hMenu) {
 		char sInfo[32];
 		IntToString(i+1, sInfo, sizeof(sInfo));
 
-		if (iRecording == NULL_RECORDING) {
+		if (!iRecording) {
 			hMenu.AddItem(sInfo, " -- Empty --", ITEMDRAW_DISABLED);
 		} else {
 			char sTime[64];

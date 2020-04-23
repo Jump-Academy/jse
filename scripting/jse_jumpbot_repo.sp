@@ -19,7 +19,7 @@ enum DLType {
 #define MAX_RETRIES		5
 
 void fetchRecording(Recording iRecording, bool bPrefetchOnly = false) {
-	if (!g_bSocketExtension || !g_hUseRepo.BoolValue || iRecording == NULL_RECORDING || iRecording.Downloading) {
+	if (!g_bSocketExtension || !g_hUseRepo.BoolValue || !iRecording || iRecording.Downloading) {
 		return;
 	}
 	

@@ -11,7 +11,7 @@ enum struct _ClientInfo {
 }
 
 static ArrayList hClientInfo = null;
-const ClientInfo NULL_CLIENTINFO = view_as<ClientInfo>(-1);
+const ClientInfo NULL_CLIENTINFO = view_as<ClientInfo>(0);
 
 public void ClientInfo_SetupNatives() {
 	CreateNative("ClientInfo.GetAuthID",			Native_ClientInfo_GetAuthID);
@@ -43,7 +43,7 @@ public void ClientInfo_SetupNatives() {
 }
 
 public int Native_ClientInfo_GetAuthID(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iLength = GetNativeCell(3);
 
 	_ClientInfo eClientInfo;
@@ -53,7 +53,7 @@ public int Native_ClientInfo_GetAuthID(Handle hPlugin, int iArgC) {
 }
 
 public int Native_ClientInfo_SetAuthID(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	
 	_ClientInfo eClientInfo;
 	hClientInfo.GetArray(iThis, eClientInfo);
@@ -64,7 +64,7 @@ public int Native_ClientInfo_SetAuthID(Handle hPlugin, int iArgC) {
 }
 
 public int Native_ClientInfo_GetName(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iLength = GetNativeCell(3);
 
 	_ClientInfo eClientInfo;
@@ -74,8 +74,7 @@ public int Native_ClientInfo_GetName(Handle hPlugin, int iArgC) {
 }
 
 public int Native_ClientInfo_SetName(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
-	
+	int iThis = GetNativeCell(1)-1;
 
 	_ClientInfo eClientInfo;
 	hClientInfo.GetArray(iThis, eClientInfo);
@@ -86,29 +85,29 @@ public int Native_ClientInfo_SetName(Handle hPlugin, int iArgC) {
 }
 
 public int Native_ClientInfo_GetTeam(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	return hClientInfo.Get(iThis, _ClientInfo::iTeam);
 }
 
 public int Native_ClientInfo_SetTeam(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iTeam = GetNativeCell(2);
 	hClientInfo.Set(iThis, iTeam, _ClientInfo::iTeam);
 }
 
 public int Native_ClientInfo_GetClass(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	return hClientInfo.Get(iThis, _ClientInfo::iClass);
 }
 
 public int Native_ClientInfo_SetClass(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iClass = GetNativeCell(2);
 	hClientInfo.Set(iThis, iClass, _ClientInfo::iClass);
 }
 
 public int Native_ClientInfo_GetStartPos(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	float fStartPos[3];
 	fStartPos[0] = hClientInfo.Get(iThis, _ClientInfo::fStartPos  );
 	fStartPos[1] = hClientInfo.Get(iThis, _ClientInfo::fStartPos+1);
@@ -118,7 +117,7 @@ public int Native_ClientInfo_GetStartPos(Handle hPlugin, int iArgC) {
 }
 
 public int Native_ClientInfo_SetStartPos(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	float fStartPos[3];
 	GetNativeArray(2, fStartPos, sizeof(fStartPos));
 
@@ -128,7 +127,7 @@ public int Native_ClientInfo_SetStartPos(Handle hPlugin, int iArgC) {
 }
 
 public int Native_ClientInfo_GetStartAng(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	float fStartAng[3];
 	fStartAng[0] = hClientInfo.Get(iThis, _ClientInfo::fStartAng  );
 	fStartAng[1] = hClientInfo.Get(iThis, _ClientInfo::fStartAng+1);
@@ -137,7 +136,7 @@ public int Native_ClientInfo_GetStartAng(Handle hPlugin, int iArgC) {
 }
 
 public int Native_ClientInfo_SetStartAng(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	float fStartAng[3];
 	GetNativeArray(2, fStartAng, sizeof(fStartAng));
 
@@ -146,14 +145,14 @@ public int Native_ClientInfo_SetStartAng(Handle hPlugin, int iArgC) {
 }
 
 public int Native_ClientInfo_GetEquipItemDefIdx(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iSlot = GetNativeCell(2);
 
 	return hClientInfo.Get(iThis, _ClientInfo::iEquipItemDefIdx + iSlot);
 }
 
 public int Native_ClientInfo_SetEquipItemDefIdx(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iSlot = GetNativeCell(2);
 	int iItemDefIdx = GetNativeCell(3);
 
@@ -161,7 +160,7 @@ public int Native_ClientInfo_SetEquipItemDefIdx(Handle hPlugin, int iArgC) {
 }
 
 public int Native_ClientInfo_GetEquipClassName(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iSlot = GetNativeCell(2);
 	int iLength = GetNativeCell(4);
 
@@ -172,7 +171,7 @@ public int Native_ClientInfo_GetEquipClassName(Handle hPlugin, int iArgC) {
 }
 
 public int Native_ClientInfo_SetEquipClassName(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iSlot = GetNativeCell(2);
 
 	_ClientInfo eClientInfo;
@@ -193,18 +192,18 @@ public int Native_ClientInfo_Instance(Handle hPlugin, int iArgC) {
 	for (int i=0; i<hClientInfo.Length; i++) {
 		if (hClientInfo.Get(i, _ClientInfo::bGCFlag)) {
 			hClientInfo.SetArray(i, eEmptyClientInfo);
-			return i;
+			return i+1;
 		}
 	}
 	
 	hClientInfo.PushArray(eEmptyClientInfo);
-	return hClientInfo.Length-1;
+	return hClientInfo.Length;
 }
 
 public int Native_ClientInfo_Destroy(Handle hPlugin, int iArgC) {
 	if (hClientInfo != null) {
 		int iClientInfo = GetNativeCell(1);
-		hClientInfo.Set(iClientInfo, 1, _ClientInfo::bGCFlag);
+		hClientInfo.Set(iClientInfo-1, 1, _ClientInfo::bGCFlag);
 	}
 }
 
@@ -227,7 +226,7 @@ enum struct _Recording {
 }
 
 static ArrayList hRecordings = null;
-const Recording NULL_RECORDING = view_as<Recording>(-1);
+const Recording NULL_RECORDING = view_as<Recording>(0);
 
 public void Recording_SetupNatives() {
 	CreateNative("Recording.GetFilePath",			Native_Recording_GetFilePath);
@@ -269,7 +268,7 @@ public void Recording_SetupNatives() {
 }
 
 public int Native_Recording_GetFilePath(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iLength = GetNativeCell(3);
 
 	char sFilePath[256];
@@ -282,7 +281,7 @@ public int Native_Recording_GetFilePath(Handle hPlugin, int iArgC) {
 }
 
 public int Native_Recording_SetFilePath(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 
 	_Recording eRecording;
 	hRecordings.GetArray(iThis, eRecording);
@@ -293,84 +292,84 @@ public int Native_Recording_SetFilePath(Handle hPlugin, int iArgC) {
 }
 
 public int Native_Recording_GetRepo(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	return hRecordings.Get(iThis, _Recording::bRepo);
 }
 
 public int Native_Recording_SetRepo(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
-	int iRepo = GetNativeCell(2) ? 1 : 0;
+	int iThis = GetNativeCell(1)-1;
+	bool bRepo = GetNativeCell(2) != 0;
 
-	hRecordings.Set(iThis, iRepo, _Recording::bRepo);
+	hRecordings.Set(iThis, bRepo, _Recording::bRepo);
 }
 
 public int Native_Recording_GetDownloading(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	return hRecordings.Get(iThis, _Recording::iDownloading);
 }
 
 public int Native_Recording_SetDownloading(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iDownloading = GetNativeCell(2);
 	hRecordings.Set(iThis, iDownloading, _Recording::iDownloading);
 }
 
 public int Native_Recording_GetFileSize(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	return hRecordings.Get(iThis, _Recording::iFileSize);
 }
 
 public int Native_Recording_SetFileSize(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iFileSize = GetNativeCell(2);
 	hRecordings.Set(iThis, iFileSize, _Recording::iFileSize);
 }
 
 public int Native_Recording_GetTimestamp(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	return hRecordings.Get(iThis, _Recording::iTimestamp);
 }
 
 public int Native_Recording_SetTimestamp(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iTimestamp = GetNativeCell(2);
 	hRecordings.Set(iThis, iTimestamp, _Recording::iTimestamp);
 }
 
 public int Native_Recording_GetFrames(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	return hRecordings.Get(iThis, _Recording::hFrames);
 }
 
 public int Native_Recording_GetFramesExpected(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	return hRecordings.Get(iThis, _Recording::iFramesExpected);
 }
 
 public int Native_Recording_SetFramesExpected(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iFrames = GetNativeCell(2);
 	hRecordings.Set(iThis, iFrames, _Recording::iFramesExpected);
 }
 
 public int Native_Recording_GetLength(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	return hRecordings.Get(iThis, _Recording::iLength);
 }
 
 public int Native_Recording_SetLength(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iLength = GetNativeCell(2);
 	hRecordings.Set(iThis, iLength, _Recording::iLength);
 }
 
 public int Native_Recording_GetClientInfo(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	return hRecordings.Get(iThis, _Recording::hClientInfo);
 }
 
 public int Native_Recording_GetEquipFilter(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 
 	int iEquipFilter = hRecordings.Get(iThis, _Recording::iEquipFilter);
 	int iSlot = iEquipFilter & 0xFF;
@@ -381,7 +380,7 @@ public int Native_Recording_GetEquipFilter(Handle hPlugin, int iArgC) {
 }
 
 public int Native_Recording_SetEquipFilter(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iSlot = GetNativeCell(2);
 	int iItemDefIdx = GetNativeCell(3);
 
@@ -390,23 +389,23 @@ public int Native_Recording_SetEquipFilter(Handle hPlugin, int iArgC) {
 }
 
 public int Native_Recording_GetNodeModel(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	return hRecordings.Get(iThis, _Recording::iNodeModel);
 }
 
 public int Native_Recording_SetNodeModel(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iNodeModel = GetNativeCell(2);
 	hRecordings.Set(iThis, iNodeModel, _Recording::iNodeModel);
 }
 
 public int Native_Recording_GetWeaponModel(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	return hRecordings.Get(iThis, _Recording::iWeaponModel);
 }
 
 public int Native_Recording_SetWeaponModel(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
+	int iThis = GetNativeCell(1)-1;
 	int iWeaponModel = GetNativeCell(2);
 	hRecordings.Set(iThis, iWeaponModel, _Recording::iWeaponModel);
 }
@@ -426,23 +425,23 @@ public int Native_Recording_Instance(Handle hPlugin, int iArgC) {
 		if (hRecordings.Get(i, _Recording::bGCFlag)) {
 			hRecordings.SetArray(i, eEmptyRecording);
 			
-			return i;
+			return i+1;
 		}
 	}
 	
 	hRecordings.PushArray(eEmptyRecording);
 
-	return hRecordings.Length-1;
+	return hRecordings.Length;
 }
 
 public int Native_Recording_Destroy(Handle hPlugin, int iArgC) {
 	if (hRecordings != null) {
 		Recording iRecording = GetNativeCell(1);
 
-		hRecordings.Set(view_as<int>(iRecording), 1, _Recording::bGCFlag);
+		hRecordings.Set(view_as<int>(iRecording)-1, 1, _Recording::bGCFlag);
 		
 		ArrayList hRecClientInfo = iRecording.ClientInfo;
-		ArrayList hFrames = hRecordings.Get(view_as<int>(iRecording), _Recording::hFrames);
+		ArrayList hFrames = hRecordings.Get(view_as<int>(iRecording)-1, _Recording::hFrames);
 		delete hFrames;
 
 		for (int i=0; i<hRecClientInfo.Length; i++) {
