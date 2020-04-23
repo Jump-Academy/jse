@@ -8,43 +8,39 @@
 #define UPDATE_URL		"http://jumpacademy.tf/plugins/jse/jumpbot/updatefile.txt"
 #define API_HOST		"api.jumpacademy.tf"
 
-#define Snapshot_fPosX			0
-#define Snapshot_fPosY			1
-#define Snapshot_fPosZ			2
-#define Snapshot_fVelX			3
-#define Snapshot_fVelY			4
-#define Snapshot_fVelZ			5
-#define Snapshot_fPitch			6
-#define Snapshot_fYaw			7
-#define Snapshot_fRoll			8
-#define Snapshot_iButn			9
-#define Snapshot_Size			10
+enum struct ClientState {
+	float fPos[3];
+	float fAng[3];
+	int iButtons;
+}
 
-#define ClientState_fPos		0
-#define ClientState_fAng_0		3
-#define ClientState_fAng_1		4
-#define ClientState_fAng_2		5
-#define ClientState_iButtons	6
-#define ClientState_Size 		7
+enum struct RecEnt {
+	int iID;
+	int iRef;
+	int iType;
+	int iMoveType;
+	int iOwner;
+	int iAssign;
+	int iDesyncs;
+}
 
-#define RecEnt_iID				0
-#define RecEnt_iRef				1
-#define RecEnt_iType			2
-#define RecEnt_iMoveType		3
-#define RecEnt_iOwner			4
-#define RecEnt_iAssign			5
-#define RecEnt_iDesyncs			6
-#define RecEnt_Size				7
+enum struct RecBot {
+	int iEnt;
+	DataPack hEquip;
+}
 
-#define MAX_REC_ENT_DESYNCS		3
+enum struct Bubble {
+	int iEnt;
+	int iTime;
+}
 
-#define RecBot_iEnt				0
-#define RecBot_hEquip			1
-#define RecBot_Size				2
-
-#define Bubble_iEnt				0
-#define Bubble_iTime			1
-#define Bubble_Size				2
+enum struct Queue {
+	int iClient;
+	Recording iRecording;
+	float fTime;
+	TFTeam iTeam;
+	Obs_Mode iObsMode;
+}
 
 #define INST_NOP				 0
 #define INST_PAUSE				 1
@@ -60,15 +56,10 @@
 #define MAX_NEARBY_SEARCH_DISTANCE	1000.0
 #define MAX_TARGET_FOLLOW_DISTANCE	4000.0
 
+#define MAX_REC_ENT_DESYNCS		3
+
 #define WARMUP_FRAMES_DEFAULT	66
 #define RESPAWN_FREEZE_FRAMES	66 // 1 second
-
-#define QUEUE_CLIENT 			0
-#define QUEUE_RECORDING 		1
-#define QUEUE_TIME				2
-#define QUEUE_TEAM				3
-#define QUEUE_OBSMODE			4
-#define QUEUE_BLOCKSIZE			5
 
 #define JSE_FOLDER				"data/jse"
 #define RECORD_FOLDER			"data/jse/jumpbot"
@@ -199,7 +190,7 @@ ArrayList g_hRecBufferFrames;
 int g_iRewindWaitFrames;
 int g_iStateLoadLast;
 
-any g_aClientState[MAXPLAYERS+1][ClientState_Size];
+ClientState g_eClientState[MAXPLAYERS+1];
 
 int g_iWarmupFrames;
 float g_fPlaybackSpeed;
@@ -217,7 +208,7 @@ Panel g_hQueuePanel[MAXPLAYERS+1] = {null, ...};
 Handle g_hQueueTimer;
 
 StringMap g_hBubbleLookup;
-int g_iLastBubbleTime[MAXPLAYERS+1][Bubble_Size];
+Bubble g_eLastBubbleTime[MAXPLAYERS+1];
 int g_iCallKeyMask;
 char g_sCallKeyLabel[16];
 
@@ -366,12 +357,12 @@ public void OnPluginStart() {
 	g_hProjMap = new StringMap();
 	g_hSpecList = new ArrayList();
 	g_bLocked = false;
-	g_hQueue = new ArrayList(QUEUE_BLOCKSIZE);
+	g_hQueue = new ArrayList(sizeof(Queue));
 	
 	g_hRecordingClients = new ArrayList();
-	g_hRecordingEntities = new ArrayList(RecEnt_Size);
+	g_hRecordingEntities = new ArrayList(sizeof(RecEnt));
 	g_hRecordingEntTypes = new ArrayList(ByteCountToCells(128));
-	g_hRecordingBots = new ArrayList(RecBot_Size);
+	g_hRecordingBots = new ArrayList(sizeof(RecBot));
 	g_hRecBufferFrames = null;
 
 	strcopy(g_sRecSubDir, sizeof(g_sRecSubDir), RECORD_FOLDER);
@@ -447,7 +438,7 @@ public void OnPluginEnd() {
 	}
 	
 	for (int i=0; i<g_hRecordingBots.Length; i++) {
-		int iClient = g_hRecordingBots.Get(i, RecBot_iEnt);
+		int iClient = g_hRecordingBots.Get(i, RecBot::iEnt);
 		KickClient(iClient, "%t", "Punt Bot");
 	}
 }
@@ -553,11 +544,11 @@ public void OnEntityDestroyed(int iEntity) {
 	PrintToServer("Entity %d (%s) destroyed", iEntity, sClassName);
 	*/
 	if (iEntity > 0 && IsValidEntity(iEntity)) {
-		int iIdx = g_hRecordingEntities.FindValue(EntIndexToEntRef(iEntity), RecEnt_iRef);
+		int iIdx = g_hRecordingEntities.FindValue(EntIndexToEntRef(iEntity), RecEnt::iRef);
 		if (iIdx != -1) {
 			if (g_iClientInstruction & INST_PAUSE) {
 				// Do lookup since destroyed entities have owner entity field set as -1
-				CloneProjectile(iEntity, g_hRecordingEntities.Get(iIdx, RecEnt_iOwner));
+				CloneProjectile(iEntity, g_hRecordingEntities.Get(iIdx, RecEnt::iOwner));
 			}
 
 			g_hRecordingEntities.Erase(iIdx);
@@ -739,16 +730,16 @@ public void OnGameFrame() {
 		}
 
 		for (int i=0; i<g_hRecordingEntities.Length; i++) {
-			int iArr[RecEnt_Size];
-			g_hRecordingEntities.GetArray(i, iArr, sizeof(iArr));
+			RecEnt eRecEnt;
+			g_hRecordingEntities.GetArray(i, eRecEnt);
 
 			//PrintToServer("RecEnt[%d] with iRef=%d, iEnt=%d", i, iArr[RecEnt_iRef], EntRefToEntIndex(iArr[RecEnt_iRef]));
 
-			int iEntity = EntRefToEntIndex(iArr[RecEnt_iRef]);
+			int iEntity = EntRefToEntIndex(eRecEnt.iRef);
 
-			int iOwner = g_hRecordingClients.FindValue(iArr[RecEnt_iOwner]);
+			int iOwner = g_hRecordingClients.FindValue(eRecEnt.iOwner);
 			if (iOwner != -1 && iEntity != INVALID_ENT_REFERENCE) {
-				g_hRecBuffer.Push(view_as<int>(ENTITY) | iArr[RecEnt_iID] << 8 | iArr[RecEnt_iType] << 16 | iOwner << 24);
+				g_hRecBuffer.Push(view_as<int>(ENTITY) | eRecEnt.iID << 8 | eRecEnt.iType << 16 | iOwner << 24);
 
 				Entity_GetAbsOrigin(iEntity, fPos);
 				Entity_GetAbsVelocity(iEntity, fVel);
@@ -779,7 +770,7 @@ public void OnGameFrame() {
 		g_iRecBufferUsed = g_iRecBufferIdx;
 	} else if (g_iClientInstruction & (INST_WARMUP | INST_WAIT)) {
 		for (int i=0; i<g_hRecordingBots.Length; i++) {
-			int iClient = g_hRecordingBots.Get(i, RecBot_iEnt);
+			int iClient = g_hRecordingBots.Get(i, RecBot::iEnt);
 
 			// TODO: Bot count vs. RecClient count mismatch
 			ClientInfo iClientInfo = g_iRecording.ClientInfo.Get(i);
@@ -795,7 +786,7 @@ public void OnGameFrame() {
 			g_iRecBufferIdx = 0;
 
 			for (int i=0; i<g_hRecordingBots.Length; i++) {
-				int iClient = g_hRecordingBots.Get(i, RecBot_iEnt);
+				int iClient = g_hRecordingBots.Get(i, RecBot::iEnt);
 
 				for (int iSlot = TFWeaponSlot_Primary; iSlot <= TFWeaponSlot_Item2; iSlot++) {
 					int iCurrentWeapon = GetPlayerWeaponSlot(iClient, iSlot);
@@ -852,7 +843,7 @@ public void OnGameFrame() {
 				// TODO: Bot count vs RecClient count mismatch
 				ArrayList hClientInfo = g_iRecording.ClientInfo;
 				for (int i=0; i<g_hRecordingBots.Length; i++) {
-					int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+					int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
 					ClientInfo iClientInfo = hClientInfo.Get(i);
 
 					TF2_SetPlayerClass(iRecBot, view_as<TFClassType>(iClientInfo.Class));
@@ -873,9 +864,9 @@ public void OnGameFrame() {
 			}
 
 			for (int i=0; i<g_hRecordingBots.Length; i++) {
-				int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+				int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
 
-				g_aClientState[iRecBot][ClientState_iButtons] = 0; // Release all buttons
+				g_eClientState[iRecBot].iButtons = 0; // Release all buttons
 			}
 
 			if (Client_IsValid(g_iClientOfInterest) && IsClientInGame(g_iClientOfInterest)) {
@@ -927,8 +918,8 @@ public void OnGameFrame() {
 		}
 
 		for (int i=0; i<g_hRecordingEntities.Length; i++) {
-			int iDesyncs = g_hRecordingEntities.Get(i, RecEnt_iDesyncs);
-			g_hRecordingEntities.Set(i, iDesyncs+1, RecEnt_iDesyncs);
+			int iDesyncs = g_hRecordingEntities.Get(i, RecEnt::iDesyncs);
+			g_hRecordingEntities.Set(i, iDesyncs+1, RecEnt::iDesyncs);
 		}
 
 		while (g_iRecBufferIdx < g_iRecBufferUsed && g_iRecBufferIdx < g_hRecBuffer.Length) {
@@ -945,10 +936,10 @@ public void OnGameFrame() {
 				}
 				case CLIENT: {
 					if (g_iClientInstruction & INST_REWIND && g_iClientInstruction & INST_RECD) {
-						iEntity = g_hRecordingClients.Get((g_hRecBuffer.Get(g_iRecBufferIdx++) >> 8) & 0xFF, RecBot_iEnt);
+						iEntity = g_hRecordingClients.Get((g_hRecBuffer.Get(g_iRecBufferIdx++) >> 8) & 0xFF, RecBot::iEnt);
 					} else {
 						iBotID = (g_hRecBuffer.Get(g_iRecBufferIdx++) >> 8) & 0xFF;
-						iEntity = g_hRecordingBots.Get(iBotID, RecBot_iEnt);
+						iEntity = g_hRecordingBots.Get(iBotID, RecBot::iEnt);
 					}
 
 					fPos[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
@@ -966,10 +957,8 @@ public void OnGameFrame() {
 						iButtons &= ~(IN_ATTACK | IN_ATTACK2 | IN_ATTACK3);
 					}
 
-					g_aClientState[iEntity][ClientState_fAng_0] = fAng[0];
-					g_aClientState[iEntity][ClientState_fAng_1] = fAng[1];
-					g_aClientState[iEntity][ClientState_fAng_2] = fAng[2];
-					g_aClientState[iEntity][ClientState_iButtons] = iButtons; // & ~(7 << 26);
+					g_eClientState[iEntity].fAng = fAng;
+					g_eClientState[iEntity].iButtons = iButtons; // & ~(7 << 26);
 
 					if (g_hTrail.BoolValue) {
 						GetClientAbsOrigin(iEntity, fPosNow);
@@ -1004,42 +993,42 @@ public void OnGameFrame() {
 					fAng[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
 					fAng[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
 
-					int iRecEntIdx = g_hRecordingEntities.FindValue(iRecordingEnt, RecEnt_iAssign);
+					int iRecEntIdx = g_hRecordingEntities.FindValue(iRecordingEnt, RecEnt::iAssign);
 					if (iRecEntIdx == -1) {
 						iEntity = INVALID_ENT_REFERENCE;
-						int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot_iEnt);
+						int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot::iEnt);
 
 						// Find unassigned entity to associate
 						for (int i=0; i<g_hRecordingEntities.Length; i++) {
-							int iArr[RecEnt_Size];
-							g_hRecordingEntities.GetArray(i, iArr, sizeof(iArr));
+							RecEnt eRecEnt;
+							g_hRecordingEntities.GetArray(i, eRecEnt);
 
-							if (iArr[RecEnt_iAssign] == -1 && iArr[RecEnt_iOwner] == iOwnerEnt && iArr[RecEnt_iType] == iEntType) {
+							if (eRecEnt.iAssign == -1 && eRecEnt.iOwner == iOwnerEnt && eRecEnt.iType == iEntType) {
 								iRecEntIdx = i;
 
-								iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iRef));
-								g_hRecordingEntities.Set(iRecEntIdx, iRecordingEnt, RecEnt_iAssign);
-								g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt_iDesyncs);
+								iEntity = EntRefToEntIndex(eRecEnt.iRef);
+								g_hRecordingEntities.Set(iRecEntIdx, iRecordingEnt, RecEnt::iAssign);
+								g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt::iDesyncs);
 								break;
 							}
 						}
 
 						if (iRecEntIdx == -1) {
-							int iArr[RecEnt_Size];
-							iArr[RecEnt_iID			] = g_iRecordingEntTotal++ % 256;
-							iArr[RecEnt_iRef		] = 0;
-							iArr[RecEnt_iType		] = iEntType;
-							iArr[RecEnt_iOwner		] = iOwnerEnt;
-							iArr[RecEnt_iAssign		] = iRecordingEnt;
-							g_hRecordingEntities.PushArray(iArr, sizeof(iArr));
+							RecEnt eRecEnt;
+							eRecEnt.iID = g_iRecordingEntTotal++ % 256;
+							eRecEnt.iRef = 0;
+							eRecEnt.iType = iEntType;
+							eRecEnt.iOwner = iOwnerEnt;
+							eRecEnt.iAssign = iRecordingEnt;
+							g_hRecordingEntities.PushArray(eRecEnt);
 						}
 					} else {
-						if (g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iRef)) {
-							g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt_iDesyncs);
+						if (g_hRecordingEntities.Get(iRecEntIdx, RecEnt::iRef)) {
+							g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt::iDesyncs);
 
-							iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iRef));
+							iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(iRecEntIdx, RecEnt::iRef));
 						} else {
-							int iDesyncs = g_hRecordingEntities.Get(iRecEntIdx, RecEnt_iDesyncs);
+							int iDesyncs = g_hRecordingEntities.Get(iRecEntIdx, RecEnt::iDesyncs);
 							if (iDesyncs) {
 								#if defined DEBUG
 								char sClassName[64];
@@ -1048,7 +1037,7 @@ public void OnGameFrame() {
 								#endif
 
 								if (iDesyncs >= MAX_REC_ENT_DESYNCS) {
-									int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot_iEnt);
+									int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot::iEnt);
 
 									#if !defined DEBUG
 									char sClassName[64];
@@ -1057,8 +1046,8 @@ public void OnGameFrame() {
 
 									iEntity = CreateProjectile(sClassName, fPos, fAng, fVel, iOwnerEnt);
 									if (IsValidEntity(iEntity)) {
-										g_hRecordingEntities.Set(iRecEntIdx, EntIndexToEntRef(iEntity), RecEnt_iRef);
-										g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt_iDesyncs);
+										g_hRecordingEntities.Set(iRecEntIdx, EntIndexToEntRef(iEntity), RecEnt::iRef);
+										g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt::iDesyncs);
 										DispatchSpawn(iEntity);
 
 										#if defined DEBUG
@@ -1121,16 +1110,16 @@ public void OnGameFrame() {
 		}
 
 		for (int i=0; i<g_hRecordingEntities.Length; i++) {
-			int iDesyncs = g_hRecordingEntities.Get(i, RecEnt_iDesyncs);
+			int iDesyncs = g_hRecordingEntities.Get(i, RecEnt::iDesyncs);
 			if (iDesyncs) {
-				int iEntity = g_hRecordingEntities.Get(i, RecEnt_iRef);
+				int iEntity = g_hRecordingEntities.Get(i, RecEnt::iRef);
 				if (!iEntity) {
 					continue;
 				}
 
 				iEntity = EntRefToEntIndex(iEntity);
 				if (IsValidEntity(iEntity)) {
-					int iRecordingEnt = g_hRecordingEntities.Get(i, RecEnt_iAssign);
+					int iRecordingEnt = g_hRecordingEntities.Get(i, RecEnt::iAssign);
 					if (iRecordingEnt == -1) {
 						continue;
 					}
@@ -1167,7 +1156,7 @@ public void OnGameFrame() {
 				g_iClientInstruction &= ~INST_REWIND;
 				/*
 				for (int i=0; i<g_hRecordingClients.Length; i++) {
-					int iRecClient = g_hRecordingClients.Get(i, RecBot_iEnt);
+					int iRecClient = g_hRecordingClients.Get(i, RecBot::iEnt);
 					SetEntityMoveType(iRecClient, MOVETYPE_WALK);
 				}
 				*/
@@ -1263,25 +1252,23 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 					StopSound(g_iClientOfInterest, SNDCHAN_STATIC, "ui/hint.wav");
 					CreateTimer(0.1, Timer_CloseHintPanel, g_iClientOfInterest, TIMER_FLAG_NO_MAPCHANGE);
 					
-					g_iLastBubbleTime[g_iClientOfInterest][Bubble_iTime] = GetTime()-10; // Prevent showme spam
+					g_eLastBubbleTime[g_iClientOfInterest].iTime = GetTime()-10; // Prevent showme spam
 					doReturn();
 				}
 				
 				doFullStop();
 				findTargetFollow();
 				for (int i=0; i<g_hRecordingBots.Length; i++) {
-					TF2_RespawnPlayer(g_hRecordingBots.Get(i, RecBot_iEnt));
+					TF2_RespawnPlayer(g_hRecordingBots.Get(i, RecBot::iEnt));
 				}
 			}
 		}
 		return Plugin_Continue;
 	} else if (g_hRecordingBots.FindValue(iClient) != -1) {
-		fAng[0] = g_aClientState[iClient][ClientState_fAng_0];
-		fAng[1] = g_aClientState[iClient][ClientState_fAng_1];
-		fAng[2] = g_aClientState[iClient][ClientState_fAng_2];
+		fAng = g_eClientState[iClient].fAng;
 
 		Entity_SetAbsAngles(iClient, fAng);
-		iButtons = g_aClientState[iClient][ClientState_iButtons] | IN_RELOAD; // Autoreload;
+		iButtons = g_eClientState[iClient].iButtons | IN_RELOAD; // Autoreload;
 
 		int iWeaponSlot = (iButtons >>> 26) & 7;
 		iWeapon = GetPlayerWeaponSlot(iClient, iWeaponSlot);
@@ -1305,8 +1292,8 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 		}
 
 		return Plugin_Changed;
-	} else if (iButtons & g_iCallKeyMask && (GetTime()-g_iLastBubbleTime[iClient][Bubble_iTime]) < 10) {
-		g_iLastBubbleTime[iClient][Bubble_iTime] = GetTime();
+	} else if (iButtons & g_iCallKeyMask && (GetTime()-g_eLastBubbleTime[iClient].iTime) < 10) {
+		g_eLastBubbleTime[iClient].iTime = GetTime();
 		FakeClientCommand(iClient, "showme");
 	}
 	
@@ -1373,7 +1360,7 @@ public void OnClientDisconnect(int iClient) {
 	int iPlayerCount = Client_GetCount(true, false);
 
 	if (IsFakeClient(iClient)) {
-		if ((iID = g_hRecordingBots.FindValue(iClient, RecBot_iEnt)) != -1) {
+		if ((iID = g_hRecordingBots.FindValue(iClient, RecBot::iEnt)) != -1) {
 			clearRecBotData(iID);
 			doFullStop();
 			
@@ -1396,7 +1383,7 @@ public void OnClientDisconnect(int iClient) {
 
 public void OnRebuildAdminCache(AdminCachePart iPart) {
 	for (int i=0; i<g_hRecordingBots.Length; i++) {
-		int iClient = g_hRecordingBots.Get(i, RecBot_iEnt);
+		int iClient = g_hRecordingBots.Get(i, RecBot::iEnt);
 		SetupBotImmunity(iClient);
 	}
 }
@@ -1406,7 +1393,7 @@ public int Native_Shutdown(Handle hPlugin, int iArgC) {
 	g_bShuttingDown = true;
 
 	for (int i=0; i<g_hRecordingBots.Length; i++) {
-		int iClient = g_hRecordingBots.Get(i, RecBot_iEnt);
+		int iClient = g_hRecordingBots.Get(i, RecBot::iEnt);
 		KickClient(iClient, "%t", "Punt Bot");
 		doFullStop();
 	}
@@ -1474,7 +1461,7 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 		}
 
 		// Primary rec
-		int iRecBot = g_hRecordingBots.Get(0, RecBot_iEnt);
+		int iRecBot = g_hRecordingBots.Get(0, RecBot::iEnt);
 
 		if (iMode == OBS_MODE_IN_EYE || iMode == OBS_MODE_CHASE) {
 			ChangeClientTeam(iClient, view_as<int>(TFTeam_Spectator));
@@ -2297,7 +2284,7 @@ public Action cmdRewind(int iClient, int iArgC) {
 
 	/*
 	for (int i=0; i<g_hRecordingClients.Length; i++) {
-		int iRecClient = g_hRecordingClients.Get(i, RecBot_iEnt);
+		int iRecClient = g_hRecordingClients.Get(i, RecBot::iEnt);
 		SetEntityMoveType(iRecClient, MOVETYPE_NONE);
 	}
 	*/
@@ -2343,13 +2330,13 @@ public Action cmdPause(int iClient, int iArgC) {
 		int iFlags = GetEntityFlags(iClient);
 		if (g_iClientInstruction & INST_PAUSE) {
 			for (int i=0; i<g_hRecordingClients.Length; i++) {
-				int iRecClient = g_hRecordingClients.Get(i, RecBot_iEnt);
+				int iRecClient = g_hRecordingClients.Get(i, RecBot::iEnt);
 				SetEntityFlags(iRecClient, iFlags | FL_FROZEN);
 				SetEntityMoveType(iRecClient, MOVETYPE_NONE);
 				
 				for (int j=0; j<g_hRecordingEntities.Length; j++) {
-					if (g_hRecordingEntities.Get(j, RecEnt_iOwner) == iRecClient) {
-						int iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(j, RecEnt_iRef));
+					if (g_hRecordingEntities.Get(j, RecEnt::iOwner) == iRecClient) {
+						int iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(j, RecEnt::iRef));
 						PrintToServer("entity %d movetype was %d", iEntity, GetEntityMoveType(iEntity));
 						SetEntityMoveType(iEntity, MOVETYPE_NONE);
 					}
@@ -2358,16 +2345,16 @@ public Action cmdPause(int iClient, int iArgC) {
 			}
 		} else {
 			for (int i=0; i<g_hRecordingClients.Length; i++) {
-				int iRecClient = g_hRecordingClients.Get(i, RecBot_iEnt);
+				int iRecClient = g_hRecordingClients.Get(i, RecBot::iEnt);
 				SetEntityFlags(iRecClient, iFlags & ~FL_FROZEN);
 				SetEntityMoveType(iRecClient, MOVETYPE_WALK);
 
 				// FIXME: Stickybombs cannot unfreeze properly
 				for (int j=0; j<g_hRecordingEntities.Length; j++) {
-					if (g_hRecordingEntities.Get(j, RecEnt_iOwner) == iRecClient) {
-						int iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(j, RecEnt_iRef));
-						SetEntityMoveType(iEntity, g_hRecordingEntities.Get(j, RecEnt_iMoveType));
-						PrintToServer("entity %d movetype reverted to %d", iEntity, g_hRecordingEntities.Get(j, RecEnt_iMoveType));
+					if (g_hRecordingEntities.Get(j, RecEnt::iOwner) == iRecClient) {
+						int iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(j, RecEnt::iRef));
+						SetEntityMoveType(iEntity, g_hRecordingEntities.Get(j, RecEnt::iMoveType));
+						PrintToServer("entity %d movetype reverted to %d", iEntity, g_hRecordingEntities.Get(j, RecEnt::iMoveType));
 					}
 				}
 				
@@ -2619,9 +2606,9 @@ public Action cmdShowMe(int iClient, int iArgC) {
 	GetClientEyePosition(iClient, fPos);
 	
 	Recording iClosestRecord;
-	if (GetTime()-g_iLastBubbleTime[iClient][Bubble_iTime] < 10) {
+	if (GetTime()-g_eLastBubbleTime[iClient].iTime < 10) {
 		char sKey[32];
-		IntToString(g_iLastBubbleTime[iClient][Bubble_iEnt], sKey, sizeof(sKey));
+		IntToString(g_eLastBubbleTime[iClient].iEnt, sKey, sizeof(sKey));
 		g_hBubbleLookup.GetValue(sKey, iClosestRecord);
 
 		if (!IsRecordingVisible(iClosestRecord, iClient)) {
@@ -2796,7 +2783,7 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 	}
 
 	// Primary rec
-	int iRecBot = g_hRecordingBots.Get(0, RecBot_iEnt);
+	int iRecBot = g_hRecordingBots.Get(0, RecBot::iEnt);
 	
 	if (iMode == OBS_MODE_IN_EYE || iMode == OBS_MODE_CHASE) {
 		ChangeClientTeam(iClient, view_as<int>(TFTeam_Spectator));
@@ -2991,7 +2978,7 @@ public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroa
 		}
 		
 		return Plugin_Handled;
-	} else if ((iBotID = g_hRecordingBots.FindValue(iClient, RecBot_iEnt)) != -1) {
+	} else if ((iBotID = g_hRecordingBots.FindValue(iClient, RecBot::iEnt)) != -1) {
 		Client_SetFOV(iClient, g_hFOV.IntValue);
 		
 		SetEntProp(iClient, Prop_Data, "m_takedamage", 1, 1); // Buddha
@@ -3010,7 +2997,7 @@ public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroa
 		if (!IsFakeClient(iClient) && g_hRecordingBots.Length) {
 			TFTeam iTeam = view_as<TFTeam>(GetClientTeam(iClient));
 			for (int i=0; i<g_hRecordingBots.Length; i++) {
-				int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+				int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
 
 				if (view_as<TFTeam>(GetClientTeam(iRecBot)) <= TFTeam_Spectator) {
 					ChangeClientTeam(iRecBot, view_as<int>(iTeam));
@@ -3026,7 +3013,7 @@ public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroa
 public Action Event_PlayerTeam(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
 	
-	if (iClient == g_iClientOfInterest || g_hRecordingBots.FindValue(iClient, RecBot_iEnt) != -1) {
+	if (iClient == g_iClientOfInterest || g_hRecordingBots.FindValue(iClient, RecBot::iEnt) != -1) {
 		hEvent.BroadcastDisabled  = true;
 	}
 	
@@ -3037,7 +3024,7 @@ public Action Event_PlayerTeam(Event hEvent, const char[] sName, bool bDontBroad
 
 public Action Event_Resupply(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
-	if (g_hRecordingBots.FindValue(iClient, RecBot_iEnt) != -1 && g_iClientOfInterest != -1) {
+	if (g_hRecordingBots.FindValue(iClient, RecBot::iEnt) != -1 && g_iClientOfInterest != -1) {
 		float fRatio = 1.0 / g_fPlaybackSpeed;
 		
 		TF2Attrib_SetByName(iClient, "gesture speed increase", fRatio);
@@ -3062,7 +3049,7 @@ public Action Event_RoundStart(Event hEvent, const char[] sName, bool bDontBroad
 
 public Action UserMessage_VoiceSubtitle(UserMsg iMessageID, Handle hMessage, const int[] iPlayers, int iPlayersNum, bool bReliable, bool bInit) {
 	int iClient = BfReadByte(hMessage);
-	if (g_hRecordingBots.FindValue(iClient, RecBot_iEnt) != -1) {
+	if (g_hRecordingBots.FindValue(iClient, RecBot::iEnt) != -1) {
 		return Plugin_Handled;
 	}
 	
@@ -3097,7 +3084,7 @@ public Action Timer_BotJoinExecute(Handle hTimer, any aData) {
 
 public Action Timer_AmmoRegen(Handle hTimer) {
 	for (int i=0; i<g_hRecordingBots.Length; i++) {
-		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+		int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
 
 		int iWeapon1 = GetPlayerWeaponSlot(iRecBot, TFWeaponSlot_Primary);
 		if (iWeapon1 != -1) {
@@ -3127,20 +3114,20 @@ public Action Timer_AmmoRegen(Handle hTimer) {
 
 public Action Timer_Queue(Handle hTimer, any aData) {
 	if (g_iClientInstruction == INST_NOP && g_hQueue.Length) {
-		any aQueueData[QUEUE_BLOCKSIZE];
-		g_hQueue.GetArray(0, aQueueData, sizeof(aQueueData));
+		Queue eQueue;
+		g_hQueue.GetArray(0, eQueue);
 		g_hQueue.Erase(0);
 		
-		if (g_hQueuePanel[aQueueData[QUEUE_CLIENT]] != null) {
-			delete g_hQueuePanel[aQueueData[QUEUE_CLIENT]];
+		if (g_hQueuePanel[eQueue.iClient] != null) {
+			delete g_hQueuePanel[eQueue.iClient];
 		}
 		
-		doShowMe(aQueueData[QUEUE_CLIENT], aQueueData[QUEUE_RECORDING], aQueueData[QUEUE_TEAM], aQueueData[QUEUE_OBSMODE]);
+		doShowMe(eQueue.iClient, eQueue.iRecording, eQueue.iTeam, eQueue.iObsMode);
 	} else if (g_hRecordingBots.Length && g_iClientInstruction == INST_NOP && !g_hQueue.Length && g_hInteractive.IntValue) {
 		findTargetFollow();
 
 		for (int i=0; i<g_hRecordingBots.Length; i++) {
-			int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+			int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
 		
 			TF2Attrib_SetByName(iRecBot, "gesture speed increase", 1.0);
 			for (int j=TFWeaponSlot_Primary; j<=TFWeaponSlot_Item2; j++) {
@@ -3155,7 +3142,7 @@ public Action Timer_Queue(Handle hTimer, any aData) {
 	}
 	
 	for (int i=0; i < g_hQueue.Length; i++) {
-		sendQueuePanel(g_hQueue.Get(i, QUEUE_CLIENT));
+		sendQueuePanel(g_hQueue.Get(i, Queue::iClient));
 	}
 	
 	RefreshModels();
@@ -3326,14 +3313,14 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		}
 		StopSound(iOther, SNDCHAN_STATIC, "ui/hint.wav");
 		
-		if (g_hDebug.BoolValue && (iEntityRef != g_iLastBubbleTime[iOther][Bubble_iEnt] || GetTime()-g_iLastBubbleTime[iOther][1] > 10)) {
+		if (g_hDebug.BoolValue && (iEntityRef != g_eLastBubbleTime[iOther].iEnt || GetTime()-g_eLastBubbleTime[iOther].iTime > 10)) {
 			char sFilePath[PLATFORM_MAX_PATH];
 			iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
 			CPrintToChat(iOther, "{dodgerblue}[jb] {white}ID: %d | %t | %s%t (%s) | %t: %s | %t:\n	%s", iRecID, (iRecording.Repo ? "Repository" : "Local"), sClass, "Recording", sTimeTotal, "Author", sAuthID, "File", sFilePath);
 		}
 
-		g_iLastBubbleTime[iOther][Bubble_iEnt] = iEntityRef;
-		g_iLastBubbleTime[iOther][Bubble_iTime] = GetTime();
+		g_eLastBubbleTime[iOther].iEnt = iEntityRef;
+		g_eLastBubbleTime[iOther].iTime = GetTime();
 	}
 	
 	return Plugin_Continue;
@@ -3341,8 +3328,8 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 
 public Action Hook_EndTouchInfo(int iEntity, int iOther) {
 	if (Client_IsValid(iOther) && !IsFakeClient(iOther) && g_bBubble[iOther]) {
-		int iTimeDiff = GetTime() - g_iLastBubbleTime[iOther][Bubble_iTime];
-		if (EntIndexToEntRef(iEntity) == g_iLastBubbleTime[iOther][Bubble_iEnt] && iTimeDiff < 10) {
+		int iTimeDiff = GetTime() - g_eLastBubbleTime[iOther].iTime;
+		if (EntIndexToEntRef(iEntity) == g_eLastBubbleTime[iOther].iEnt && iTimeDiff < 10) {
 			PrintHintText(iOther, " ");
 			StopSound(iOther, SNDCHAN_STATIC, "ui/hint.wav");
 			CreateTimer(0.1, Timer_CloseHintPanel, iOther, TIMER_FLAG_NO_MAPCHANGE);
@@ -3352,7 +3339,7 @@ public Action Hook_EndTouchInfo(int iEntity, int iOther) {
 }
 
 public Action Hook_TouchFlag(int iEntity, int iOther) {
-	if (g_hRecordingBots.FindValue(iOther, RecBot_iEnt) != -1) {
+	if (g_hRecordingBots.FindValue(iOther, RecBot::iEnt) != -1) {
 		return Plugin_Handled;
 	}
 	
@@ -3367,7 +3354,7 @@ public Action Hook_RocketSpawn(int iEntity) {
 	}
 
 	int iRecBot = -1;
-	int iRecOwner = IsFakeClient(iOwnerEnt) ? (iRecBot = g_hRecordingBots.FindValue(iOwnerEnt, RecBot_iEnt)) : g_hRecordingClients.FindValue(iOwnerEnt);
+	int iRecOwner = IsFakeClient(iOwnerEnt) ? (iRecBot = g_hRecordingBots.FindValue(iOwnerEnt, RecBot::iEnt)) : g_hRecordingClients.FindValue(iOwnerEnt);
 	
 	if (iRecOwner != -1) {
 		RegisterRecEnt(iEntity, iOwnerEnt);
@@ -3408,7 +3395,7 @@ public Action Hook_ProjectileSpawn(int iEntity) {
 	}
 
 	int iRecBot = -1;
-	int iRecOwner = IsFakeClient(iOwnerEnt) ? (iRecBot = g_hRecordingBots.FindValue(iOwnerEnt, RecBot_iEnt)) : g_hRecordingClients.FindValue(iOwnerEnt);
+	int iRecOwner = IsFakeClient(iOwnerEnt) ? (iRecBot = g_hRecordingBots.FindValue(iOwnerEnt, RecBot::iEnt)) : g_hRecordingClients.FindValue(iOwnerEnt);
 	
 	if (iRecOwner != -1) {
 		RegisterRecEnt(iEntity, iOwnerEnt);
@@ -3458,7 +3445,7 @@ public void Hook_ProjVPhysics(int iEntity) {
 
 // Adapted from BeTheRobot: https://forums.alliedmods.net/showthread.php?t=193067
 public Action Hook_NormalSound(int iClients[64], int &iNumClients, char sSound[PLATFORM_MAX_PATH], int &iEnt, int &iChannel, float &fVolume, int &iLevel, int &iPitch, int &iFlags) {
-	if (g_hRobot.BoolValue && g_hRecordingBots.FindValue(iEnt, RecBot_iEnt) != -1) {
+	if (g_hRobot.BoolValue && g_hRecordingBots.FindValue(iEnt, RecBot::iEnt) != -1) {
 		TFClassType iClass = TF2_GetPlayerClass(iEnt);
 		
 		if (StrContains(sSound, "player/footsteps/", false) != -1 && iClass != TFClass_Medic) {
@@ -3529,7 +3516,7 @@ public Action Hook_SpawnTaunt(int iEntity) {
 */
 
 public Action Hook_TouchFuncRegenerate(int iEntity, int iOther) {
-	if (g_hRecordingBots.FindValue(iOther, RecBot_iEnt) != -1) {
+	if (g_hRecordingBots.FindValue(iOther, RecBot::iEnt) != -1) {
 		return Plugin_Handled;
 	}
 	
@@ -3593,12 +3580,12 @@ bool checkVersion(char[] sFilePath) {
 void clearRecBotData(int iID = -1) {
 	if (iID == -1) {
 		for (int i=0; i<g_hRecordingBots.Length; i++) {
-			delete view_as<DataPack>(g_hRecordingBots.Get(i, RecBot_hEquip));
+			delete view_as<DataPack>(g_hRecordingBots.Get(i, RecBot::hEquip));
 		}
 
 		g_hRecordingBots.Clear();
 	} else {
-		delete view_as<DataPack>(g_hRecordingBots.Get(iID, RecBot_hEquip));
+		delete view_as<DataPack>(g_hRecordingBots.Get(iID, RecBot::hEquip));
 		g_hRecordingBots.Erase(iID);
 	}
 }
@@ -3613,10 +3600,10 @@ void clearRecordings(ArrayList hRecordings) {
 
 void clearRecEntities() {
 	for (int i=0; i<g_hRecordingEntities.Length; i++) {
-		int iArr[RecEnt_Size];
-		g_hRecordingEntities.GetArray(i, iArr, sizeof(iArr));
+		RecEnt eRecEnt;
+		g_hRecordingEntities.GetArray(i, eRecEnt);
 
-		int iEntity = EntRefToEntIndex(iArr[RecEnt_iRef]);
+		int iEntity = EntRefToEntIndex(eRecEnt.iRef);
 		if (iEntity && IsValidEntity(iEntity)) {
 			g_hRecordingEntities.Erase(i);
 			AcceptEntityInput(iEntity, "Kill");
@@ -3625,7 +3612,7 @@ void clearRecEntities() {
 			i--;
 		}
 	}
-	
+
 	g_hRecordingEntities.Clear();
 }
 
@@ -3634,13 +3621,13 @@ void doPlayerQueueAdd(int iClient, Recording iRecording, Obs_Mode iMode) {
 		return;
 	}
 
-	any aQueueData[QUEUE_BLOCKSIZE];
-	aQueueData[QUEUE_CLIENT] = iClient;
-	aQueueData[QUEUE_RECORDING] = iRecording;
-	aQueueData[QUEUE_TIME] = (g_iWarmupFrames + iRecording.Length) / 66.0;
-	aQueueData[QUEUE_TEAM] = GetClientTeam(iClient);
-	aQueueData[QUEUE_OBSMODE] = iMode;
-	g_hQueue.PushArray(aQueueData);
+	Queue eQueue;
+	eQueue.iClient = iClient;
+	eQueue.iRecording = iRecording;
+	eQueue.fTime = (g_iWarmupFrames + iRecording.Length) / 66.0;
+	eQueue.iTeam = view_as<TFTeam>(GetClientTeam(iClient));
+	eQueue.iObsMode = iMode;
+	g_hQueue.PushArray(eQueue);
 }
 
 void doPlayerQueueRemove(int iClient) {
@@ -3664,10 +3651,10 @@ void doPlayerQueueClear() {
 	}
 
 	for (int i = 0; i < g_hQueue.Length; i++) {
-		any aQueueData[QUEUE_BLOCKSIZE];
-		g_hQueue.GetArray(i, aQueueData, sizeof(aQueueData));
+		Queue eQueue;
+		g_hQueue.GetArray(i, eQueue);
 		
-		int iClient = aQueueData[QUEUE_CLIENT];
+		int iClient = eQueue.iClient;
 		if (g_hQueuePanel[iClient] != null) {
 			delete g_hQueuePanel[iClient];
 		}
@@ -3718,7 +3705,7 @@ void doReturnSpectators(int iTarget) {
 			Obs_Mode iObserverMode = Client_GetObserverMode(iClient);
 
 			// FIXME: What if observing idle RecBot not in recording playback?
-			if ((iObserverMode == OBS_MODE_IN_EYE || iObserverMode == OBS_MODE_CHASE) && g_hRecordingBots.FindValue(Client_GetObserverTarget(iClient), RecBot_iEnt) != -1) {
+			if ((iObserverMode == OBS_MODE_IN_EYE || iObserverMode == OBS_MODE_CHASE) && g_hRecordingBots.FindValue(Client_GetObserverTarget(iClient), RecBot::iEnt) != -1) {
 				FakeClientCommand(iClient, "spec_player \"%N\"", iTarget);
 			}
 		}
@@ -3734,7 +3721,7 @@ void doFullStop() {
 	
 	// Release all buttons
 	for (int i=1; i<=MaxClients; i++) {
-		g_aClientState[i][ClientState_iButtons] = 0;
+		g_eClientState[i].iButtons = 0;
 	}
 
 	if (g_bShowKeysAvailable && Client_IsValid(g_iClientOfInterest) && IsClientInGame(g_iClientOfInterest)) {
@@ -3755,7 +3742,7 @@ void doFullStop() {
 	}
 
 	for (int i=0; i<g_hRecordingClients.Length; i++) {
-		int iRecClient = g_hRecordingClients.Get(i, RecBot_iEnt);
+		int iRecClient = g_hRecordingClients.Get(i, RecBot::iEnt);
 
 		int iFlags = GetEntityFlags(iRecClient);
 		SetEntityFlags(iRecClient, iFlags & ~FL_FROZEN);
@@ -3768,7 +3755,7 @@ void doFullStop() {
 	g_hRecBufferFrames = null;
 	
 	for (int i=0; i<g_hRecordingBots.Length; i++) {
-		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+		int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
 
 		TF2Attrib_SetByName(iRecBot, "gesture speed increase", 1.0);
 		for (int j=TFWeaponSlot_Primary; j<=TFWeaponSlot_Item2; j++) {
@@ -3783,13 +3770,13 @@ void doFullStop() {
 }
 
 void Equip(int iBotID) {
-	int iClient = g_hRecordingBots.Get(iBotID, RecBot_iEnt);
+	int iClient = g_hRecordingBots.Get(iBotID, RecBot::iEnt);
 	if (!Client_IsValid(iClient) || !IsClientInGame(iClient)) {
 		LogError("Cannot equip for client not in game: bot %d, client %d", iBotID, iClient);
 		return;
 	}
 
-	DataPack hEquip = g_hRecordingBots.Get(iBotID, RecBot_hEquip);
+	DataPack hEquip = g_hRecordingBots.Get(iBotID, RecBot::hEquip);
 	hEquip.Reset(false);
 	if (!hEquip.IsReadable(4)) {
 		return;
@@ -3854,7 +3841,7 @@ void EquipRec(int iBotID, Recording iRecording, bool bImmediate = true) {
 		return;
 	}
 
-	DataPack hEquip = g_hRecordingBots.Get(iBotID, RecBot_hEquip);
+	DataPack hEquip = g_hRecordingBots.Get(iBotID, RecBot::hEquip);
 	hEquip.Reset(true);
 	
 	ClientInfo iClientInfo = iRecording.ClientInfo.Get(iBotID);
@@ -3960,7 +3947,7 @@ void findTargetFollow() {
 	}
 	
 	// TODO: Multiple bot follow target
-	int iRecBot = g_hRecordingBots.Get(0, RecBot_iEnt);
+	int iRecBot = g_hRecordingBots.Get(0, RecBot::iEnt);
 
 	float fPos[3], fPosOther[3];
 	GetClientAbsOrigin(iRecBot, fPos);
@@ -4696,10 +4683,10 @@ void SetupBot() {
 
 	SetupBotImmunity(iRecBot);
 
-	any aArr[RecBot_Size];
-	aArr[RecBot_iEnt] = iRecBot;
-	aArr[RecBot_hEquip] = new DataPack();
-	g_hRecordingBots.PushArray(aArr);
+	RecBot eRecBot;
+	eRecBot.iEnt = iRecBot;
+	eRecBot.hEquip = new DataPack();
+	g_hRecordingBots.PushArray(eRecBot);
 
 	CreateTimer(5.0, Timer_BotJoinExecute, iRecBot, TIMER_FLAG_NO_MAPCHANGE);
 	
@@ -4722,7 +4709,7 @@ public void showKeys(int iClient) {
 		Obs_Mode iObserverMode = Client_GetObserverMode(iClient);
 		if (iObserverMode == OBS_MODE_IN_EYE || iObserverMode == OBS_MODE_CHASE) {
 			int iObsTarget = Client_GetObserverTarget(iClient);
-			if (g_hRecordingBots.FindValue(iObsTarget, RecBot_iEnt) == -1) {
+			if (g_hRecordingBots.FindValue(iObsTarget, RecBot::iEnt) == -1) {
 				return;
 			}
 			
@@ -5197,7 +5184,7 @@ int CreateProjectile(char[] sClassName, float fPos[3], float fAng[3], float fVel
 void RegisterRecEnt(int iEntity, int iOwnerEnt, int iAssign=-1) {
 	// Check for duplicate hook callback
 	int iRef = EntIndexToEntRef(iEntity);
-	if (g_hRecordingEntities.FindValue(iRef, RecEnt_iRef) != -1) {
+	if (g_hRecordingEntities.FindValue(iRef, RecEnt::iRef) != -1) {
 		return;
 	}
 
@@ -5211,29 +5198,29 @@ void RegisterRecEnt(int iEntity, int iOwnerEnt, int iAssign=-1) {
 	}
 
 	for (int i=0; i<g_hRecordingEntities.Length; i++) {
-		int iArr[RecEnt_Size];
-		g_hRecordingEntities.GetArray(i, iArr, sizeof(iArr));
+		RecEnt eRecEnt;
+		g_hRecordingEntities.GetArray(i, eRecEnt);
 
-		if (iArr[RecEnt_iOwner] == iOwnerEnt && !iArr[RecEnt_iRef] && iArr[RecEnt_iType] == iEntType) {
-			g_hRecordingEntities.Set(i, iRef, RecEnt_iRef);
-			g_hRecordingEntities.Set(i, 0, RecEnt_iDesyncs);
+		if (eRecEnt.iOwner == iOwnerEnt && !eRecEnt.iRef && eRecEnt.iType == iEntType) {
+			g_hRecordingEntities.Set(i, iRef, RecEnt::iRef);
+			g_hRecordingEntities.Set(i, 0, RecEnt::iDesyncs);
 			return;
 		}
 	}
 
-	int iArr[RecEnt_Size];
-	iArr[RecEnt_iID			] = g_iRecordingEntTotal++ % 256;
-	iArr[RecEnt_iRef		] = iRef;
-	iArr[RecEnt_iType		] = iEntType;
-	iArr[RecEnt_iMoveType	] = view_as<int>(GetEntityMoveType(iEntity));
-	iArr[RecEnt_iOwner		] = iOwnerEnt;
-	iArr[RecEnt_iAssign		] = iAssign;
-	g_hRecordingEntities.PushArray(iArr, sizeof(iArr));
+	RecEnt eRecEnt;
+	eRecEnt.iID = g_iRecordingEntTotal++ % 256;
+	eRecEnt.iRef = iRef;
+	eRecEnt.iType = iEntType;
+	eRecEnt.iMoveType = view_as<int>(GetEntityMoveType(iEntity));
+	eRecEnt.iOwner = iOwnerEnt;
+	eRecEnt.iAssign = iAssign;
+	g_hRecordingEntities.PushArray(eRecEnt);
 }
 
 void RespawnFrameRecEnt(int iFrame) {
 	for (int i=0; i<g_hRecordingEntities.Length; i++) {
-		int iRecEntIdx = EntRefToEntIndex(g_hRecordingEntities.Get(i, RecEnt_iRef));
+		int iRecEntIdx = EntRefToEntIndex(g_hRecordingEntities.Get(i, RecEnt::iRef));
 		if (IsValidEntity(iRecEntIdx)) {
 			AcceptEntityInput(iRecEntIdx, "Kill");
 		}
@@ -5301,7 +5288,7 @@ bool PrepareBots(Recording iRecording) {
 
 	ArrayList hClientInfo = iRecording.ClientInfo;
 	for (int i=0; i<hClientInfo.Length; i++) {
-		int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+		int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
 		if (!IsClientInGame(iRecBot)) {
 			LogError("Tried using iRecBot=%d but the client is not in-game", i);
 			return false;
@@ -5315,15 +5302,13 @@ bool PrepareBots(Recording iRecording) {
 
 		float fAng[3];
 		iClientInfo.GetStartAng(fAng);
-		g_aClientState[iRecBot][ClientState_fAng_0] = fAng[0];
-		g_aClientState[iRecBot][ClientState_fAng_1] = fAng[1];
-		g_aClientState[iRecBot][ClientState_fAng_2] = fAng[2];
+		g_eClientState[iRecBot].fAng = fAng;
 
 		TFClassType iRecClass = iClientInfo.Class;
 		TFTeam iRecTeam = iClientInfo.Team;
 
 		if (iRecClass == TFClass_DemoMan) {
-			g_aClientState[iRecBot][ClientState_iButtons] = TFWeaponSlot_Secondary << 26;
+			g_eClientState[iRecBot].iButtons = TFWeaponSlot_Secondary << 26;
 		}
 
 		bool bRespawnRequired = !IsPlayerAlive(iRecBot);
@@ -5361,7 +5346,7 @@ void sendQueuePanel(int iClient) {
 		delete g_hQueuePanel[iClient];
 	}
 	
-	int iAhead = g_hQueue.FindValue(iClient, QUEUE_CLIENT);
+	int iAhead = g_hQueue.FindValue(iClient, Queue::iClient);
 	if (iAhead == -1) {
 		iAhead = g_hQueue.Length;
 	}
@@ -5387,7 +5372,7 @@ void sendQueuePanel(int iClient) {
 		}
 	}
 	for (int i = 0; i < iAhead; i++) {
-		fWaitTime = fWaitTime + view_as<float>(g_hQueue.Get(i, QUEUE_TIME)) * g_fSpeed[g_hQueue.Get(i, QUEUE_CLIENT)];
+		fWaitTime = fWaitTime + view_as<float>(g_hQueue.Get(i, Queue::fTime)) * g_fSpeed[g_hQueue.Get(i, Queue::iClient)];
 	}
 	int iWaitTimeRounded = RoundFloat(fWaitTime);
 	

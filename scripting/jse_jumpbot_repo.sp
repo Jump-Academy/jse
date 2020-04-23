@@ -304,7 +304,7 @@ public int OnSocketDisconnected(Handle hSocket, any aArg) {
 
 				ArrayList hClientInfo = iRecording.ClientInfo;
 				for (int i=0; i<hClientInfo.Length; i++) {
-					int iRecBot = g_hRecordingBots.Get(i, RecBot_iEnt);
+					int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
 					if (!IsClientInGame(iRecBot)) {
 						LogError("Tried using iRecBot=%d but the client is not in-game", i);
 						return;
