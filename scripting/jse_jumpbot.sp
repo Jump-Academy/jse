@@ -5066,8 +5066,22 @@ bool IsRecordingVisible(Recording iRecording, int iClient) {
 		return false;
 	}
 
-	if (view_as<TFTeam>(GetClientTeam(iClient)) == TFTeam_Spectator || (g_hAllowMedic.BoolValue && TF2_GetPlayerClass(iClient) == TFClass_Medic) || g_hDebug.BoolValue) {
+	if ((g_hAllowMedic.BoolValue && TF2_GetPlayerClass(iClient) == TFClass_Medic) || g_hDebug.BoolValue) {
 		return true;
+	}
+
+	if (view_as<TFTeam>(GetClientTeam(iClient)) == TFTeam_Spectator) {
+		if (iClient == g_iClientOfInterest) {
+			return g_iRecording == iRecording;
+		}
+
+		Obs_Mode iObserverMode = Client_GetObserverMode(iClient);
+		int iObsTarget = Client_GetObserverTarget(iClient);
+		if ((iObserverMode == OBS_MODE_IN_EYE || iObserverMode == OBS_MODE_CHASE) && g_hRecordingBots.FindValue(iObsTarget, RecBot::iEnt) != -1) {
+			return g_iRecording == iRecording;
+		}
+
+		return checkAccess(iClient);
 	}
 
 	TFClassType iClass = TF2_GetPlayerClass(iClient);
