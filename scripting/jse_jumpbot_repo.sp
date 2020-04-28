@@ -314,6 +314,7 @@ public int OnSocketDisconnected(Handle hSocket, any aArg) {
 				}
 
 				LoadFrames(iRecording);
+				SetPlaybackSpeedCOI();
 
 				g_iClientInstruction |= INST_PLAY;
 				g_iClientInstruction &= ~INST_WAIT;

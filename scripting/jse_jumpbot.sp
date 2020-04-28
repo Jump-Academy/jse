@@ -22,11 +22,19 @@ enum struct RecEnt {
 	int iOwner;
 	int iAssign;
 	int iDesyncs;
+	float fPosPrev[3];
+	float fAngPrev[3];
+	float fPosNext[3];
+	float fAngNext[3];
 }
 
 enum struct RecBot {
 	int iEnt;
 	DataPack hEquip;
+	float fPosPrev[3];
+	float fAngPrev[3];
+	float fPosNext[3];
+	float fAngNext[3];
 }
 
 enum struct Bubble {
@@ -186,17 +194,19 @@ ArrayList g_hRecBuffer;
 int g_iRecBufferIdx;
 int g_iRecBufferUsed;
 int g_iRecBufferFrame;
+
+float g_fPlaybackSpeed;
+int g_iInterFrameIdx;
+int g_iInterFrameLength;
+
+int g_iWarmupFrames;
+
 ArrayList g_hRecBufferFrames;
 int g_iRewindWaitFrames;
 int g_iStateLoadLast;
 
 ClientState g_eClientState[MAXPLAYERS+1];
 
-int g_iWarmupFrames;
-float g_fPlaybackSpeed;
-//float g_fShadowBufferAlpha;
-
-//float g_fIdleViewAngles[3];
 any g_aSpawnFreeze[MAXPLAYERS+1][8];
 StringMap g_hProjMap;
 ArrayList g_hSpecList;
@@ -374,7 +384,6 @@ public void OnPluginStart() {
 	
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_team", Event_PlayerTeam, EventHookMode_Pre);
-	HookEvent("post_inventory_application", Event_Resupply,  EventHookMode_Post);
 	HookEvent("teamplay_round_start", Event_RoundStart);
 	HookUserMessage(GetUserMessageId("VoiceSubtitle"), UserMessage_VoiceSubtitle, true);
 	AddNormalSoundHook(Hook_NormalSound);
@@ -573,7 +582,6 @@ public void OnMapStart() {
 
 	g_iStateLoadLast = -1;
 
-	//g_fShadowBufferAlpha = 0.0;
 	g_iRecording = NULL_RECORDING;
 	g_iWarmupFrames = 2 * WARMUP_FRAMES_DEFAULT;
 	
@@ -797,6 +805,8 @@ public void OnGameFrame() {
 					}
 				}
 			}
+
+			SetPlaybackSpeedCOI();
 		}
 	} else if (g_iClientInstruction & (INST_PLAY | INST_REWIND)) {
 		static float fPos[3];
@@ -905,274 +915,351 @@ public void OnGameFrame() {
 				Entity_SetAbsAngles(iBubble, fBubbleAng);
 			}
 		}
-		
-		int iRecBufferIdxBackup = g_iRecBufferIdx;
 
-		if (view_as<RecBlockType>(g_hRecBuffer.Get(g_iRecBufferIdx) & 0xFF) == FRAME) {
-			g_iRecBufferFrame = g_hRecBuffer.Get(g_iRecBufferIdx) >> 8;
-			g_iRecBufferIdx++;
-		} else {
-			LogError("Cannot find start of frame at buffer index: %d", g_iRecBufferIdx);
-			doFullStop();
-			return;
-		}
+		if (g_iInterFrameIdx == 0) {
+			int iRecBufferIdxBackup = g_iRecBufferIdx;
 
-		for (int i=0; i<g_hRecordingEntities.Length; i++) {
-			int iDesyncs = g_hRecordingEntities.Get(i, RecEnt::iDesyncs);
-			g_hRecordingEntities.Set(i, iDesyncs+1, RecEnt::iDesyncs);
-		}
+			if (view_as<RecBlockType>(g_hRecBuffer.Get(g_iRecBufferIdx) & 0xFF) == FRAME) {
+				g_iRecBufferFrame = g_hRecBuffer.Get(g_iRecBufferIdx) >> 8;
+				g_iRecBufferIdx++;
+				g_iInterFrameIdx = 0;
+			} else {
+				LogError("Cannot find start of frame at buffer index: %d", g_iRecBufferIdx);
+				doFullStop();
+				return;
+			}
 
-		while (g_iRecBufferIdx < g_iRecBufferUsed && g_iRecBufferIdx < g_hRecBuffer.Length) {
-			int iEntity = INVALID_ENT_REFERENCE;
-			int iEntType;
-			int iOwner = -1;
-			int iBotID = -1;
-			int iRecordingEnt = -1;
+			for (int i=0; i<g_hRecordingEntities.Length; i++) {
+				int iDesyncs = g_hRecordingEntities.Get(i, RecEnt::iDesyncs);
+				g_hRecordingEntities.Set(i, iDesyncs+1, RecEnt::iDesyncs);
+			}
 
-			RecBlockType iRecBlockType = view_as<RecBlockType>(g_hRecBuffer.Get(g_iRecBufferIdx) & 0xFF);
-			switch (iRecBlockType) {
-				case FRAME: {
-					break;
-				}
-				case CLIENT: {
-					if (g_iClientInstruction & INST_REWIND && g_iClientInstruction & INST_RECD) {
-						iEntity = g_hRecordingClients.Get((g_hRecBuffer.Get(g_iRecBufferIdx++) >> 8) & 0xFF, RecBot::iEnt);
-					} else {
-						iBotID = (g_hRecBuffer.Get(g_iRecBufferIdx++) >> 8) & 0xFF;
-						iEntity = g_hRecordingBots.Get(iBotID, RecBot::iEnt);
+			while (g_iRecBufferIdx < g_iRecBufferUsed && g_iRecBufferIdx < g_hRecBuffer.Length) {
+				int iEntity = INVALID_ENT_REFERENCE;
+				int iEntType;
+				int iOwner = -1;
+				int iBotID = -1;
+				int iRecordingEnt = -1;
+
+				RecBlockType iRecBlockType = view_as<RecBlockType>(g_hRecBuffer.Get(g_iRecBufferIdx) & 0xFF);
+				switch (iRecBlockType) {
+					case FRAME: {
+						break;
 					}
-
-					fPos[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fPos[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fPos[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fVel[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fVel[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fVel[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fAng[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fAng[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fAng[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					iButtons = g_hRecBuffer.Get(g_iRecBufferIdx++);
-
-					if (g_iClientInstruction & INST_PAUSE) {
-						iButtons &= ~(IN_ATTACK | IN_ATTACK2 | IN_ATTACK3);
-					}
-
-					g_eClientState[iEntity].fAng = fAng;
-					g_eClientState[iEntity].iButtons = iButtons; // & ~(7 << 26);
-
-					if (g_hTrail.BoolValue) {
-						GetClientAbsOrigin(iEntity, fPosNow);
-						if (GetVectorDistance(fPosNow, fPos) < 100.0) {
-							float fEyePos[3];
-							GetClientEyePosition(iEntity, fEyePos);
-							float fZOffset = (fEyePos[2] - fPosNow[2])/2;
-
-							fPosNow[2] += fZOffset;
-							float fPosNext[3];
-							fPosNext[0] = fPos[0];
-							fPosNext[1] = fPos[1];
-							fPosNext[2] = fPos[2] + fZOffset;
-
-							TE_SetupBeamPoints(fPosNow, fPosNext, g_iTrailLaser, g_iTrailHalo, 0, 66, g_fTrailLife, 25.0, 25.0, 1, 1.0, g_iTrailColor, 0);
-							TE_SendToAllInRangeVisible(fPos);
+					case CLIENT: {
+						if (g_iClientInstruction & INST_REWIND && g_iClientInstruction & INST_RECD) {
+							iEntity = g_hRecordingClients.Get((g_hRecBuffer.Get(g_iRecBufferIdx++) >> 8) & 0xFF, RecBot::iEnt);
+						} else {
+							iBotID = (g_hRecBuffer.Get(g_iRecBufferIdx++) >> 8) & 0xFF;
+							iEntity = g_hRecordingBots.Get(iBotID, RecBot::iEnt);
 						}
-					}
-				}
-				case ENTITY: {
-					iRecordingEnt	= (g_hRecBuffer.Get(g_iRecBufferIdx  ) >>  8) & 0xFF;
-					iEntType 		= (g_hRecBuffer.Get(g_iRecBufferIdx  ) >> 16) & 0xFF;
-					iOwner			= (g_hRecBuffer.Get(g_iRecBufferIdx++) >> 24) & 0xFF;
-					
-					fPos[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fPos[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fPos[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fVel[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fVel[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fVel[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fAng[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fAng[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
-					fAng[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
 
-					int iRecEntIdx = g_hRecordingEntities.FindValue(iRecordingEnt, RecEnt::iAssign);
-					if (iRecEntIdx == -1) {
-						iEntity = INVALID_ENT_REFERENCE;
-						int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot::iEnt);
+						fPos[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fPos[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fPos[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fVel[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fVel[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fVel[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fAng[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fAng[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fAng[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						iButtons = g_hRecBuffer.Get(g_iRecBufferIdx++);
 
-						// Find unassigned entity to associate
-						for (int i=0; i<g_hRecordingEntities.Length; i++) {
-							RecEnt eRecEnt;
-							g_hRecordingEntities.GetArray(i, eRecEnt);
+						if (g_iClientInstruction & INST_PAUSE) {
+							iButtons &= ~(IN_ATTACK | IN_ATTACK2 | IN_ATTACK3);
+						}
 
-							if (eRecEnt.iAssign == -1 && eRecEnt.iOwner == iOwnerEnt && eRecEnt.iType == iEntType) {
-								iRecEntIdx = i;
+						g_eClientState[iEntity].fAng = fAng;
+						g_eClientState[iEntity].iButtons = iButtons; // & ~(7 << 26);
 
-								iEntity = EntRefToEntIndex(eRecEnt.iRef);
-								g_hRecordingEntities.Set(iRecEntIdx, iRecordingEnt, RecEnt::iAssign);
-								g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt::iDesyncs);
-								break;
+						if (g_iInterFrameLength) {
+							RecBot eRecBot;
+							g_hRecordingBots.GetArray(iBotID, eRecBot);
+							
+							eRecBot.fPosPrev = eRecBot.fPosNext;
+							eRecBot.fAngPrev = eRecBot.fAngNext;
+
+							eRecBot.fPosNext = fPos;
+							eRecBot.fAngNext = fAng;
+
+							g_hRecordingBots.SetArray(iBotID, eRecBot);
+						}
+
+						if (g_hTrail.BoolValue) {
+							GetClientAbsOrigin(iEntity, fPosNow);
+							if (GetVectorDistance(fPosNow, fPos) < 100.0) {
+								float fEyePos[3];
+								GetClientEyePosition(iEntity, fEyePos);
+								float fZOffset = (fEyePos[2] - fPosNow[2])/2;
+
+								fPosNow[2] += fZOffset;
+								float fPosNext[3];
+								fPosNext[0] = fPos[0];
+								fPosNext[1] = fPos[1];
+								fPosNext[2] = fPos[2] + fZOffset;
+
+								TE_SetupBeamPoints(fPosNow, fPosNext, g_iTrailLaser, g_iTrailHalo, 0, 66, g_fTrailLife, 25.0, 25.0, 1, 1.0, g_iTrailColor, 0);
+								TE_SendToAllInRangeVisible(fPos);
 							}
 						}
+					}
+					case ENTITY: {
+						iRecordingEnt	= (g_hRecBuffer.Get(g_iRecBufferIdx  ) >>  8) & 0xFF;
+						iEntType 		= (g_hRecBuffer.Get(g_iRecBufferIdx  ) >> 16) & 0xFF;
+						iOwner			= (g_hRecBuffer.Get(g_iRecBufferIdx++) >> 24) & 0xFF;
+						
+						fPos[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fPos[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fPos[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fVel[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fVel[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fVel[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fAng[0] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fAng[1] = g_hRecBuffer.Get(g_iRecBufferIdx++);
+						fAng[2] = g_hRecBuffer.Get(g_iRecBufferIdx++);
 
+						int iRecEntIdx = g_hRecordingEntities.FindValue(iRecordingEnt, RecEnt::iAssign);
 						if (iRecEntIdx == -1) {
-							RecEnt eRecEnt;
-							eRecEnt.iID = g_iRecordingEntTotal++ % 256;
-							eRecEnt.iRef = 0;
-							eRecEnt.iType = iEntType;
-							eRecEnt.iOwner = iOwnerEnt;
-							eRecEnt.iAssign = iRecordingEnt;
-							g_hRecordingEntities.PushArray(eRecEnt);
-						}
-					} else {
-						if (g_hRecordingEntities.Get(iRecEntIdx, RecEnt::iRef)) {
-							g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt::iDesyncs);
+							iEntity = INVALID_ENT_REFERENCE;
+							int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot::iEnt);
 
-							iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(iRecEntIdx, RecEnt::iRef));
+							// Find unassigned entity to associate
+							for (int i=0; i<g_hRecordingEntities.Length; i++) {
+								RecEnt eRecEnt;
+								g_hRecordingEntities.GetArray(i, eRecEnt);
+
+								if (eRecEnt.iAssign == -1 && eRecEnt.iOwner == iOwnerEnt && eRecEnt.iType == iEntType) {
+									iRecEntIdx = i;
+
+									iEntity = EntRefToEntIndex(eRecEnt.iRef);
+									g_hRecordingEntities.Set(iRecEntIdx, iRecordingEnt, RecEnt::iAssign);
+									g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt::iDesyncs);
+									break;
+								}
+							}
+
+							if (iRecEntIdx == -1) {
+								RecEnt eRecEnt;
+								eRecEnt.iID = g_iRecordingEntTotal++ % 256;
+								eRecEnt.iRef = 0;
+								eRecEnt.iType = iEntType;
+								eRecEnt.iOwner = iOwnerEnt;
+								eRecEnt.iAssign = iRecordingEnt;
+								g_hRecordingEntities.PushArray(eRecEnt);
+								iRecEntIdx = g_hRecordingEntities.Length -1;
+							}
 						} else {
-							int iDesyncs = g_hRecordingEntities.Get(iRecEntIdx, RecEnt::iDesyncs);
-							if (iDesyncs) {
-								#if defined DEBUG
-								char sClassName[64];
-								g_hRecordingEntTypes.GetString(iEntType, sClassName, sizeof(sClassName));
-								PrintToServer("Entity block for RecEnt[%d] has no assigned entity (%s) (%d)", iRecordingEnt, sClassName, iDesyncs);
-								#endif
+							if (g_hRecordingEntities.Get(iRecEntIdx, RecEnt::iRef)) {
+								g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt::iDesyncs);
 
-								if (iDesyncs >= MAX_REC_ENT_DESYNCS) {
-									int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot::iEnt);
-
-									#if !defined DEBUG
+								iEntity = EntRefToEntIndex(g_hRecordingEntities.Get(iRecEntIdx, RecEnt::iRef));
+							} else {
+								int iDesyncs = g_hRecordingEntities.Get(iRecEntIdx, RecEnt::iDesyncs);
+								if (iDesyncs) {
+									#if defined DEBUG
 									char sClassName[64];
 									g_hRecordingEntTypes.GetString(iEntType, sClassName, sizeof(sClassName));
+									PrintToServer("Entity block for RecEnt[%d] has no assigned entity (%s) (%d)", iRecordingEnt, sClassName, iDesyncs);
 									#endif
 
-									iEntity = CreateProjectile(sClassName, fPos, fAng, fVel, iOwnerEnt);
-									if (IsValidEntity(iEntity)) {
-										g_hRecordingEntities.Set(iRecEntIdx, EntIndexToEntRef(iEntity), RecEnt::iRef);
-										g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt::iDesyncs);
-										DispatchSpawn(iEntity);
+									if (iDesyncs >= MAX_REC_ENT_DESYNCS) {
+										int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot::iEnt);
 
-										#if defined DEBUG
-										PrintToServer("Respawned RecEnt[%d] (%s)", iRecordingEnt, sClassName);
+										#if !defined DEBUG
+										char sClassName[64];
+										g_hRecordingEntTypes.GetString(iEntType, sClassName, sizeof(sClassName));
 										#endif
+
+										iEntity = CreateProjectile(sClassName, fPos, fAng, fVel, iOwnerEnt);
+										if (IsValidEntity(iEntity)) {
+											g_hRecordingEntities.Set(iRecEntIdx, EntIndexToEntRef(iEntity), RecEnt::iRef);
+											g_hRecordingEntities.Set(iRecEntIdx, 0, RecEnt::iDesyncs);
+											DispatchSpawn(iEntity);
+
+											#if defined DEBUG
+											PrintToServer("Respawned RecEnt[%d] (%s)", iRecordingEnt, sClassName);
+											#endif
+										}
 									}
 								}
 							}
 						}
-					}
-				}
-				#if defined DEBUG
-				default: {
-					PrintToServer("Buffer read: UNKNOWN");
-				}
-				#endif
-			}
 
-			if (iEntity == INVALID_ENT_REFERENCE) {
-				continue;
-			}
+						if (g_iInterFrameLength) {
+							RecEnt eRecEnt;
+							g_hRecordingEntities.GetArray(iRecEntIdx, eRecEnt);
 
-			Entity_GetAbsOrigin(iEntity, fPosNow);
+							eRecEnt.fPosPrev = eRecEnt.fPosNext;
+							eRecEnt.fAngPrev = eRecEnt.fAngNext;
 
-			float fPosErr = GetVectorDistance(fPosNow, fPos);
-			if (fPosErr > g_hBotMaxError.FloatValue) {
-				if (iRecBlockType == CLIENT) {
-					float fPosBump[3];
-					fPosBump[0] = fPos[0];
-					fPosBump[1] = fPos[1];
-					fPosBump[2] = fPos[2] + 0.05;
-					Handle hTr = TR_TraceRayFilterEx(fPosBump, view_as<float>({90.0, 0.0, 0.0}), MASK_SHOT_HULL, RayType_Infinite, traceHitNonPlayer, iEntity);
-					if (TR_DidHit(hTr)) {
-						float fPosAhead[3];
-						TR_GetEndPosition(fPosAhead, hTr);
+							eRecEnt.fPosNext = fPos;
+							eRecEnt.fAngNext = fAng;
 
-						if (GetVectorDistance(fPosBump, fPosAhead) < 0.05) {
-							#if defined DEBUG
-							PrintToServer("Prevented playback client teleport into ground (%1.f, %.1f, %.3f)", fPos[0], fPos[1], fPos[2]);
-							#endif 
-
-							fPos[2] = fPosAhead[2];
+							g_hRecordingEntities.SetArray(iRecEntIdx, eRecEnt);
 						}
 					}
-					delete hTr;
+					#if defined DEBUG
+					default: {
+						PrintToServer("Buffer read: UNKNOWN");
+					}
+					#endif
 				}
 
-				Entity_SetAbsOrigin(iEntity, fPos);
-
-				#if defined DEBUG
-				PrintToServer("Position for %s[%d] exceeded max error (%.1f/%.1f)", iRecBlockType == CLIENT ? "iBotID" : "iRecEnt", iRecBlockType == CLIENT ? iBotID : iRecordingEnt, fPosErr, g_hBotMaxError.FloatValue);
-				#endif
-			} else {
-				fVel[0] = (fPos[0]-fPosNow[0])*66;
-				fVel[1] = (fPos[1]-fPosNow[1])*66;
-				fVel[2] = (fPos[2]-fPosNow[2])*66;
-			}
-
-			TeleportEntity(iEntity, NULL_VECTOR, fAng, fVel);
-		}
-
-		for (int i=0; i<g_hRecordingEntities.Length; i++) {
-			int iDesyncs = g_hRecordingEntities.Get(i, RecEnt::iDesyncs);
-			if (iDesyncs) {
-				int iEntity = g_hRecordingEntities.Get(i, RecEnt::iRef);
-				if (!iEntity) {
+				if (iEntity == INVALID_ENT_REFERENCE || g_iInterFrameLength) {
 					continue;
 				}
 
-				iEntity = EntRefToEntIndex(iEntity);
-				if (IsValidEntity(iEntity)) {
-					int iRecordingEnt = g_hRecordingEntities.Get(i, RecEnt::iAssign);
-					if (iRecordingEnt == -1) {
+				Entity_GetAbsOrigin(iEntity, fPosNow);
+
+				float fPosErr = GetVectorDistance(fPosNow, fPos);
+				if (fPosErr > g_hBotMaxError.FloatValue) {
+					if (iRecBlockType == CLIENT) {
+						float fPosBump[3];
+						fPosBump[0] = fPos[0];
+						fPosBump[1] = fPos[1];
+						fPosBump[2] = fPos[2] + 0.05;
+						Handle hTr = TR_TraceRayFilterEx(fPosBump, view_as<float>({90.0, 0.0, 0.0}), MASK_SHOT_HULL, RayType_Infinite, traceHitNonPlayer, iEntity);
+						if (TR_DidHit(hTr)) {
+							float fPosAhead[3];
+							TR_GetEndPosition(fPosAhead, hTr);
+
+							if (GetVectorDistance(fPosBump, fPosAhead) < 0.05) {
+								#if defined DEBUG
+								PrintToServer("Prevented playback client teleport into ground (%1.f, %.1f, %.3f)", fPos[0], fPos[1], fPos[2]);
+								#endif
+
+								fPos[2] = fPosAhead[2];
+							}
+						}
+						delete hTr;
+					}
+
+					Entity_SetAbsOrigin(iEntity, fPos);
+
+					#if defined DEBUG
+					PrintToServer("Position for %s[%d] exceeded max error (%.1f/%.1f)", iRecBlockType == CLIENT ? "iBotID" : "iRecEnt", iRecBlockType == CLIENT ? iBotID : iRecordingEnt, fPosErr, g_hBotMaxError.FloatValue);
+					#endif
+				} else {
+					fVel[0] = (fPos[0]-fPosNow[0])*66;
+					fVel[1] = (fPos[1]-fPosNow[1])*66;
+					fVel[2] = (fPos[2]-fPosNow[2])*66;
+				}
+
+				TeleportEntity(iEntity, NULL_VECTOR, fAng, fVel);
+			}
+		
+			for (int i=0; i<g_hRecordingEntities.Length; i++) {
+				int iDesyncs = g_hRecordingEntities.Get(i, RecEnt::iDesyncs);
+				if (iDesyncs) {
+					int iEntity = g_hRecordingEntities.Get(i, RecEnt::iRef);
+					if (!iEntity) {
 						continue;
 					}
 
-					#if defined DEBUG
-					char sClassName[64];
-					GetEntityClassname(iEntity, sClassName, sizeof(sClassName));
-					
-					PrintToServer("Missing entity block for RecEnt[%d] (%s) (%d)", iRecordingEnt, sClassName, iDesyncs);	
-					#endif
-
-					if (iDesyncs >= MAX_REC_ENT_DESYNCS) {
-						AcceptEntityInput(iEntity, "Kill");
-						// Kill triggers OnEntityDestroyed immediately and removes from list
-						i--;
+					iEntity = EntRefToEntIndex(iEntity);
+					if (IsValidEntity(iEntity)) {
+						int iRecordingEnt = g_hRecordingEntities.Get(i, RecEnt::iAssign);
+						if (iRecordingEnt == -1) {
+							continue;
+						}
 
 						#if defined DEBUG
-						PrintToServer("Pruned orphaned RecEnt[%d] (%s)", iRecordingEnt, sClassName);
+						char sClassName[64];
+						GetEntityClassname(iEntity, sClassName, sizeof(sClassName));
+						
+						PrintToServer("Missing entity block for RecEnt[%d] (%s) (%d)", iRecordingEnt, sClassName, iDesyncs);	
 						#endif
+
+						if (iDesyncs >= MAX_REC_ENT_DESYNCS) {
+							AcceptEntityInput(iEntity, "Kill");
+							// Kill triggers OnEntityDestroyed immediately and removes from list
+							i--;
+
+							#if defined DEBUG
+							PrintToServer("Pruned orphaned RecEnt[%d] (%s)", iRecordingEnt, sClassName);
+							#endif
+						}
+
+					} else {
+						g_hRecordingEntities.Erase(i--);
 					}
-
-				} else {
-					g_hRecordingEntities.Erase(i--);
 				}
-			}
-		}
-		
-		if (g_iClientInstruction & INST_PAUSE) {
-			g_iRecBufferIdx = iRecBufferIdxBackup;
-		}
-
-		if (g_iClientInstruction & INST_REWIND) {
-			if (g_iRewindWaitFrames-- <= 0) {
-				g_iClientInstruction &= ~INST_REWIND;
-				/*
-				for (int i=0; i<g_hRecordingClients.Length; i++) {
-					int iRecClient = g_hRecordingClients.Get(i, RecBot::iEnt);
-					SetEntityMoveType(iRecClient, MOVETYPE_WALK);
-				}
-				*/
-			}
-		}
-/*
-		for (int i=0; i<g_hRecordingBots.Length; i++) {
-			int iClient = g_hRecordingBots.Get(i);
-			if (!IsPlayerAlive(g_iClientControl)) {
-				TF2_RespawnPlayer(g_iClientControl);
-				// return;
-			}
 			
+				if (g_iClientInstruction & INST_PAUSE) {
+					g_iRecBufferIdx = iRecBufferIdxBackup;
+				}
 
+				if (g_iClientInstruction & INST_REWIND) {
+					if (g_iRewindWaitFrames-- <= 0) {
+						g_iClientInstruction &= ~INST_REWIND;
+						/*
+						for (int i=0; i<g_hRecordingClients.Length; i++) {
+							int iRecClient = g_hRecordingClients.Get(i, RecBot::iEnt);
+							SetEntityMoveType(iRecClient, MOVETYPE_WALK);
+						}
+						*/
+					}
+				}
+			}
 		}
-*/
+
+		if (g_iInterFrameLength) {
+			float fAlpha = float(g_iInterFrameIdx) / g_iInterFrameLength;
+
+			for (int i=0; i<g_hRecordingBots.Length; i++) {
+				RecBot eRecBot;
+				g_hRecordingBots.GetArray(i, eRecBot);
+
+				int iClient = eRecBot.iEnt;
+				if (!IsClientInGame(iClient) || !IsPlayerAlive(iClient)) {
+					continue;
+				}
+
+				InterpCoords(fAlpha, eRecBot.fPosPrev, eRecBot.fPosNext, fPos);
+				InterpAngles(fAlpha, eRecBot.fAngPrev, eRecBot.fAngNext, fAng);
+
+				Entity_GetAbsOrigin(iClient, fPosNow);
+
+				float fPosErr = GetVectorDistance(fPosNow, fPos);
+				if (fPosErr > g_hBotMaxError.FloatValue) {
+					TeleportEntity(iClient, fPos, fAng, NULL_VECTOR);
+				} else {
+					CalcCorrectionalVelocity(fPosNow, fPos, fVel);
+
+					TeleportEntity(iClient, NULL_VECTOR, fAng, fVel);
+				}
+			}
+
+			for (int i=0; i<g_hRecordingEntities.Length; i++) {
+				RecEnt eRecEnt;
+				g_hRecordingEntities.GetArray(i, eRecEnt);
+				
+				if (!eRecEnt.iRef || eRecEnt.iDesyncs) {
+					continue;
+				}
+
+				int iEntity = EntRefToEntIndex(eRecEnt.iRef);
+				if (!IsValidEntity(iEntity)) {
+					continue;
+				}
+
+				InterpCoords(fAlpha, eRecEnt.fPosPrev, eRecEnt.fPosNext, fPos);
+				InterpAngles(fAlpha, eRecEnt.fAngPrev, eRecEnt.fAngNext, fAng);
+
+				Entity_GetAbsOrigin(iEntity, fPosNow);
+
+				float fPosErr = GetVectorDistance(fPosNow, fPos);
+				if (fPosErr > g_hBotMaxError.FloatValue) {
+					TeleportEntity(iEntity, fPos, fAng, NULL_VECTOR);
+				} else {
+					CalcCorrectionalVelocity(fPosNow, fPos, fVel);
+
+					TeleportEntity(iEntity, NULL_VECTOR, fAng, fVel);
+				}
+			}
+
+			g_iInterFrameIdx = (g_iInterFrameIdx+1) % g_iInterFrameLength;
+		}
 	}
 }
 
@@ -1205,15 +1292,6 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 				if (g_hRecordingBots.FindValue(iObsTarget) == -1) {
 					FakeClientCommand(g_iClientOfInterest, "spec_player \"%N\"", g_hRecordingBots.Get(0));
 				}
-				/*
-				if (iObserverMode == OBS_MODE_CHASE) {
-					float fRot[3];
-					fRot[0] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fPitch];
-					fRot[1] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fYaw];
-					fRot[2] = g_aShadowBuffer[g_iShadowBufferIndex][Snapshot_fRoll];
-					Entity_SetAbsAngles(iClient, fRot);
-				}
-				*/
 			}
 			
 			if ((g_iRecBufferFrame % 22) == 0 && !(g_iClientInstruction & INST_WARMUP) && g_hRecBufferFrames != null) {
@@ -2233,7 +2311,7 @@ public Action cmdPlayAll(int iClient, int iArgC) {
 	g_iClientInstructionPost = INST_NOP;
 	g_iRecBufferIdx = 0;
 	g_iRecBufferFrame = 0;
-	
+
 	SetAllBubbleAlpha(50);
 	
 	return Plugin_Handled;
@@ -2246,7 +2324,13 @@ public Action cmdRewind(int iClient, int iArgC) {
 	}
 	
 	if (!(g_iClientInstruction & (INST_RECD | INST_PLAY))) {
+		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Cannot use outside of playback or recording");
 		return Plugin_Handled;
+	}
+
+	if (g_fSpeed[iClient] < 1.0) {
+		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Cannot use while in slow motion.");
+		return Plugin_Handled;	
 	}
 
 	if (iArgC == 0) {
@@ -2322,6 +2406,11 @@ public Action cmdPause(int iClient, int iArgC) {
 	if (!(g_iClientInstruction & (INST_RECD | INST_PLAY))) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Cannot use outside of playback or recording");
 		return Plugin_Handled;
+	}
+
+	if (g_fSpeed[iClient] < 1.0) {
+		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Cannot use while in slow motion.");
+		return Plugin_Handled;	
 	}
 
 	g_iClientInstruction ^= INST_PAUSE;
@@ -2757,24 +2846,7 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 	g_iLastCaller = iClient;
 	g_iLastCallTime = GetTime();
 
-	//g_fShadowBufferAlpha = 0.0;
-	g_fPlaybackSpeed = g_fSpeed[g_iClientOfInterest];
-	
 	SetAllBubbleAlpha(50);
-	
-	// TODO: Playback speed
-	/*
-	float fRatio = 1.0 / g_fPlaybackSpeed;
-	for (int i=0; i<=5; i++) {
-		int iWeaponEquipped = GetPlayerWeaponSlot(g_iClientControl, i);
-		if (iWeaponEquipped != -1) {
-			TF2Attrib_SetByName(iWeaponEquipped, "fire rate penalty", fRatio);
-			TF2Attrib_SetByName(iWeaponEquipped, "Projectile speed decreased", g_fPlaybackSpeed);
-			TF2Attrib_SetByName(iWeaponEquipped, "Reload time increased", fRatio);
-		}
-	}
-	TF2Attrib_SetByName(g_iClientControl, "gesture speed increase", g_fPlaybackSpeed);
-	*/
 
 	if (g_hAllowMedic.BoolValue && TF2_GetPlayerClass(iClient) == TFClass_Medic && iTeam > TFTeam_Spectator) {
 		g_iClientInstructionPost = INST_NOP;
@@ -3022,25 +3094,6 @@ public Action Event_PlayerTeam(Event hEvent, const char[] sName, bool bDontBroad
 	return Plugin_Continue;
 }
 
-public Action Event_Resupply(Event hEvent, const char[] sName, bool bDontBroadcast) {
-	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
-	if (g_hRecordingBots.FindValue(iClient, RecBot::iEnt) != -1 && g_iClientOfInterest != -1) {
-		float fRatio = 1.0 / g_fPlaybackSpeed;
-		
-		TF2Attrib_SetByName(iClient, "gesture speed increase", fRatio);
-		for (int i=0; i<=5; i++) {
-			int iWeaponEquipped = GetPlayerWeaponSlot(iClient, i);
-			if (iWeaponEquipped != -1) {
-				TF2Attrib_SetByName(iWeaponEquipped, "fire rate penalty", fRatio);
-				TF2Attrib_SetByName(iWeaponEquipped, "Projectile speed decreased", g_fPlaybackSpeed);
-				TF2Attrib_SetByName(iWeaponEquipped, "Reload time increased", fRatio);
-			}
-		}
-	}
-	
-	return Plugin_Continue;
-}
-
 public Action Event_RoundStart(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	RemoveAllModels();
 	blockFlags();
@@ -3125,20 +3178,6 @@ public Action Timer_Queue(Handle hTimer, any aData) {
 		doShowMe(eQueue.iClient, eQueue.iRecording, eQueue.iTeam, eQueue.iObsMode);
 	} else if (g_hRecordingBots.Length && g_iClientInstruction == INST_NOP && !g_hQueue.Length && g_hInteractive.IntValue) {
 		findTargetFollow();
-
-		for (int i=0; i<g_hRecordingBots.Length; i++) {
-			int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
-		
-			TF2Attrib_SetByName(iRecBot, "gesture speed increase", 1.0);
-			for (int j=TFWeaponSlot_Primary; j<=TFWeaponSlot_Item2; j++) {
-				int iWeaponEquipped = GetPlayerWeaponSlot(iRecBot, j);
-				if (iWeaponEquipped != -1) {
-					TF2Attrib_SetByName(iWeaponEquipped, "fire rate penalty", 1.0);
-					TF2Attrib_SetByName(iWeaponEquipped, "Projectile speed decreased", 1.0);
-					TF2Attrib_SetByName(iWeaponEquipped, "Reload time increased", 1.0);
-				}
-			}
-		}
 	}
 	
 	for (int i=0; i < g_hQueue.Length; i++) {
@@ -3718,6 +3757,8 @@ void doFullStop() {
 	g_iClientInstruction = INST_NOP;
 	g_iClientInstructionPost = INST_NOP;
 	g_fPlaybackSpeed = 1.0;
+	g_iInterFrameIdx = 0;
+	g_iInterFrameLength = 0;
 	
 	// Release all buttons
 	for (int i=1; i<=MaxClients; i++) {
@@ -3754,19 +3795,7 @@ void doFullStop() {
 	g_hPlaybackQueue.Clear();
 	g_hRecBufferFrames = null;
 	
-	for (int i=0; i<g_hRecordingBots.Length; i++) {
-		int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
-
-		TF2Attrib_SetByName(iRecBot, "gesture speed increase", 1.0);
-		for (int j=TFWeaponSlot_Primary; j<=TFWeaponSlot_Item2; j++) {
-			int iWeaponEquipped = GetPlayerWeaponSlot(iRecBot, j);
-			if (iWeaponEquipped != -1) {
-				TF2Attrib_SetByName(iWeaponEquipped, "fire rate penalty", 1.0);
-				TF2Attrib_SetByName(iWeaponEquipped, "Projectile speed decreased", 1.0);
-				TF2Attrib_SetByName(iWeaponEquipped, "Reload time increased", 1.0);
-			}
-		}
-	}
+	SetPlaybackSpeed(1.0);
 }
 
 void Equip(int iBotID) {
@@ -4175,7 +4204,6 @@ bool LoadRecording(Recording iRecording) {
 					iRecording.SetEquipFilter(TFWeaponSlot_Primary, iItemDefIdx);
 				}
 			}
-			
 		}
 	}
 
@@ -5018,14 +5046,7 @@ bool LoadFrames(Recording iRecording) {
 	
 	return true;
 }
-/*
-float tweenAngles(float fAlpha, float fAngleA, float fAngleB) {
-	fAngleA = DegToRad(fAngleA);
-	fAngleB = DegToRad(fAngleB);
-	
-	return RadToDeg(ArcTangent2(fAlpha * Sine(fAngleB) + (1.0 - fAlpha) * Sine(fAngleA), fAlpha * Cosine(fAngleB) + (1.0 - fAlpha) * Cosine(fAngleA)));
-}
-*/
+
 void TE_SendToAllInRangeVisible(float fPos[3]) {
 	static int iClients[MAXPLAYERS];
 	int iClientCount = GetClientsInRange(fPos, RangeType_Visibility, iClients, sizeof(iClients));
@@ -5211,13 +5232,21 @@ void RegisterRecEnt(int iEntity, int iOwnerEnt, int iAssign=-1) {
 		g_hRecordingEntTypes.PushString(sClassName);
 	}
 
+	float fPos[3];
+	Entity_GetAbsOrigin(iEntity, fPos);
+
 	for (int i=0; i<g_hRecordingEntities.Length; i++) {
 		RecEnt eRecEnt;
 		g_hRecordingEntities.GetArray(i, eRecEnt);
 
 		if (eRecEnt.iOwner == iOwnerEnt && !eRecEnt.iRef && eRecEnt.iType == iEntType) {
-			g_hRecordingEntities.Set(i, iRef, RecEnt::iRef);
-			g_hRecordingEntities.Set(i, 0, RecEnt::iDesyncs);
+			eRecEnt.iRef = iRef;
+			eRecEnt.fPosPrev = fPos;
+			eRecEnt.fPosNext = fPos;
+			eRecEnt.iDesyncs = 0;
+
+			g_hRecordingEntities.SetArray(i, eRecEnt);
+
 			return;
 		}
 	}
@@ -5229,6 +5258,9 @@ void RegisterRecEnt(int iEntity, int iOwnerEnt, int iAssign=-1) {
 	eRecEnt.iMoveType = view_as<int>(GetEntityMoveType(iEntity));
 	eRecEnt.iOwner = iOwnerEnt;
 	eRecEnt.iAssign = iAssign;
+	eRecEnt.fPosPrev = fPos;
+	eRecEnt.fPosNext = fPos;
+	
 	g_hRecordingEntities.PushArray(eRecEnt);
 }
 
@@ -5302,7 +5334,10 @@ bool PrepareBots(Recording iRecording) {
 
 	ArrayList hClientInfo = iRecording.ClientInfo;
 	for (int i=0; i<hClientInfo.Length; i++) {
-		int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
+		RecBot eRecBot;
+		g_hRecordingBots.GetArray(i, eRecBot);
+
+		int iRecBot = eRecBot.iEnt;
 		if (!IsClientInGame(iRecBot)) {
 			LogError("Tried using iRecBot=%d but the client is not in-game", i);
 			return false;
@@ -5313,6 +5348,10 @@ bool PrepareBots(Recording iRecording) {
 		float fPos[3];
 		iClientInfo.GetStartPos(fPos);
 		Entity_SetAbsOrigin(iRecBot, fPos);
+
+		eRecBot.fPosPrev = fPos;
+		eRecBot.fPosNext = fPos;
+		g_hRecordingBots.SetArray(i, eRecBot);
 
 		float fAng[3];
 		iClientInfo.GetStartAng(fAng);
@@ -5351,6 +5390,78 @@ bool PrepareBots(Recording iRecording) {
 	}
 
 	return true;
+}
+
+void SetPlaybackSpeedCOI() {
+	SetPlaybackSpeed(g_iClientOfInterest == -1 ? 1.0 : g_fSpeed[g_iClientOfInterest]);
+}
+
+void SetPlaybackSpeed(float fPlaybackSpeed, int iClient=-1) {
+	if (fPlaybackSpeed == 0.0) {
+		fPlaybackSpeed = g_iClientOfInterest == -1 ? 1.0 : g_fSpeed[g_iClientOfInterest];
+	}
+
+	g_fPlaybackSpeed = fPlaybackSpeed;
+
+	float fRatio = 1.0 / fPlaybackSpeed;
+	g_iInterFrameLength = RoundFloat(fRatio);
+
+	if (iClient == -1) {
+		for (int i=0; i<g_hRecordingBots.Length; i++) {
+			int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
+
+			TF2Attrib_SetByName(iRecBot, "gesture speed increase", g_fPlaybackSpeed);
+			
+			for (int j=TFWeaponSlot_Primary; j<=TFWeaponSlot_Item2; j++) {
+				int iWeaponEquipped = GetPlayerWeaponSlot(iRecBot, j);
+				if (iWeaponEquipped != -1) {
+					TF2Attrib_SetByName(iWeaponEquipped, "fire rate penalty", fRatio);
+					TF2Attrib_SetByName(iWeaponEquipped, "Projectile speed decreased", fPlaybackSpeed);
+					TF2Attrib_SetByName(iWeaponEquipped, "Reload time increased", fRatio);
+				}
+			}
+		}
+	} else {
+		TF2Attrib_SetByName(iClient, "gesture speed increase", g_fPlaybackSpeed);
+
+		for (int i=TFWeaponSlot_Primary; i<=TFWeaponSlot_Item2; i++) {
+			int iWeaponEquipped = GetPlayerWeaponSlot(iClient, i);
+			if (iWeaponEquipped != -1) {
+				TF2Attrib_SetByName(iWeaponEquipped, "fire rate penalty", fRatio);
+				TF2Attrib_SetByName(iWeaponEquipped, "Projectile speed decreased", fPlaybackSpeed);
+				TF2Attrib_SetByName(iWeaponEquipped, "Reload time increased", fRatio);
+			}
+		}
+	}
+}
+
+float InterpAngle(float fAlpha, float fAngleA, float fAngleB) {
+	fAngleA = DegToRad(fAngleA);
+	fAngleB = DegToRad(fAngleB);
+	
+	return RadToDeg(ArcTangent2(fAlpha * Sine(fAngleB) + (1.0 - fAlpha) * Sine(fAngleA), fAlpha * Cosine(fAngleB) + (1.0 - fAlpha) * Cosine(fAngleA)));
+}
+
+float InterpAngles(float fAlpha, float fAngA[3], float fAngB[3], float fAngResult[3]) {
+	fAngResult[0] = InterpAngle(fAlpha, fAngA[0], fAngB[0]);
+	fAngResult[1] = InterpAngle(fAlpha, fAngA[1], fAngB[1]);
+	fAngResult[2] = InterpAngle(fAlpha, fAngA[2], fAngB[2]);
+}
+
+float InterpCoord(float fAlpha, float fCoordA, float fCoordB) {
+	return (1.0 - fAlpha) * fCoordA + fAlpha * fCoordB;
+}
+
+float InterpCoords(float fAlpha, float fCoordA[3], float fCoordB[3], float fCoordResult[3]) {
+	fCoordResult[0] = InterpCoord(fAlpha, fCoordA[0], fCoordB[0]);
+	fCoordResult[1] = InterpCoord(fAlpha, fCoordA[1], fCoordB[1]);
+	fCoordResult[2] = InterpCoord(fAlpha, fCoordA[2], fCoordB[2]);
+}
+
+float CalcCorrectionalVelocity(float fPos[3], float fPosTarget[3], float fVelResult[3]) {
+	fVelResult[0] = (fPosTarget[0] - fPos[0]) * 66;
+	fVelResult[1] = (fPosTarget[1] - fPos[1]) * 66;
+	fVelResult[2] = (fPosTarget[2] - fPos[2]) * 66;
 }
 
 //////// Menus ////////
@@ -5463,10 +5574,8 @@ void sendSpeedOptionsPanel(int iClient) {
 	Menu hMenu = new Menu(MenuHandler_SpeedOptions);
 	hMenu.SetTitle(sBuffer);
 	
-	hMenu.AddItem("0.15", "15%");
 	hMenu.AddItem("0.25", "25%");
 	hMenu.AddItem("0.5", "50%");
-	hMenu.AddItem("0.75", "75%");
 	hMenu.AddItem("1.0", "100%");
 	
 	hMenu.ExitButton = false;
