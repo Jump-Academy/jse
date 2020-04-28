@@ -50,6 +50,14 @@ enum struct Queue {
 	Obs_Mode iObsMode;
 }
 
+enum struct SpawnFreeze {
+	int iFrames;
+	TFTeam iTeam;
+	TFClassType iClass;
+	float fPos[3];
+	float fAng[3];
+}
+
 #define INST_NOP				 0
 #define INST_PAUSE				 1
 #define INST_RECD				(1 << 1)
@@ -207,7 +215,7 @@ int g_iStateLoadLast;
 
 ClientState g_eClientState[MAXPLAYERS+1];
 
-any g_aSpawnFreeze[MAXPLAYERS+1][8];
+SpawnFreeze g_eSpawnFreeze[MAXPLAYERS+1];
 StringMap g_hProjMap;
 ArrayList g_hSpecList;
 int g_iTrailLaser;
@@ -383,6 +391,7 @@ public void OnPluginStart() {
 	g_hHudDisplayJump = CreateHudSynchronizer();
 	
 	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("player_changeclass", Event_PlayerSpawn);
 	HookEvent("player_team", Event_PlayerTeam, EventHookMode_Pre);
 	HookEvent("teamplay_round_start", Event_RoundStart);
 	HookUserMessage(GetUserMessageId("VoiceSubtitle"), UserMessage_VoiceSubtitle, true);
@@ -1268,20 +1277,15 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 		showKeys(iClient);
 	}
 
-	if (g_aSpawnFreeze[iClient][0] > 0 && GetClientTeam(iClient) == g_aSpawnFreeze[iClient][1]) {
-		float fPos[3];
-		fPos[0] = g_aSpawnFreeze[iClient][2];
-		fPos[1] = g_aSpawnFreeze[iClient][3];
-		fPos[2] = g_aSpawnFreeze[iClient][4];
+	if (g_eSpawnFreeze[iClient].iFrames > 0 &&
+		view_as<TFTeam>(GetClientTeam(iClient)) == g_eSpawnFreeze[iClient].iTeam &&
+		TF2_GetPlayerClass(iClient) == g_eSpawnFreeze[iClient].iClass) {
 		
-		fAng[0] = g_aSpawnFreeze[iClient][5];
-		fAng[1] = g_aSpawnFreeze[iClient][6];
-		fAng[2] = g_aSpawnFreeze[iClient][7];
-		
-		TeleportEntity(iClient, fPos, fAng, NULL_VECTOR);
-		
-		g_aSpawnFreeze[iClient][0]--;
-		return Plugin_Continue;
+		fAng = g_eSpawnFreeze[iClient].fAng;
+		TeleportEntity(iClient, g_eSpawnFreeze[iClient].fPos, fAng, NULL_VECTOR);
+		g_eSpawnFreeze[iClient].iFrames--;
+
+		return Plugin_Changed;
 	}
 	
 	if (iClient == g_iClientOfInterest) {
@@ -1401,7 +1405,7 @@ public void OnClientCookiesCached(int iClient) {
 }
 
 public void OnClientPostAdminCheck(int iClient) {
-	g_aSpawnFreeze[iClient][0] = 0;
+	g_eSpawnFreeze[iClient].iFrames = 0;
 	
 	if (!IsFakeClient(iClient) && !g_hRecordingBots.Length) {
 		SetupBot();
@@ -2871,6 +2875,7 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 		}
 
 		setRespawnTeam(g_iClientOfInterest, iTeam);
+		setRespawnClass(g_iClientOfInterest, TF2_GetPlayerClass(iClient));
 	} else {
 		g_iClientInstructionPost = INST_NOP;
 	}
@@ -3032,16 +3037,7 @@ public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroa
 		
 		if (g_bShuttingDown) {
 			Timer_TeleportOnSpawn(INVALID_HANDLE, iClient);
-			float fPos[3], fAng[3];
-			fPos[0] = g_aSpawnFreeze[iClient][2];
-			fPos[1] = g_aSpawnFreeze[iClient][3];
-			fPos[2] = g_aSpawnFreeze[iClient][4];
-			
-			fAng[0] = g_aSpawnFreeze[iClient][5];
-			fAng[1] = g_aSpawnFreeze[iClient][6];
-			fAng[2] = g_aSpawnFreeze[iClient][7];
-			
-			TeleportEntity(iClient, fPos, fAng, NULL_VECTOR);
+			TeleportEntity(iClient, g_eSpawnFreeze[iClient].fPos, g_eSpawnFreeze[iClient].fAng, NULL_VECTOR);
 		} else {
 			SetEntityFlags(iClient, GetEntityFlags(iClient) | FL_FROZEN);
 			SetEntityFlags(iClient, GetEntityFlags(iClient) | FL_ATCONTROLS);
@@ -3703,9 +3699,13 @@ void doPlayerQueueClear() {
 }
 
 void doRespawn(int iClient) {
-	g_aSpawnFreeze[iClient][0] = RESPAWN_FREEZE_FRAMES;
-	if (GetClientTeam(iClient) != g_aSpawnFreeze[iClient][1]) {
-		ChangeClientTeam(iClient, g_aSpawnFreeze[iClient][1]);
+	g_eSpawnFreeze[iClient].iFrames = RESPAWN_FREEZE_FRAMES;
+	if (view_as<TFTeam>(GetClientTeam(iClient)) != g_eSpawnFreeze[iClient].iTeam) {
+		ChangeClientTeam(iClient, view_as<int>(g_eSpawnFreeze[iClient].iTeam));
+	}
+
+	if (TF2_GetPlayerClass(iClient) != g_eSpawnFreeze[iClient].iClass) {
+		TF2_SetPlayerClass(iClient, g_eSpawnFreeze[iClient].iClass);
 	}
 	
 	Respawn(iClient);
@@ -4658,16 +4658,16 @@ void setProjectileGlow(int iEntity) {
 }
 
 void setRespawnTeam(int iClient, TFTeam iTeam) {
-	g_aSpawnFreeze[iClient][1] = iTeam;
+	g_eSpawnFreeze[iClient].iTeam = iTeam;
+}
+
+void setRespawnClass(int iClient, TFClassType iClass) {
+	g_eSpawnFreeze[iClient].iClass = iClass;
 }
 
 void setRespawn(int iClient, float fPos[3], float fAng[3]) {
-	g_aSpawnFreeze[iClient][2] = fPos[0];
-	g_aSpawnFreeze[iClient][3] = fPos[1];
-	g_aSpawnFreeze[iClient][4] = fPos[2];
-	g_aSpawnFreeze[iClient][5] = fAng[0];
-	g_aSpawnFreeze[iClient][6] = fAng[1];
-	g_aSpawnFreeze[iClient][7] = fAng[2];
+	g_eSpawnFreeze[iClient].fPos = fPos;
+	g_eSpawnFreeze[iClient].fAng = fAng;
 }
 
 void setRobotModel(int iClient) {
