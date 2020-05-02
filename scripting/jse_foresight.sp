@@ -3,7 +3,7 @@
 //#define DEBUG
 
 #define PLUGIN_AUTHOR		"AI"
-#define PLUGIN_VERSION		"0.2.3"
+#define PLUGIN_VERSION		"0.2.4"
 
 #define CAMERA_MODEL		"models/combine_scanner.mdl"
 
@@ -95,6 +95,10 @@ public void OnClientDisconnect(int iClient) {
 }
 
 public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fVel[3], float fAng[3], int &iWeapon, int& iSubType, int& iCmdNum, int& iTickCount, int& iSeed, int iMouse[2]) {
+	if (!IsClientInGame(iClient)) {
+		return Plugin_Continue;
+	}
+
 	FSCamera iCamera = g_iActiveCamera[iClient];
 	if (iCamera == NULL_CAMERA) {
 		return Plugin_Continue;

@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.3.3"
+#define PLUGIN_VERSION "0.3.4"
 
 #define DATA_FOLDER "data/jse"
 
@@ -300,6 +300,10 @@ public void OnMapEnd() {
 }
 
 public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fVel[3], float fAng[3], int &iWeapon) {
+	if (!IsClientInGame(iClient)) {
+		return Plugin_Continue;
+	}
+
 	if (g_hCVRegenHP.BoolValue) {
 		int iMaxHealth = Entity_GetMaxHealth(iClient);
 		if (Entity_GetHealth(iClient) < iMaxHealth) {

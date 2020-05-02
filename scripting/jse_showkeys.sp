@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"0.1.6"
+#define PLUGIN_VERSION	"0.1.7"
 
 #define UPDATE_URL		"http://jumpacademy.tf/plugins/jse/showkeys/updatefile.txt"
 
@@ -145,6 +145,10 @@ public void OnClientCookiesCached(int iClient) {
 }
 
 public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fVel[3], float fAng[3], int &iWeapon, int &iSubType, int &iCmdNum, int &iTickCount, int &iSeed, int iMouse[2]) {
+	if (!IsClientInGame(iClient)) {
+		return Plugin_Continue;
+	}
+
 	switch (g_iMode[iClient]) {
 		case DISPLAY: {
 			if (!g_bEnabled[iClient]) {
