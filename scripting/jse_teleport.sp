@@ -534,7 +534,6 @@ public Action cmdSend(int iClient, int iArgC) {
 void SendMainMenu(int iClient, MenuHandler fnMainHandler, MenuHandler fnPlayerHandler) {
 	if (!IsTrackerLoaded()) {
 		SendPlayerMenu(iClient, fnPlayerHandler);
-
 		return;
 	}
 
@@ -547,6 +546,8 @@ void SendMainMenu(int iClient, MenuHandler fnMainHandler, MenuHandler fnPlayerHa
 	hMenu.AddItem(NULL_STRING, "Jump", hCourses.Length ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
 
 	hMenu.Display(iClient, 5);
+
+	delete hCourses;
 }
 
 void SendPlayerMenu(int iClient, MenuHandler fnHandler, bool bBackButton=true) {
@@ -590,6 +591,7 @@ void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJump
 	ArrayList hCourses = GetTrackerCourses();
 
 	if (!hCourses.Length) {
+		delete hCourses;
 		return;
 	}
 
@@ -624,7 +626,7 @@ void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJump
 	if (hCourses.Length == 1 && hCourseNumbers.Length) {
 		SendJumpMenu(iClient, fnJumpHandler, hCourses.Get(0));
 		delete hCourseNumbers;
-
+		delete hCourses;
 		return;
 	}
 
@@ -663,6 +665,7 @@ void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJump
 
 	delete hBonusCourses;
 	delete hCourseNumbers;
+	delete hCourses;
 
 	hMenu.Display(iClient, 0);
 }

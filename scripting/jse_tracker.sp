@@ -268,7 +268,7 @@ public int Native_GetDatabase(Handle hPlugin, int iArgC) {
 }
 
 public int Native_GetCourses(Handle hPlugin, int iArgC) {
-	return view_as<int>(g_hCourses);
+	return view_as<int>(g_hCourses.Clone());
 }
 
 public int Native_GetMapID(Handle hPlugin, int iArgC) {
