@@ -161,7 +161,12 @@ enum struct Checkpoint {
 	}
 
 	int GetCourseNumber() {
-		return this.iHash >>> 26;
+		int iCourseNumber = this.iHash >>> 26;
+		if (iCourseNumber > 31) {
+			return iCourseNumber-64;
+		}
+
+		return iCourseNumber;
 	}
 
 	void SetCourseNumber(int iCourseNumber) {

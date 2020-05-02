@@ -862,7 +862,12 @@ public int MenuHandler_GotoJump(Menu hMenu, MenuAction iAction, int iClient, int
 			hMenu.GetItem(iOption, sKey, sizeof(sKey));
 
 			int iKey = StringToInt(sKey);
-			Course iCourse = ResolveCourseNumber(iKey & 0xFFFF);
+			int iCourseNumber = iKey & 0xFFFF;
+			if (iCourseNumber > 32767) {
+				iCourseNumber -= 65536;
+			}
+
+			Course iCourse = ResolveCourseNumber(iCourseNumber);
 			int iJumpNumber = (iKey >> 16) & 0xFFFF;
 
 			if (iJumpNumber) {
