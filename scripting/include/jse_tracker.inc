@@ -268,3 +268,7 @@ native void ResetPlayerProgress(int iClient);
 
 native Course ResolveCourseNumber(int iCourseNumber);
 native Jump ResolveJumpNumber(Course iCourse, int iJumpNumber);
+
+native bool GetCourseDisplayName(Course iCourse, char[] sBuffer, int iMaxLen);
+native bool GetCheckpointDisplayName(Course iCourse, int iJumpNumber, bool bControlPoint, char[] sBuffer, int iMaxLen);
+native void GetCourseCheckpointDisplayName(Course iCourse, int iJumpNumber, bool bControlPoint, char[] sBuffer, int iMaxLen);

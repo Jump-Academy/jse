@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.3.1"
+#define PLUGIN_VERSION "0.3.2"
 
 #define API_URL "https://api.jumpacademy.tf/mapinfo_json"
 
@@ -26,6 +26,8 @@ int g_iMapID = -1;
 bool g_bLoaded = false;
 
 ArrayList g_hCourses;
+int g_iNormalCourses;
+int g_iBonusCourses;
 
 #include <jse_tracker>
 #include "jse_tracker_course.sp"
@@ -109,6 +111,9 @@ public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErr
 	CreateNative("ResetPlayerProgress", Native_ResetPlayerProgress);
 	CreateNative("ResolveCourseNumber", Native_ResolveCourseNumber);
 	CreateNative("ResolveJumpNumber", Native_ResolveJumpNumber);
+	CreateNative("GetCourseDisplayName", Native_GetCourseDisplayName);
+	CreateNative("GetCheckpointDisplayName", Native_GetCheckpointDisplayName);
+	CreateNative("GetCourseCheckpointDisplayName", Native_GetCourseCheckpointDisplayName);
 }
 
 public void OnMapStart() {
@@ -255,6 +260,28 @@ public void HTTPRequestCallback_FetchedLayout(HTTPResponse hResponse, any aValue
 	delete hMapData;
 
 	DB_ExecuteAddMapInfoTX(hTxn);
+}
+
+int Sort_Courses(int iIdx1, int iIdx2, Handle hArr, Handle hHandle) {
+	Course iCourse1 = g_hCourses.Get(iIdx1);
+	Course iCourse2 = g_hCourses.Get(iIdx2);
+
+	int iCourseNumber1 = iCourse1.iNumber;
+	int iCourseNumber2 = iCourse2.iNumber;
+	if (iCourseNumber1 > 0) {
+		if (iCourseNumber2 > 0) {
+			return iCourseNumber1-iCourseNumber2;
+		}
+
+		return -1;
+	} else {
+		if (iCourseNumber2 > 0) {
+			return 1;
+		}
+
+		// Negate bonus course number
+		return iCourseNumber2-iCourseNumber1;
+	}
 }
 
 // Natives
@@ -427,6 +454,100 @@ public int Native_ResolveJumpNumber(Handle hPlugin, int iArgC) {
 	}
 
 	return view_as<int>(hJumps.Get(iJumpNumber-1));
+}
+
+public int Native_GetCourseDisplayName(Handle hPlugin, int iArgC) {
+	Course iCourse = GetNativeCell(1);
+	int iMaxLength = GetNativeCell(3);
+
+	int iCourseNumber = iCourse.iNumber;
+
+	char sBuffer[128];
+	iCourse.GetName(sBuffer, sizeof(sBuffer));
+
+	bool bCanHide = false;
+	if (sBuffer[0]) {
+		if (iCourseNumber <= 0) {
+			Format(sBuffer, sizeof(sBuffer), "%s (Bonus)", sBuffer);
+		}
+	} else {
+		if (iCourseNumber > 0) {
+			if (g_iNormalCourses > 1) {
+				FormatEx(sBuffer, sizeof(sBuffer), "Course %d", iCourse.iNumber);
+			} else {
+				FormatEx(sBuffer, sizeof(sBuffer), "Course");
+				bCanHide = true;
+			}
+		} else {
+			if (g_iBonusCourses > 1) {
+				FormatEx(sBuffer, sizeof(sBuffer), "Bonus %d", -iCourse.iNumber);
+			} else {
+				FormatEx(sBuffer, sizeof(sBuffer), "Bonus");
+			}
+		}
+	}
+
+	SetNativeString(2, sBuffer, iMaxLength);
+
+	return bCanHide;
+}
+
+public int Native_GetCheckpointDisplayName(Handle hPlugin, int iArgC) {
+	Course iCourse = GetNativeCell(1);
+	int iJumpNumber = GetNativeCell(2);
+	bool bControlPoint = GetNativeCell(3);
+	int iMaxLength = GetNativeCell(5);
+
+	bool bCanHide = false;
+
+	char sBuffer[128];
+	if (bControlPoint) {
+		FormatEx(sBuffer, sizeof(sBuffer), "End");
+	} else {
+		if (iCourse.hJumps.Length > 1) {
+			FormatEx(sBuffer, sizeof(sBuffer), "Jump %d", iJumpNumber);
+		} else {
+			FormatEx(sBuffer, sizeof(sBuffer), "Jump");
+			bCanHide = true;
+		}
+	}
+
+	SetNativeString(4, sBuffer, iMaxLength);
+
+	return bCanHide;
+}
+
+public int Native_GetCourseCheckpointDisplayName(Handle hPlugin, int iArgC) {
+	Course iCourse = GetNativeCell(1);
+	int iJumpNumber = GetNativeCell(2);
+	bool bControlPoint = GetNativeCell(3);
+	int iMaxLength = GetNativeCell(5);
+
+	char sBuffer[256];
+
+	char sCourseName[128];
+	bool bCanHideCourseName = GetCourseDisplayName(iCourse, sCourseName, sizeof(sCourseName));
+
+	char sCheckpointName[128];
+	bool bCanHideCheckpointName = GetCheckpointDisplayName(iCourse, iJumpNumber, bControlPoint, sCheckpointName, sizeof(sCheckpointName));
+
+	if (bControlPoint) {
+		FormatEx(sBuffer, sizeof(sBuffer), "%s %s", sCourseName, sCheckpointName);
+	} else if (bCanHideCourseName) {
+		if (bCanHideCheckpointName) {
+			FormatEx(sBuffer, sizeof(sBuffer), "%s", sCourseName);
+		} else {
+			FormatEx(sBuffer, sizeof(sBuffer), "%s", sCheckpointName);
+		}
+	} else {
+		if (bCanHideCheckpointName) {
+			FormatEx(sBuffer, sizeof(sBuffer), "%s", sCourseName);
+		} else {
+			FormatEx(sBuffer, sizeof(sBuffer), "%s %s", sCourseName, sCheckpointName);
+		}
+	}
+
+	SetNativeString(4, sBuffer, iMaxLength);
 }
 
 // Timers
@@ -628,13 +749,6 @@ void FetchMapData() {
 	g_hHTTPClient.Get(sEndpoint, HTTPRequestCallback_FetchedLayout);
 }
 
-bool LocatePlayer(int iClient, Course &iCourse=NULL_COURSE, Jump &iJump=NULL_JUMP, ControlPoint &iControlPoint=NULL_CONTROLPOINT) {
-	float fPos[3];
-	GetClientEyePosition(iClient, fPos);
-
-	return LocatePosition(fPos, iCourse, iJump, iControlPoint);
-}
-
 void ResetClient(int iClient) {
 	g_eNearestCheckpoint[iClient].Clear();
 	g_eNearestCheckpointLanded[iClient].Clear();
@@ -644,48 +758,6 @@ void ResetClient(int iClient) {
 	}
 
 	g_fLastTeleport[iClient] = 0.0;
-}
-
-bool LocatePosition(float fPos[3], Course &iCourse, Jump &iJump, ControlPoint &iControlPoint, float fMinDist=view_as<float>(0x7F800000)) {
-	// 0x7F800000 = +inf
-	
-	iCourse=NULL_COURSE;
-	iJump=NULL_JUMP;
-	iControlPoint=NULL_CONTROLPOINT;
-
-	float fOrigin[3];
-	for (int i=0; i<g_hCourses.Length; i++) {
-		Course iCourseIter = g_hCourses.Get(i);
-
-		ArrayList hJumps = iCourseIter.hJumps;
-		for (int j=0; j<hJumps.Length; j++) {
-			Jump iJumpIter = hJumps.Get(j);
-			iJumpIter.GetOrigin(fOrigin);
-			
-			float fDist = GetVectorDistance(fPos, fOrigin);
-			if ((fDist < fMinDist) && IsVisible(fPos, fOrigin)) {
-				iCourse = iCourseIter;
-				iJump = iJumpIter;
-				iControlPoint = NULL_CONTROLPOINT;
-				fMinDist = fDist;
-			}
-		}
-
-		ControlPoint iControlPointItr = iCourseIter.iControlPoint;
-		if (iControlPointItr) {
-			iControlPointItr.GetOrigin(fOrigin);
-
-			float fDist = GetVectorDistance(fPos, fOrigin);
-			if ((fDist < fMinDist) && IsVisible(fPos, fOrigin)) {
-				iCourse = iCourseIter;
-				iJump = NULL_JUMP;
-				iControlPoint = iControlPointItr;
-				fMinDist = fDist;
-			}	
-		}
-	}
-
-	return iJump || iControlPoint;
 }
 
 void GetClientGroundPosition(int iClient, float fPos[3]) {
@@ -746,65 +818,92 @@ public Action cmdWhereAmI(int iClient, int iArgC) {
 		return Plugin_Handled;
 	}
 
-	Course iCourse;
-	Jump iJump;
-	ControlPoint iControlPoint;
-	if (LocatePlayer(iClient, iCourse, iJump, iControlPoint)) {
-		char sCourseName[128];
-		iCourse.GetName(sCourseName, sizeof(sCourseName));
+	if (g_eNearestCheckpoint[iClient].iTimestamp) {
+		Checkpoint eCheckpoint;
+		eCheckpoint.iHash = g_eNearestCheckpoint[iClient].iHash;
 
-		if (!sCourseName[0]) {
-			FormatEx(sCourseName, sizeof(sCourseName), "Course %d", iCourse.iNumber);
-		}
+		Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
 
-		char sBuffer[128];
-		if (iJump) {
-			FormatEx(sBuffer, sizeof(sBuffer), "jump %d", iJump.iNumber);
-		} else {
-			FormatEx(sBuffer, sizeof(sBuffer), "control point");
-		}
+		char sLocationName[256];
+		GetCourseCheckpointDisplayName(iCourse, eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), sLocationName, sizeof(sLocationName));
 
-		CPrintToChat(iClient, "{dodgerblue}[jse] {white}You are on %s %s.", sCourseName, sBuffer);
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}You are on {yellow}%s{white}.", sLocationName);
 	} else {
-		CPrintToChat(iClient, "{dodgerblue}[jse] {white}You are not near any jump."); 
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}You are not near any jump."); 
 	}
 
 	return Plugin_Handled;
 }
 
 public Action cmdWhereIs(int iClient, int iArgC) {
+	if (!iArgC) {
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Usage: sm_whereis <target>");
+		return Plugin_Handled;
+	}
+
 	char sArg1[32];
 	GetCmdArg(1, sArg1, sizeof(sArg1));
-	
-	int iTarget = FindTarget(iClient, sArg1, false, false);
-	if (iTarget != -1) {
-		if (GetClientTeam(iTarget) <= view_as<int>(TFTeam_Spectator)) {
-			CReplyToCommand(iClient, "\x04[jse] \x01%N has not joined a team.", iTarget);
-			return Plugin_Continue;
+
+	char sTargetName[MAX_TARGET_LENGTH];
+	int iTargetList[MAXPLAYERS], iTargetCount;
+	bool bTnIsML;
+
+	if ((iTargetCount = ProcessTargetString(
+			sArg1,
+			iClient,
+			iTargetList,
+			MAXPLAYERS,
+			COMMAND_FILTER_NO_IMMUNITY,
+			sTargetName,
+			sizeof(sTargetName),
+			bTnIsML)) <= 0) {
+		ReplyToTargetError(iClient, iTargetCount);
+		return Plugin_Handled;
+	}
+
+	if (iTargetCount == 1) {
+		int iTarget = iTargetList[0];
+
+		if (g_eNearestCheckpoint[iTarget].iTimestamp) {
+			Checkpoint eCheckpoint;
+			eCheckpoint.iHash = g_eNearestCheckpoint[iTarget].iHash;
+
+			Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
+
+			char sLocationName[128];
+			GetCourseCheckpointDisplayName(iCourse, eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), sLocationName, sizeof(sLocationName));
+
+			CReplyToCommand(iClient, "{dodgerblue}[jse] {limegreen}%N {white}is on {yellow}%s{white}.", iTarget, sLocationName);
+		} else {
+			CReplyToCommand(iClient, "{dodgerblue}[jse] {limegreen}%N {white}is not found near any jump.", iTarget);
 		}
 
-		Course iCourse;
-		Jump iJump;
-		ControlPoint iControlPoint;
+		return Plugin_Handled;
+	}
 
-		if (LocatePlayer(iTarget, iCourse, iJump, iControlPoint)) {
-			char sCourseName[128];
-			iCourse.GetName(sCourseName, sizeof(sCourseName));
+	if (bTnIsML) {
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing locations for {limegreen}%t{white}:", sTargetName);
+	} else {
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing locations for {limegreen}%s{white}:", sTargetName);
+	}
 
-			if (!sCourseName[0]) {
-				FormatEx(sCourseName, sizeof(sCourseName), "Course %d", iCourse.iNumber);
-			}
+	for (int i = 0; i < iTargetCount; i++) {
+		int iTarget = iTargetList[i];
+	
+		if (GetClientTeam(iTarget) <= view_as<int>(TFTeam_Spectator)) {
+			CReplyToCommand(iClient, "\t{limegreen}%N {white}has not joined a team.", iTarget);
+		} else if (g_eNearestCheckpoint[iTarget].iTimestamp) {
+			Checkpoint eCheckpoint;
+			eCheckpoint.iHash = g_eNearestCheckpoint[iTarget].iHash;
 
-			char sBuffer[128];
-			if (iJump) {
-				FormatEx(sBuffer, sizeof(sBuffer), "jump %d", iJump.iNumber);
-			} else {
-				FormatEx(sBuffer, sizeof(sBuffer), "control point");
-			}
+			Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
 
-			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}%N is at %s %s.", iTarget, sCourseName, sBuffer);
+			char sLocationName[128];
+			GetCourseCheckpointDisplayName(iCourse, eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), sLocationName, sizeof(sLocationName));
+
+			CReplyToCommand(iClient, "\t{limegreen}%N {white}is on {yellow}%s{white}.", iTarget, sLocationName);
 		} else {
-			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}%N is not found near any jump.", iTarget);
+			CReplyToCommand(iClient, "\t{limegreen}%N {white}is not found near any jump.", iTarget);
 		}
 	}
 
@@ -845,6 +944,9 @@ public Action cmdProgress(int iClient, int iArgC) {
 		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing your progress:");
 	}
 
+	ArrayList hCourseList = g_hCourses.Clone();
+	SortADTArrayCustom(hCourseList, Sort_Courses);
+
 	char sBuffer[256];
 	for (int i = 0; i < iTargetCount; i++) {
 		int iTarget = iTargetList[i];
@@ -868,15 +970,15 @@ public Action cmdProgress(int iClient, int iArgC) {
 
 		int iLineCount = 1;
 		int iJumpCountTotal = 0;
-		for (int j=0; j<g_hCourses.Length; j++) {
-			Course iCourse = g_hCourses.Get(j);
+		for (int j=0; j<hCourseList.Length; j++) {
+			Course iCourse = hCourseList.Get(j);
 			int iCourseID = iCourse.iNumber;
 
 			char sCourseName[128];
-			iCourse.GetName(sCourseName, sizeof(sCourseName));
+			GetCourseDisplayName(iCourse, sCourseName, sizeof(sCourseName));
 
 			if (!sCourseName[0]) {
-				FormatEx(sCourseName, sizeof(sCourseName), "Course %d", iCourse.iNumber);
+				FormatEx(sCourseName, sizeof(sCourseName), "Course");
 			}
 			
 			int iJumpCount = 0;
@@ -927,6 +1029,8 @@ public Action cmdProgress(int iClient, int iArgC) {
 			CReplyToCommand(iClient, sBuffer);
 		}
 	}
+
+	delete hCourseList;
 
 	return Plugin_Handled;
 }
