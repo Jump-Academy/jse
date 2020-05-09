@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"0.3.1"
+#define PLUGIN_VERSION	"0.3.2"
 
 #include <tf2>
 #include <tf2_stocks>
@@ -18,6 +18,7 @@
 
 ConVar g_hCVGotoProgressed;
 ConVar g_hCVGotoPlayerProgressed;
+ConVar g_hCVGotoPlayerClass;
 
 public Plugin myinfo = {
 	name = "Jump Server Essentials - Teleport",
@@ -31,6 +32,7 @@ public void OnPluginStart() {
 	CreateConVar("jse_teleport_version", PLUGIN_VERSION, "Jump Server Essentials teleport version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 	g_hCVGotoProgressed = CreateConVar("jse_teleport_goto_progressed", "1", "Allow goto teleport to jumps reached by player", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_hCVGotoPlayerProgressed = CreateConVar("jse_teleport_goto_player_progressed", "1", "Allow goto teleport to players on jumps reached by player", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_hCVGotoPlayerClass = CreateConVar("jse_teleport_goto_player_class", "1", "Allow players with jump override goto teleport to players regardless of class", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 
 	RegConsoleCmd("sm_goto", cmdGoto, "Teleport self");
 
@@ -184,7 +186,7 @@ bool CheckSafeTeleportTarget(int iClient, int iTarget, bool bNotify=true) {
 		return false;
 	}
 
-	if (CheckCommandAccess(iClient, "sm_bring", ADMFLAG_GENERIC, true)) {
+	if (CheckCommandAccess(iClient, PLAYERS_OVERRIDE, ADMFLAG_GENERIC) || CheckCommandAccess(iClient, "sm_bring", ADMFLAG_GENERIC, true)) {
 		return true;
 	}
 
@@ -196,7 +198,8 @@ bool CheckSafeTeleportTarget(int iClient, int iTarget, bool bNotify=true) {
 		return false;
 	}
 
-	if (TF2_GetPlayerClass(iTarget) != TF2_GetPlayerClass(iClient)) {
+	if (!(CheckCommandAccess(iClient, JUMPS_OVERRIDE, ADMFLAG_GENERIC) && g_hCVGotoPlayerClass.BoolValue) && 
+		TF2_GetPlayerClass(iTarget) != TF2_GetPlayerClass(iClient)) {
 		if (bNotify) {
 			CPrintToChat(iClient, "{dodgerblue}[jse] {white}Player class does not match.");
 		}
