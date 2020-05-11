@@ -261,7 +261,7 @@ native ArrayList GetTrackerCourses();
 
 native bool GetPlayerNearestCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint);
 native bool GetPlayerNewestCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint, int &iTimestamp=0, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown);
-native bool GetPlayerLastCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint, int &iTimestamp=0, TFTeam &iTeam, TFClassType &iClass);
+native bool GetPlayerLastCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint, int &iTimestamp=0, TFTeam &iTeam=TFTeam_Unassigned, TFClassType &iClass=TFClass_Unknown);
 
 native ArrayList GetPlayerProgress(int iClient);
 native void ResetPlayerProgress(int iClient);

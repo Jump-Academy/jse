@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.3.2"
+#define PLUGIN_VERSION "0.3.3"
 
 #define API_URL "https://api.jumpacademy.tf/mapinfo_json"
 
@@ -17,6 +17,8 @@
 #include <tf2>
 #include <tf2_stocks>
 #include <multicolors>
+
+#define CHECKPOINT_TIME_CUTOFF	20
 
 GlobalForward g_hTrackerLoadedForward;
 GlobalForward g_hCheckpointReachedForward;
@@ -636,13 +638,16 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 	eCheckpoint.iTimestamp = iTime;
 
 	for (int i=1; i<=MaxClients; i++) {
-		if (!IsClientInGame(i) || !IsPlayerAlive(i) ||
-		 	!g_eNearestCheckpoint[i].iTimestamp || g_eNearestCheckpoint[i].iHash == g_eNearestCheckpointLanded[i].iHash) {
+		if (!IsClientInGame(i) || !IsPlayerAlive(i) || !g_eNearestCheckpoint[i].iTimestamp) {
+			continue;
+		}
+
+		if (g_eNearestCheckpoint[i].iHash == g_eNearestCheckpointLanded[i].iHash) {
+			g_eNearestCheckpointLanded[i].iTimestamp = iTime;
 			continue;
 		}
 
 		eCheckpoint.iHash = g_eNearestCheckpoint[i].iHash;
-		eCheckpoint.iTimestamp = g_eNearestCheckpoint[i].iTimestamp;
 
 		TFTeam iTeam = view_as<TFTeam>(GetClientTeam(i));
 		TFClassType iClass = TF2_GetPlayerClass(i);
@@ -818,9 +823,9 @@ public Action cmdWhereAmI(int iClient, int iArgC) {
 		return Plugin_Handled;
 	}
 
-	if (g_eNearestCheckpoint[iClient].iTimestamp) {
+	if (GetTime()-g_eNearestCheckpointLanded[iClient].iTimestamp <= CHECKPOINT_TIME_CUTOFF) {
 		Checkpoint eCheckpoint;
-		eCheckpoint.iHash = g_eNearestCheckpoint[iClient].iHash;
+		eCheckpoint.iHash = g_eNearestCheckpointLanded[iClient].iHash;
 
 		Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
 
@@ -864,9 +869,9 @@ public Action cmdWhereIs(int iClient, int iArgC) {
 	if (iTargetCount == 1) {
 		int iTarget = iTargetList[0];
 
-		if (g_eNearestCheckpoint[iTarget].iTimestamp) {
+		if (GetTime()-g_eNearestCheckpointLanded[iTarget].iTimestamp <= CHECKPOINT_TIME_CUTOFF) {
 			Checkpoint eCheckpoint;
-			eCheckpoint.iHash = g_eNearestCheckpoint[iTarget].iHash;
+			eCheckpoint.iHash = g_eNearestCheckpointLanded[iTarget].iHash;
 
 			Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
 
@@ -887,14 +892,15 @@ public Action cmdWhereIs(int iClient, int iArgC) {
 		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing locations for {limegreen}%s{white}:", sTargetName);
 	}
 
+	int iTime = GetTime();
 	for (int i = 0; i < iTargetCount; i++) {
 		int iTarget = iTargetList[i];
 	
 		if (GetClientTeam(iTarget) <= view_as<int>(TFTeam_Spectator)) {
 			CReplyToCommand(iClient, "\t{limegreen}%N {white}has not joined a team.", iTarget);
-		} else if (g_eNearestCheckpoint[iTarget].iTimestamp) {
+		} else if (iTime-g_eNearestCheckpointLanded[iTarget].iTimestamp <= CHECKPOINT_TIME_CUTOFF) {
 			Checkpoint eCheckpoint;
-			eCheckpoint.iHash = g_eNearestCheckpoint[iTarget].iHash;
+			eCheckpoint.iHash = g_eNearestCheckpointLanded[iTarget].iHash;
 
 			Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
 

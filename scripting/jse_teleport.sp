@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"0.3.2"
+#define PLUGIN_VERSION	"0.3.3"
 
 #include <tf2>
 #include <tf2_stocks>
@@ -15,6 +15,8 @@
 #define JUMPS_OVERRIDE 			"jse_teleport_jumps"
 #define PLAYERS_OVERRIDE 		"jse_teleport_players"
 #define MULTITARGET_OVERRIDE	"jse_teleport_multitarget"
+
+#define CHECKPOINT_TIME_CUTOFF	20
 
 ConVar g_hCVGotoProgressed;
 ConVar g_hCVGotoPlayerProgressed;
@@ -104,7 +106,7 @@ void GotoPlayer(int iClient, int iTarget, bool bNotify=true) {
 		int iJumpNumber;
 		bool bControlPoint;
 
-		if (GetPlayerNearestCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint)) {
+		if (GetPlayerLastCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint)) {
 			Course iCourse = ResolveCourseNumber(iCourseNumber);
 
 			char sBuffer[256];
@@ -300,8 +302,9 @@ public Action cmdGoto(int iClient, int iArgC) {
 					int iCourseNumber;
 					int iJumpNumber;
 					bool bControlPoint;
+					int iTimestamp;
 
-					if (GetPlayerNearestCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint)) {
+					if (GetPlayerLastCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint, iTimestamp) && GetTime()-iTimestamp <= CHECKPOINT_TIME_CUTOFF) {
 						Course iCourse = ResolveCourseNumber(iCourseNumber);
 
 						if (bCanTeleToAllJumps || CheckProgress(iClient, iCourseNumber, iJumpNumber, bControlPoint)) {
@@ -788,8 +791,9 @@ public int MenuHandler_GotoPlayer(Menu hMenu, MenuAction iAction, int iClient, i
 					int iCourseNumber;
 					int iJumpNumber;
 					bool bControlPoint;
+					int iTimestamp;
 
-					if (GetPlayerNearestCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint)) {
+					if (GetPlayerLastCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint, iTimestamp) && GetTime()-iTimestamp <= CHECKPOINT_TIME_CUTOFF) {
 						Course iCourse = ResolveCourseNumber(iCourseNumber);
 
 						if (bCanTeleToAllJumps || CheckProgress(iClient, iCourseNumber, iJumpNumber, bControlPoint)) {
