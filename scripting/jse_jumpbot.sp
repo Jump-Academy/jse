@@ -4625,11 +4625,12 @@ void SetBubbleAlpha(Recording iRecording, int iAlpha) {
 	if (IsValidEntity(iNModel) && IsValidEntity(iWModel)) {
 		if (iRecording.Repo) {
 			SetEntityRenderColor(iNModel, 255, 255, 255, iAlpha);
-			SetEntityRenderColor(iWModel, 255, 255, 255, iAlpha);
+			
 		} else {
-			SetEntityRenderColor(iNModel, 0, 255, 0, iAlpha);
-			SetEntityRenderColor(iWModel, 0, 255, 0, iAlpha);
+			SetEntityRenderColor(iNModel, g_iLocalRecColor[0], g_iLocalRecColor[1], g_iLocalRecColor[2], iAlpha);
 		}
+
+		SetEntityRenderColor(iWModel, 255, 255, 255, iAlpha);
 	}
 }
 
