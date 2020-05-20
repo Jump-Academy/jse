@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"0.3.3"
+#define PLUGIN_VERSION	"0.3.4"
 
 #include <tf2>
 #include <tf2_stocks>
@@ -558,7 +558,12 @@ void SendPlayerMenu(int iClient, MenuHandler fnHandler, bool bBackButton=true) {
 		delete hMenu;
 
 		CPrintToChat(iClient, "{dodgerblue}[jse] {white}No other players to go to.");
-		SendMainMenu(iClient, MenuHandler_GotoMain, MenuHandler_GotoPlayer);
+		
+		// Prevent infinite loop
+		if (IsTrackerLoaded()) {
+			SendMainMenu(iClient, MenuHandler_GotoMain, MenuHandler_GotoPlayer);
+		}
+
 		return;
 	}
 
