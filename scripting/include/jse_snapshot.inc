@@ -18,4 +18,4 @@ public SharedPlugin __pl_jse_snapshot =
 };
 
 forward Action OnSnapshotPreLoad(int iClient);
-forward Action OnSnapshotLoad(int iClient, TFTeam &iTeam, TFClassType &iClass, Course &iCourse, Jump &iJump, ControlPoint &iControlPoint);
+forward Action OnSnapshotLoad(int iClient, TFTeam &iTeam, TFClassType &iClass, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint);
