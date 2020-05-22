@@ -1,6 +1,5 @@
-language: sourcepawn
+language: minimal
 
-sudo: false
 addons:
   apt:
     packages:
