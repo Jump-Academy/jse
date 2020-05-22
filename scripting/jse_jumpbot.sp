@@ -4249,8 +4249,6 @@ bool LoadRecording(Recording iRecording) {
 		iClientInfo.SetStartAng(fStartAng);
 	}
 
-	//PrintToServer("\tStartPos: %.1f, %.1f, %.1f", fStartPos[0], fStartPos[1], fStartPos[2]);
-
 	delete hFile;
 
 	return true;
@@ -4261,23 +4259,18 @@ void LoadRecordings(bool bUseCachedRepoIndex = false) {
 	
 	char sFilePath[PLATFORM_MAX_PATH];
 	
-	if (bUseCachedRepoIndex) {
-		BuildPath(Path_SM, sFilePath, sizeof(sFilePath), "%s/%s", CACHE_FOLDER, INDEX_FILE_NAME);
-		if (!FileExists(sFilePath)) {
-			fetchRepository();
+	if (g_hUseRepo.BoolValue) {
+		if (bUseCachedRepoIndex) {
+			BuildPath(Path_SM, sFilePath, sizeof(sFilePath), "%s/%s", CACHE_FOLDER, INDEX_FILE_NAME);
+			if (!FileExists(sFilePath)) {
+				fetchRepository();
+			} else {
+				parseIndex(sFilePath);
+			}
 		} else {
-			parseIndex(sFilePath);
+			fetchRepository();
 		}
-	} else {
-		fetchRepository();
 	}
-	
-	/*
-	g_iRecBufferIdx = 0;
-	g_iRecBufferUsed = 0;
-	g_iRecBufferFrame = 0;
-	g_iRecBufferFramesTotal = 0;
-	*/
 
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), g_sRecSubDir);
