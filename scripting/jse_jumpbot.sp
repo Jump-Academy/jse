@@ -58,6 +58,9 @@ enum struct SpawnFreeze {
 	float fAng[3];
 }
 
+#define REC_FORMAT_VERSION_MAJOR	1
+#define REC_FORMAT_VERSION_MINOR	0
+
 #define INST_NOP				 0
 #define INST_PAUSE				 1
 #define INST_RECD				(1 << 1)
@@ -3355,7 +3358,7 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		if (g_hDebug.BoolValue && (iEntityRef != g_eLastBubbleTime[iOther].iEnt || GetTime()-g_eLastBubbleTime[iOther].iTime > 10)) {
 			char sFilePath[PLATFORM_MAX_PATH];
 			iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
-			CPrintToChat(iOther, "{dodgerblue}[jb] {white}ID: %d | %t | %s%t (%s) | %t: %s | %t:\n	%s", iRecID, (iRecording.Repo ? "Repository" : "Local"), sClass, "Recording", sTimeTotal, "Author", sAuthID, "File", sFilePath);
+			CPrintToChat(iOther, "{dodgerblue}[jb] {white}ID: %d | %t | %s %t (%s) | %t: %s | %t:\n	%s", iRecID, (iRecording.Repo ? "Repository" : "Local"), sClass, "Recording", sTimeTotal, "Author", sAuthID, "File", sFilePath);
 		}
 
 		g_eLastBubbleTime[iOther].iEnt = iEntityRef;
@@ -3606,7 +3609,7 @@ bool checkVersion(char[] sFilePath) {
 	int iVersionMinor;
 	hFile.ReadUint8(iVersionMajor);
 	hFile.ReadUint8(iVersionMinor);
-	if (!(iVersionMajor == 1 && iVersionMinor == 0)) {
+	if (!(iVersionMajor == 1 && iVersionMinor == 0 || iVersionMajor == 0 && iVersionMinor == 9)) {
 		LogError("Incompatible JBREC version (%d.%d): %s", iVersionMajor, iVersionMinor, sFilePath);
 		delete hFile;
 		return false;
@@ -4471,8 +4474,8 @@ bool SaveFile(char[] sFilePath) {
 	hFile.WriteString("JBREC", true); // Identifier
 	
 	// 0x6
-	hFile.WriteInt8(1); // File format version major
-	hFile.WriteInt8(0); // File format version minor
+	hFile.WriteInt8(REC_FORMAT_VERSION_MAJOR); // File format version major
+	hFile.WriteInt8(REC_FORMAT_VERSION_MINOR); // File format version minor
 
 	// 0x8
 	hFile.WriteInt32(g_iRecording.Timestamp);

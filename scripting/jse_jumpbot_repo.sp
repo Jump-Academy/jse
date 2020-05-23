@@ -102,7 +102,7 @@ void fetchRepository() {
 	GetCurrentMap(sMapName, sizeof(sMapName));
 	
 	char sPage[64];
-	FormatEx(sPage, sizeof(sPage), "%s?map=%s", REPO_LISTING_PAGE, sMapName);
+	FormatEx(sPage, sizeof(sPage), "%s?map=%s&version=%d.%d", REPO_LISTING_PAGE, sMapName, REC_FORMAT_VERSION_MAJOR, REC_FORMAT_VERSION_MINOR);
 	hFileInfo.PushString(sPage);
 	SocketSetArg(hSocket, hFileInfo);
 	SocketConnect(hSocket, OnSocketConnected, OnSocketReceive, OnSocketDisconnected, API_HOST, 80);
