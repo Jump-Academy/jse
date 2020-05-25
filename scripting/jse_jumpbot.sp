@@ -3036,6 +3036,10 @@ public Action cmdUpgrade(int iClient, int iArgC) {
 
 public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
+	if (!iClient) {
+		return Plugin_Handled;
+	}
+
 	int iBotID = -1;
 	if (iClient == g_iClientOfInterest && !(g_iClientInstruction & INST_PLAYALL) && view_as<TFTeam>(GetClientTeam(iClient)) > TFTeam_Spectator) {
 		doFullStop();
@@ -3087,6 +3091,9 @@ public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroa
 
 public Action Event_PlayerTeam(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
+	if (!iClient) {
+		return Plugin_Handled;
+	}
 	
 	if (iClient == g_iClientOfInterest || g_hRecordingBots.FindValue(iClient, RecBot::iEnt) != -1) {
 		hEvent.BroadcastDisabled  = true;

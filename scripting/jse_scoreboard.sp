@@ -88,6 +88,10 @@ public Action CommandListener_Restart(int iClient, const char[] sCommand, int iA
 
 public Action Hook_ChangeTeamClass(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
+	if (!iClient) {
+		return Plugin_Handled;
+	}
+	
 	ResetClient(iClient);
 	
 	return Plugin_Continue;

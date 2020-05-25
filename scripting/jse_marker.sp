@@ -92,6 +92,10 @@ public void OnClientDisconnect(int iClient) {
 
 public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
+	if (!iClient) {
+		return Plugin_Handled;
+	}
+	
 	CreateTimer(0.1, Timer_ShowAnnotations, iClient);
 	
 	return Plugin_Continue;

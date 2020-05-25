@@ -107,7 +107,7 @@ public void OnPluginStart() {
 	
 	g_hCVInstantRespawn = CreateConVar("jse_core_instant_respawn", "3", "Minimum seconds between instant respawns (-1 to disable instant respawn)", FCVAR_NONE, true, -1.0, true, 30.0);
 	
-	g_hCVCapInterval = CreateConVar("jse_core_cap_interval", "5", "Minimum time between control point captures in seconds", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_hCVCapInterval = CreateConVar("jse_core_cap_interval", "5", "Mini1mum time between control point captures in seconds", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_hCVCriticals = CreateConVar("jse_core_criticals", "0", "Toggles weapon criticals", FCVAR_NONE, true, 0.0, true, 1.0);
 	g_hCVEasyBuild = CreateConVar("jse_core_easybuild", "1", "Toggles engineer building fast and cheap build", FCVAR_NONE, true, 0.0, true, 1.0);
 	g_hCVSentryAmmo = CreateConVar("jse_core_sentryammo", "1", "Toggles engineer sentry ammo auto refill", FCVAR_NONE, true, 0.0, true, 1.0);
@@ -343,6 +343,9 @@ public Action Event_UpgradedObject(Event hEvent, const char[] sName, bool bDontB
 
 public Action Event_EquipWeapon(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
+	if (!iClient) {
+		return Plugin_Handled;
+	}
 	
 	if (g_bBlockEquip[iClient]) {
 		return Plugin_Handled;
@@ -367,7 +370,10 @@ public Action Event_EquipWeapon(Event hEvent, const char[] sName, bool bDontBroa
 
 public Action Event_PlayerChangeClass(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
-	
+	if (!iClient) {
+		return Plugin_Handled;
+	}
+
 	clearControlPointCapture(iClient);
 	
 	TF2_RespawnPlayer(iClient);
@@ -377,16 +383,23 @@ public Action Event_PlayerChangeClass(Event hEvent, const char[] sName, bool bDo
 
 public Action Event_PlayerDeath(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
+	if (!iClient) {
+		return Plugin_Handled;
+	}
 	
-	float iRespawnTime = Math_Min(float(g_hCVInstantRespawn.IntValue - (GetTime() - g_iLastSpawn[iClient])), 0.1);
-	CreateTimer(iRespawnTime, Timer_Respawn, GetClientSerial(iClient), TIMER_FLAG_NO_MAPCHANGE);
+	if (g_hCVInstantRespawn.IntValue != -1) {
+		float iRespawnTime = Math_Min(g_hCVInstantRespawn.FloatValue - (GetTime() - g_iLastSpawn[iClient]), 0.1);
+		CreateTimer(iRespawnTime, Timer_Respawn, GetClientSerial(iClient), TIMER_FLAG_NO_MAPCHANGE);
+	}
 	
 	return Plugin_Continue;
 }
 
 public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
-	//TFTeam iTFTeam = view_as<TFTeam>(GetClientTeam(iClient));
+	if (!iClient) {
+		return Plugin_Handled;
+	}
 
 	g_iLastSpawn[iClient] = GetTime();
 

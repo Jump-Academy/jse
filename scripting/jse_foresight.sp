@@ -168,6 +168,10 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 
 public Action Event_PlayerChangeState(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
+	if (!iClient) {
+		return Plugin_Handled;
+	}
+	
 	if (g_iActiveCamera[iClient] != NULL_CAMERA) {
 		DisableForesight(g_iActiveCamera[iClient]);
 	}	
