@@ -107,7 +107,7 @@ public void OnPluginStart() {
 	
 	g_hCVInstantRespawn = CreateConVar("jse_core_instant_respawn", "3", "Minimum seconds between instant respawns (-1 to disable instant respawn)", FCVAR_NONE, true, -1.0, true, 30.0);
 	
-	g_hCVCapInterval = CreateConVar("jse_core_cap_interval", "5", "Mini1mum time between control point captures in seconds", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_hCVCapInterval = CreateConVar("jse_core_cap_interval", "5", "Minimum time between control point captures in seconds", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_hCVCriticals = CreateConVar("jse_core_criticals", "0", "Toggles weapon criticals", FCVAR_NONE, true, 0.0, true, 1.0);
 	g_hCVEasyBuild = CreateConVar("jse_core_easybuild", "1", "Toggles engineer building fast and cheap build", FCVAR_NONE, true, 0.0, true, 1.0);
 	g_hCVSentryAmmo = CreateConVar("jse_core_sentryammo", "1", "Toggles engineer sentry ammo auto refill", FCVAR_NONE, true, 0.0, true, 1.0);
