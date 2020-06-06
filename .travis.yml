@@ -36,4 +36,4 @@ before_script:
   - chmod +x spcomp
 
 script:
-- ./compile.sh jse_core.sp jse_foresight.sp jse_jumpbot.sp jse_marker.sp jse_scoreboard.sp jse_showkeys.sp jse_tracker.sp jse_transcript.sp
+- ./compile.sh jse_core.sp jse_foresight.sp jse_jumpbot.sp jse_marker.sp jse_scoreboard.sp jse_snapshot.sp jse_showkeys.sp jse_tracker.sp jse_teleport.sp
