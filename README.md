@@ -12,7 +12,6 @@ JSE is a set of modular plugins for enabling standard features present in most T
 * Show Keys
 * Teleport
 * Tracker
-* Transcript
 * Scoreboard
 
 ## Required
