@@ -854,7 +854,7 @@ public void OnGameFrame() {
 					fetchRecording(g_iRecording);
 				} else if (!LoadFrames(g_iRecording)) {
 					if (g_hDebug.BoolValue)
-						CPrintToChatAll("{dodgerblue}[jb] \0x1%t", "Cannot File Read");
+						CPrintToChatAll("{dodgerblue}[jb] {white}%t", "Cannot File Read");
 					g_iRecBufferIdx = 0;
 					g_iRecording = NULL_RECORDING;
 					return;
@@ -2797,21 +2797,31 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 	iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
 	bool bFileExists = FileExists(sFilePath);
 	
-	if (!LoadFrames(iRecording) && !iRecording.Repo) {
+	if (!iRecording.Repo && !CheckFile(sFilePath)) {
 		LogError("%T: %s", "Cannot Local Play", LANG_SERVER, sFilePath);
 		g_iClientInstruction = INST_NOP;
 		g_iRecording = NULL_RECORDING;
 		return;
 	}
 
-	if (!PrepareBots(iRecording)) {
-		return;
-	}
+	if (iRecording.Repo && (!bFileExists || iRecording.Downloading)) {
+		g_iClientInstruction = INST_WAIT; // Wait for download completion
+		
+		if (g_hDebug.BoolValue) {
+			CPrintToChat(iClient, "{dodgerblue}[jb] {white}File %s", !bFileExists ? "does not exist" : "is downloading");
+		}
+		
+		if (!iRecording.Downloading) {
+			fetchRecording(iRecording);
+		}
+	} else {
+		if (!(LoadRecording(iRecording) && PrepareBots(iRecording) && LoadFrames(iRecording))) {
+			CPrintToChat(iClient, "{dodgerblue}[jb] {white}%t", "Cannot File Read");
+			return;
+		}
 
-	g_iRecBufferIdx = 0;
-	g_iRecBufferFrame = 0;
-	clearRecEntities();
-	g_iRecordingEntTotal = 0;
+		g_iClientInstruction = INST_WARMUP;
+	}
 
 	ArrayList hClientInfo = iRecording.ClientInfo;
 	for (int i=0; i<hClientInfo.Length; i++) {
@@ -2831,28 +2841,12 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 	GetClientEyeAngles(iClient, fAng);
 	GetClientAbsOrigin(iClient, fPos);
 	setRespawn(iClient, fPos, fAng);
-
-	if (iRecording.Repo && (!bFileExists || iRecording.Downloading)) {
-		g_iClientInstruction = INST_WAIT; // Wait for download completion
-		
-		if (g_hDebug.BoolValue) {
-			CPrintToChat(iClient, "{dodgerblue}[jb] {white}File %s", !bFileExists ? "does not exist" : "is downloading");
-		}
-		
-		if (!iRecording.Downloading) {
-			fetchRecording(iRecording);
-		}
-	} else {
-		g_iClientInstruction = INST_WARMUP;
-		LoadRecording(iRecording);
-		PrepareBots(iRecording);
-
-		LoadFrames(iRecording);
-	}
 	
 	g_iRecording = iRecording;
 	g_iRecBufferFrame =  0;
 	g_iRecBufferIdx = 0;
+	clearRecEntities();
+	g_iRecordingEntTotal = 0;
 
 	g_iLastCaller = iClient;
 	g_iLastCallTime = GetTime();
@@ -3600,29 +3594,50 @@ bool checkAccess(int iClient) {
 	return iClient == 0 || CheckCommandAccess(iClient, "jb_access", ADMFLAG_ROOT) || g_bPlayerGrantAccess[iClient];
 }
 
-bool checkVersion(char[] sFilePath) {
+bool CheckFile(char[] sFilePath) {
 	File hFile = OpenFile(sFilePath, "rb");
-
-	char sIdentifier[6];
-	if (hFile.ReadString(sIdentifier, sizeof(sIdentifier)) == -1 || !StrEqual("JBREC", sIdentifier)) {
-		LogError("Not a JBREC file: %s", sFilePath);
-		delete hFile;
+	if (!hFile) {
+		LogError("Cannot open file: %s", sFilePath);
 		return false;
 	}
 
-	// Version check
+	char sError[256];
+	bool bVersionResult = CheckVersion(hFile, sError, sizeof(sError));
+	if (!bVersionResult) {
+		LogError("%s: %s", sError, sFilePath);
+	}
+
+	delete hFile;
+
+	return bVersionResult;
+}
+
+bool CheckVersion(File hFile, char[] sError, int iMaxLength) {
+	int iPosBackup = hFile.Position;
+
+	hFile.Seek(0x0, SEEK_SET);
+
+	char sIdentifier[6];
+	if (hFile.ReadString(sIdentifier, sizeof(sIdentifier)) == -1 || !StrEqual("JBREC", sIdentifier)) {
+		FormatEx(sError, iMaxLength, "Not a JBREC file");
+		hFile.Seek(iPosBackup, SEEK_SET);
+		return false;
+	}
+
 	hFile.Seek(0x6, SEEK_SET);
+
 	int iVersionMajor;
 	int iVersionMinor;
 	hFile.ReadUint8(iVersionMajor);
 	hFile.ReadUint8(iVersionMinor);
 	if (!(iVersionMajor == 1 && iVersionMinor == 0 || iVersionMajor == 0 && iVersionMinor == 9)) {
-		LogError("Incompatible JBREC version (%d.%d): %s", iVersionMajor, iVersionMinor, sFilePath);
-		delete hFile;
+		FormatEx(sError, iMaxLength, "Incompatible JBREC version (%d.%d)", iVersionMajor, iVersionMinor);
+
+		hFile.Seek(iPosBackup, SEEK_SET);
 		return false;
 	}
 
-	delete hFile;
+	hFile.Seek(iPosBackup, SEEK_SET);
 	return true;
 }
 
@@ -4111,8 +4126,14 @@ bool LoadRecording(Recording iRecording) {
 	iRecording.FileSize = FileSize(sFilePath);
 
 	File hFile = OpenFile(sFilePath, "rb");
-	if (hFile == null) {
+	if (!hFile) {
 		LogError("%T: %s", "Cannot Local Play", LANG_SERVER, sFilePath);
+		return false;
+	}
+
+	char sError[256];
+	if (!CheckVersion(hFile, sError, sizeof(sError))) {
+		LogError("%s: %s", sError, sFilePath);
 		return false;
 	}
 
@@ -4321,7 +4342,7 @@ void LoadRecordings(bool bUseCachedRepoIndex = false) {
 					FormatEx(sFilePath, sizeof(sFilePath), "%s/%s", sPath, sFile);
 					ReplaceString(sFilePath, sizeof(sFilePath), "\\\0", "/", true); // Windows
 
-					if (!checkVersion(sFilePath)) {
+					if (!CheckFile(sFilePath)) {
 						continue;
 					}
 
@@ -4340,6 +4361,109 @@ void LoadRecordings(bool bUseCachedRepoIndex = false) {
 	delete hDir;
 
 	SortADTArrayCustom(g_hRecordings, Sort_Recordings);
+}
+
+bool LoadFrames(Recording iRecording) {
+	if  (!iRecording) {
+		return false;
+	}
+	
+	char sFilePath[PLATFORM_MAX_PATH];
+	iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
+	
+	if (g_hDebug.BoolValue) {
+		int iFilePart = FindCharInString(sFilePath, '/', true);
+		CPrintToChatAll("{dodgerblue}[jb] {white}%t: %s (%s)", "Load", sFilePath[iFilePart+1], FileExists(sFilePath) ? "exists" : "notfound");
+	}
+	
+	if (!FileExists(sFilePath)) {
+		return false;
+	}
+	
+	File hFile = OpenFile(sFilePath, "rb");
+	if (hFile == null) {
+		return false;
+	}
+
+	char sError[256];
+	if (!CheckVersion(hFile, sError, sizeof(sError))) {
+		LogError("%s: %s", sError, sFilePath);
+		return false;
+	}
+
+	hFile.Seek(0xC, SEEK_SET);
+	int iFrames, iLength;
+	hFile.ReadInt32(iFrames);
+	hFile.ReadInt32(iLength);
+	iRecording.Length = iLength;
+
+	int iRecBufferUsed = iRecording.Length;
+	ArrayList hRecBufferFrames = iRecording.Frames;
+
+	int iPosFrameData;
+	hFile.Seek(0x14, SEEK_SET);
+	hFile.ReadInt32(iPosFrameData);
+	hFile.Seek(iPosFrameData, SEEK_SET);
+
+	if (iRecording.Repo) {
+		int iSize = FileSize(sFilePath);
+		// Offset + buffer used + frame index block
+		int iSizeExpected = iPosFrameData + iRecBufferUsed + hRecBufferFrames.Length;
+		if (iSize < iSizeExpected) {
+			LogError("%T: %s (%d/%d KB) -- %T", "Cannot Load Incomplete", LANG_SERVER, sFilePath, iSize/1000, iSizeExpected/1000, "Delete", LANG_SERVER);
+			if (!iRecording.Downloading) {
+				DeleteFile(sFilePath);
+			}
+			return false;
+		}
+	} else if (!FileSize(sFilePath)) {
+		LogError("%T: %s (0 KB) -- %T", "Cannot Load Incomplete", LANG_SERVER, sFilePath, "Delete", LANG_SERVER);
+		return false;
+	}
+	
+	g_hRecBuffer.Clear();
+	any aFrameData;
+	for (int i=0; i<iRecBufferUsed; i++) {
+		if (!hFile.ReadInt32(aFrameData)) {
+			LogError("%T (%d/%d B): %s", "Unexpected EOF", LANG_SERVER, i, iRecBufferUsed, sFilePath);
+			return false;
+		}
+
+		g_hRecBuffer.Push(aFrameData);
+	}
+
+	int iPosEntData;
+	hFile.Seek(0x24, SEEK_SET);
+	hFile.ReadInt32(iPosEntData);
+	hFile.Seek(iPosEntData+4, SEEK_SET);
+	
+	int iEntTypes;
+	hFile.ReadUint8(iEntTypes);
+
+	g_hRecordingEntTypes.Clear();
+	char sClassName[128];
+	for (int i=0; i<iEntTypes; i++) {
+		hFile.ReadString(sClassName, sizeof(sClassName));
+		g_hRecordingEntTypes.PushString(sClassName);
+	}
+
+	hRecBufferFrames.Clear();
+	hFile.Seek(0x18, SEEK_SET);
+	int iPosFrameIndex;
+	hFile.ReadInt32(iPosFrameIndex);
+	hFile.Seek(iPosFrameIndex, SEEK_SET);
+	for (int i=0; i<iFrames; i++) {
+		int iFrameIdx;
+		hFile.ReadInt32(iFrameIdx);
+		hRecBufferFrames.Push(iFrameIdx);
+	}
+
+	g_iRecBufferUsed = iRecBufferUsed;
+	g_hRecBufferFrames = hRecBufferFrames;
+	
+	delete hFile;
+	
+	return true;
 }
 
 ArrayList GetSaveStates() {
@@ -4383,7 +4507,7 @@ ArrayList GetSaveStates() {
 					FormatEx(sFilePath, sizeof(sFilePath), "%s/%s", sPath, sFile);
 					ReplaceString(sFilePath, sizeof(sFilePath), "\\\0", "/", true); // Windows
 
-					if (!checkVersion(sFilePath)) {
+					if (!CheckFile(sFilePath)) {
 						continue;
 					}
 				
@@ -4952,107 +5076,6 @@ void RemoveModels(Recording iRecording) {
 		IntToString(iEntityRef, sKey, sizeof(sKey));
 		g_hBubbleLookup.Remove(sKey);
 	}
-}
-
-bool LoadFrames(Recording iRecording) {
-	if  (!iRecording) {
-		return false;
-	}
-	
-	char sFilePath[PLATFORM_MAX_PATH];
-	iRecording.GetFilePath(sFilePath, sizeof(sFilePath));
-	
-	if (g_hDebug.BoolValue) {
-		int iFilePart = FindCharInString(sFilePath, '/', true);
-		CPrintToChatAll("{dodgerblue}[jb] {white}%t: %s (%s)", "Load", sFilePath[iFilePart+1], FileExists(sFilePath) ? "exists" : "notfound");
-	}
-	
-	if (!FileExists(sFilePath)) {
-		return false;
-	}
-	
-	File hFile = OpenFile(sFilePath, "rb");
-	if (hFile == null) {
-		return false;
-	}
-
-	if (!checkVersion(sFilePath)) {
-		return false;
-	}
-
-	hFile.Seek(0xC, SEEK_SET);
-	int iFrames, iLength;
-	hFile.ReadInt32(iFrames);
-	hFile.ReadInt32(iLength);
-	iRecording.Length = iLength;
-
-	int iRecBufferUsed = iRecording.Length;
-	ArrayList hRecBufferFrames = iRecording.Frames;
-
-	int iPosFrameData;
-	hFile.Seek(0x14, SEEK_SET);
-	hFile.ReadInt32(iPosFrameData);
-	hFile.Seek(iPosFrameData, SEEK_SET);
-
-	if (iRecording.Repo) {
-		int iSize = FileSize(sFilePath);
-		// Offset + buffer used + frame index block
-		int iSizeExpected = iPosFrameData + iRecBufferUsed + hRecBufferFrames.Length;
-		if (iSize < iSizeExpected) {
-			LogError("%T: %s (%d/%d KB) -- %T", "Cannot Load Incomplete", LANG_SERVER, sFilePath, iSize/1000, iSizeExpected/1000, "Delete", LANG_SERVER);
-			if (!iRecording.Downloading) {
-				DeleteFile(sFilePath);
-			}
-			return false;
-		}
-	} else if (!FileSize(sFilePath)) {
-		LogError("%T: %s (0 KB) -- %T", "Cannot Load Incomplete", LANG_SERVER, sFilePath, "Delete", LANG_SERVER);
-		return false;
-	}
-	
-	g_hRecBuffer.Clear();
-	any aFrameData;
-	for (int i=0; i<iRecBufferUsed; i++) {
-		if (!hFile.ReadInt32(aFrameData)) {
-			LogError("%T (%d/%d B): %s", "Unexpected EOF", LANG_SERVER, i, iRecBufferUsed, sFilePath);
-			return false;
-		}
-
-		g_hRecBuffer.Push(aFrameData);
-	}
-
-	int iPosEntData;
-	hFile.Seek(0x24, SEEK_SET);
-	hFile.ReadInt32(iPosEntData);
-	hFile.Seek(iPosEntData+4, SEEK_SET);
-	
-	int iEntTypes;
-	hFile.ReadUint8(iEntTypes);
-
-	g_hRecordingEntTypes.Clear();
-	char sClassName[128];
-	for (int i=0; i<iEntTypes; i++) {
-		hFile.ReadString(sClassName, sizeof(sClassName));
-		g_hRecordingEntTypes.PushString(sClassName);
-	}
-
-	hRecBufferFrames.Clear();
-	hFile.Seek(0x18, SEEK_SET);
-	int iPosFrameIndex;
-	hFile.ReadInt32(iPosFrameIndex);
-	hFile.Seek(iPosFrameIndex, SEEK_SET);
-	for (int i=0; i<iFrames; i++) {
-		int iFrameIdx;
-		hFile.ReadInt32(iFrameIdx);
-		hRecBufferFrames.Push(iFrameIdx);
-	}
-
-	g_iRecBufferUsed = iRecBufferUsed;
-	g_hRecBufferFrames = hRecBufferFrames;
-	
-	delete hFile;
-	
-	return true;
 }
 
 void TE_SendToAllInRangeVisible(float fPos[3]) {
