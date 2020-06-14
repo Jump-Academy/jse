@@ -141,7 +141,6 @@ ConVar g_hProjTrail;
 ConVar g_hProjTrailColor;
 ConVar g_hTrailLife;
 
-ConVar g_hMapMatch;
 ConVar g_hVacate;
 
 ConVar g_hBubble;
@@ -284,7 +283,6 @@ public void OnPluginStart() {
 	g_hProjTrail 			= AutoExecConfig_CreateConVar("jse_jb_projtrail", 		"1", 				"Toggle projectile trail", 																FCVAR_NONE, 						true, 0.0, true, 1.0);
 	g_hProjTrailColor		= AutoExecConfig_CreateConVar("jse_jb_projcolor", 		"800080FF", 		"Bot launched projectiles trail color (hex RGBA)", 										FCVAR_NONE												);
 
-	g_hMapMatch 			= AutoExecConfig_CreateConVar("jse_jb_match_exact", 	"0", 				"Map/recording name matching method (0 for prefix, 1 for exact)", 						FCVAR_NONE												);
 	g_hVacate 				= AutoExecConfig_CreateConVar("jse_jb_vacate", 			"1", 				"Vacate when the server becomes empty", 												FCVAR_NONE, 						true, 0.0, true, 1.0);
 	
 	g_hBubble 				= AutoExecConfig_CreateConVar("jse_jb_bubble", 			"1", 				"Toggle showing JumpBOT recording bubbles", 											FCVAR_NONE, 						true, 0.0, true, 1.0);
@@ -1783,6 +1781,7 @@ public Action cmdPlay(int iClient, int iArgC) {
 
 			iRecording = g_hRecordings.Get(iRecID);
 			if (!LoadFrames(iRecording)) {
+				// TODO: Translate
 				CReplyToCommand(iClient, "{dodgerblue}[jb] {white}Failed to load recording file");
 				return Plugin_Handled;
 			}
@@ -1910,8 +1909,8 @@ public Action cmdStateSave(int iClient, int iArgC) {
 	if (!DirExists(sPath))
 		CreateDirectory(sPath, 509);
 	
-	char sFileName[32];
-	GetCurrentMap(sFileName, sizeof(sFileName));
+	char sMapName[32];
+	GetCurrentMap(sMapName, sizeof(sMapName));
 	
 	g_iRecording.Timestamp = GetTime();
 
@@ -1919,7 +1918,7 @@ public Action cmdStateSave(int iClient, int iArgC) {
 	if (iArgC == 0) {
 		iSlot = 0;
 		do {
-			Format(sPathTemp, sizeof(sPathTemp), "%s/%s-%d.save", sPath, sFileName, ++iSlot);
+			Format(sPathTemp, sizeof(sPathTemp), "%s/%s-%d.save", sPath, sMapName, ++iSlot);
 		} while (FileExists(sPathTemp));
 	} else {
 		char sArg1[32];
@@ -1931,7 +1930,7 @@ public Action cmdStateSave(int iClient, int iArgC) {
 			return Plugin_Handled;
 		}
 
-		Format(sPathTemp, sizeof(sPathTemp), "%s/%s-%d.save", sPath, sFileName, iSlot);
+		Format(sPathTemp, sizeof(sPathTemp), "%s/%s-%d.save", sPath, sMapName, iSlot);
 	}
 	
 	if (SaveFile(sPathTemp)) {
@@ -1980,7 +1979,6 @@ public Action cmdStateLoad(int iClient, int iArgC) {
 		hMenu.SetTitle("Load Rec State");
 		BuildStateMenu(hMenu);
 		hMenu.Display(iClient, 0);
-		
 	} else {
 		char sArg1[32];
 		GetCmdArg(1, sArg1, sizeof(sArg1));
@@ -3594,7 +3592,7 @@ bool checkAccess(int iClient) {
 	return iClient == 0 || CheckCommandAccess(iClient, "jb_access", ADMFLAG_ROOT) || g_bPlayerGrantAccess[iClient];
 }
 
-bool CheckFile(char[] sFilePath) {
+bool CheckFile(char[] sFilePath, char[] sMapName=NULL_STRING) {
 	File hFile = OpenFile(sFilePath, "rb");
 	if (!hFile) {
 		LogError("Cannot open file: %s", sFilePath);
@@ -3602,14 +3600,18 @@ bool CheckFile(char[] sFilePath) {
 	}
 
 	char sError[256];
-	bool bVersionResult = CheckVersion(hFile, sError, sizeof(sError));
-	if (!bVersionResult) {
+	bool bResult = CheckVersion(hFile, sError, sizeof(sError));
+	if (!bResult) {
 		LogError("%s: %s", sError, sFilePath);
+	}
+
+	if (bResult && sMapName[0]) {
+		bResult = CheckMap(hFile, sMapName);
 	}
 
 	delete hFile;
 
-	return bVersionResult;
+	return bResult;
 }
 
 bool CheckVersion(File hFile, char[] sError, int iMaxLength) {
@@ -3639,6 +3641,19 @@ bool CheckVersion(File hFile, char[] sError, int iMaxLength) {
 
 	hFile.Seek(iPosBackup, SEEK_SET);
 	return true;
+}
+
+bool CheckMap(File hFile, char[] sMapName) {
+	int iPosBackup = hFile.Position;
+
+	hFile.Seek(0x28, SEEK_SET);
+
+	char sFileMapName[32];
+	hFile.ReadString(sFileMapName, sizeof(sFileMapName));
+	
+	hFile.Seek(iPosBackup, SEEK_SET);
+
+	return StrEqual(sMapName, sFileMapName, false);
 }
 
 void clearRecBotData(int iID = -1) {
@@ -4174,7 +4189,7 @@ bool LoadRecording(Recording iRecording) {
 
 	char sFileMapName[32];
 	hFile.ReadString(sFileMapName, sizeof(sFileMapName));
-	if (g_hMapMatch.BoolValue && !StrEqual(sMapName, sFileMapName, false)) {
+	if (!StrEqual(sMapName, sFileMapName, false)) {
 		LogError("Map mismatch (%s): %s", sFileMapName, sFilePath);
 		delete hFile;
 		return false;
@@ -4314,50 +4329,52 @@ void LoadRecordings(bool bUseCachedRepoIndex = false) {
 		return;
 	}
 
-	char sMapName[PLATFORM_MAX_PATH];
+	char sMapName[32];
 	GetCurrentMap(sMapName, sizeof(sMapName));
 	
+	Regex hFileRegex = new Regex("^([\\w_]+)\\-[\\d_]+");
+
 	FileType iFileType;
 	char sFile[PLATFORM_MAX_PATH];
 	char sFileBase[PLATFORM_MAX_PATH];
 	
 	while (hDir.GetNext(sFile, sizeof(sFile), iFileType)) {
+		if (iFileType != FileType_File) {
+			continue;
+		}
+
+		// Check file extension
 		int iExt = FindCharInString(sFile, '.', true);
+		if (iExt == -1 || !StrEqual(sFile[iExt], ".jmp", false)) {
+			continue;
+		}
 		
-		if (iFileType == FileType_File && iExt != -1 && StrEqual(sFile[iExt], ".jmp", false)) {
-			
-			int iMap = FindCharInString(sFile, '-');
-			if (iMap != -1) {
-				strcopy(sFileBase, iMap+1, sFile);
-				// Similar version compatibility assumption
-				
-				bool bMatch = false;	
-				if (g_hMapMatch.BoolValue) {
-					bMatch = StrEqual(sMapName, sFileBase, false);
-				} else {
-					bMatch = (StrContains(sMapName, sFileBase, false) != -1) || (StrContains(sFileBase, sMapName, false) != -1);
-				}
-				
-				if (bMatch) {
-					FormatEx(sFilePath, sizeof(sFilePath), "%s/%s", sPath, sFile);
-					ReplaceString(sFilePath, sizeof(sFilePath), "\\\0", "/", true); // Windows
-
-					if (!CheckFile(sFilePath)) {
-						continue;
-					}
-
-					Recording iRecording = Recording.Instance();
-					iRecording.SetFilePath(sFilePath);
-
-					if (LoadRecording(iRecording)) {
-						g_hRecordings.Push(iRecording);
-					} else {
-						Recording.Destroy(iRecording);
-					}
-				}
+		// Skip opening file if naming scheme matches but map does not
+		// Proceed to file check for irregularly named files
+		if (hFileRegex.Match(sFile) > 0 && hFileRegex.GetSubString(1, sFileBase, sizeof(sFileBase))) {
+			if (!StrEqual(sFileBase, sMapName, false)) {
+				continue;
 			}
 		}
+
+		FormatEx(sFilePath, sizeof(sFilePath), "%s/%s", sPath, sFile);
+		ReplaceString(sFilePath, sizeof(sFilePath), "\\\0", "/", true); // Windows
+
+		if (!CheckFile(sFilePath, sMapName)) {
+			continue;
+		}
+
+		Recording iRecording = Recording.Instance();
+		iRecording.SetFilePath(sFilePath);
+
+		if (LoadRecording(iRecording)) {
+			g_hRecordings.Push(iRecording);
+		} else {
+			Recording.Destroy(iRecording);
+		}
 	}
+
+	delete hFileRegex;
 	delete hDir;
 
 	SortADTArrayCustom(g_hRecordings, Sort_Recordings);
@@ -4482,65 +4499,64 @@ ArrayList GetSaveStates() {
 
 	char sFilePath[PLATFORM_MAX_PATH];
 	char sFile[PLATFORM_MAX_PATH];
-	char sFileBase[PLATFORM_MAX_PATH];
+	char sSaveID[32];
 
-	char sMapName[PLATFORM_MAX_PATH];
+	char sMapName[32];
 	GetCurrentMap(sMapName, sizeof(sMapName));
+
+	char sRegExp[64];
+	FormatEx(sRegExp, sizeof(sRegExp), "^%s-(\\d+)", sMapName);
+
+	Regex hFileRegex = new Regex(sRegExp);
 
 	FileType iFileType;
 	while (hDir.GetNext(sFile, sizeof(sFile), iFileType)) {
+		if (iFileType != FileType_File) {
+			continue;
+		}
+
+		// Check file extension
 		int iExt = FindCharInString(sFile, '.', true);
+		if (iExt == -1 || !StrEqual(sFile[iExt], ".save", false)) {
+			continue;
+		}
 
-		if (iFileType == FileType_File && iExt != -1 && StrEqual(sFile[iExt], ".save", false)) {
-			int iMap = FindCharInString(sFile, '-');
-			if (iMap != -1) {
-				strcopy(sFileBase, iMap+1, sFile);
+		// Skip opening file if naming scheme matches but map does not
+		// Skip irregularly named files
+		if (hFileRegex.Match(sFile) < 0 || !hFileRegex.GetSubString(1, sSaveID, sizeof(sSaveID))) {
+			continue;
+		}
 
-				bool bMatch = false;	
-				if (g_hMapMatch.BoolValue) {
-					bMatch = StrEqual(sMapName, sFileBase, false);
-				} else {
-					bMatch = (StrContains(sMapName, sFileBase, false) != -1) || (StrContains(sFileBase, sMapName, false) != -1);
-				}
+		FormatEx(sFilePath, sizeof(sFilePath), "%s/%s", sPath, sFile);
+		ReplaceString(sFilePath, sizeof(sFilePath), "\\\0", "/", true); // Windows
 
-				if (bMatch) {
-					FormatEx(sFilePath, sizeof(sFilePath), "%s/%s", sPath, sFile);
-					ReplaceString(sFilePath, sizeof(sFilePath), "\\\0", "/", true); // Windows
+		if (!CheckFile(sFilePath, sMapName)) {
+			continue;
+		}
 
-					if (!CheckFile(sFilePath)) {
-						continue;
-					}
-				
-					char sSaveID[32];
-					iExt = FindCharInString(sFile, '.', true);
-					iMap = FindCharInString(sFile, '-', true);
-					strcopy(sSaveID, iExt-iMap, sFile[iMap+1]);
+		int iSaveID = StringToInt(sSaveID);
+		if (iSaveID) {
+			Recording iRecording = Recording.Instance();
 
-					int iSaveID = StringToInt(sSaveID);
+			iRecording.SetFilePath(sFilePath);
+			if (!LoadRecording(iRecording)) {
+				LogError("Failed to load save slot %d: %s", iSaveID, sFilePath);
 
-					if (iSaveID) {
-						PrintToServer("Found save slot %d: %s", iSaveID, sFilePath);
-						Recording iRecording = Recording.Instance();
-
-						iRecording.SetFilePath(sFilePath);
-						if (!LoadRecording(iRecording)) {
-							LogError("Failed to load save slot %d: %s", iSaveID, sFilePath);
-
-							Recording.Destroy(iRecording);
-							hSaveStates.Set(iSaveID-1, NULL_RECORDING);
-							continue;
-						}
-
-						while (iSaveID > hSaveStates.Length) {
-							hSaveStates.Push(NULL_RECORDING);
-						}
-
-						hSaveStates.Set(iSaveID-1, iRecording);
-					}
-				}
+				Recording.Destroy(iRecording);
+				hSaveStates.Set(iSaveID-1, NULL_RECORDING);
+				continue;
 			}
+
+			while (iSaveID > hSaveStates.Length) {
+				hSaveStates.Push(NULL_RECORDING);
+			}
+
+			hSaveStates.Set(iSaveID-1, iRecording);
 		}
 	}
+
+	delete hFileRegex;
+	delete hDir;
 
 	return hSaveStates;
 }
