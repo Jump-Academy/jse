@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"1.0.0-rc2"
+#define PLUGIN_VERSION	"1.0.0-rc3"
 
 #define UPDATE_URL		"http://jumpacademy.tf/plugins/jse/jumpbot/updatefile.txt"
 #define API_HOST		"api.jumpacademy.tf"
@@ -1115,7 +1115,7 @@ public void OnGameFrame() {
 					#endif
 				}
 
-				if (iEntity == INVALID_ENT_REFERENCE || g_iInterFrameLength) {
+				if (iEntity == INVALID_ENT_REFERENCE || g_iInterFrameLength > 1) {
 					continue;
 				}
 
@@ -1212,8 +1212,8 @@ public void OnGameFrame() {
 				}
 			}
 		}
-
-		if (g_iInterFrameLength) {
+		
+		if (g_iInterFrameLength > 1) {
 			float fAlpha = float(g_iInterFrameIdx) / g_iInterFrameLength;
 
 			for (int i=0; i<g_hRecordingBots.Length; i++) {
@@ -1228,6 +1228,8 @@ public void OnGameFrame() {
 				InterpCoords(fAlpha, eRecBot.fPosPrev, eRecBot.fPosNext, fPos);
 				InterpAngles(fAlpha, eRecBot.fAngPrev, eRecBot.fAngNext, fAng);
 
+				g_eClientState[iClient].fAng = fAng;
+
 				Entity_GetAbsOrigin(iClient, fPosNow);
 
 				float fPosErr = GetVectorDistance(fPosNow, fPos);
@@ -1235,8 +1237,7 @@ public void OnGameFrame() {
 					TeleportEntity(iClient, fPos, fAng, NULL_VECTOR);
 				} else {
 					CalcCorrectionalVelocity(fPosNow, fPos, fVel);
-
-					TeleportEntity(iClient, NULL_VECTOR, fAng, fVel);
+					Entity_SetAbsVelocity(iClient, fVel);
 				}
 			}
 
@@ -1285,7 +1286,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 	if (g_eSpawnFreeze[iClient].iFrames > 0 &&
 		view_as<TFTeam>(GetClientTeam(iClient)) == g_eSpawnFreeze[iClient].iTeam &&
 		TF2_GetPlayerClass(iClient) == g_eSpawnFreeze[iClient].iClass) {
-		
+
 		fAng = g_eSpawnFreeze[iClient].fAng;
 		TeleportEntity(iClient, g_eSpawnFreeze[iClient].fPos, fAng, NULL_VECTOR);
 		g_eSpawnFreeze[iClient].iFrames--;
@@ -1354,7 +1355,6 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 	} else if (g_hRecordingBots.FindValue(iClient) != -1) {
 		fAng = g_eClientState[iClient].fAng;
 
-		Entity_SetAbsAngles(iClient, fAng);
 		iButtons = g_eClientState[iClient].iButtons | IN_RELOAD; // Autoreload;
 
 		int iWeaponSlot = (iButtons >>> 26) & 7;
@@ -5398,10 +5398,14 @@ bool PrepareBots(Recording iRecording) {
 
 		eRecBot.fPosPrev = fPos;
 		eRecBot.fPosNext = fPos;
-		g_hRecordingBots.SetArray(i, eRecBot);
 
 		float fAng[3];
 		iClientInfo.GetStartAng(fAng);
+		eRecBot.fAngPrev = fAng;
+		eRecBot.fAngNext = fAng;
+
+		g_hRecordingBots.SetArray(i, eRecBot);
+
 		g_eClientState[iRecBot].fAng = fAng;
 
 		TFClassType iRecClass = iClientInfo.Class;
