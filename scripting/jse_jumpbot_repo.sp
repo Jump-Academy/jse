@@ -300,20 +300,12 @@ public int OnSocketDisconnected(Handle hSocket, any aArg) {
 			if (FileSize(sFilePath) == iRecording.FileSize) {
 				iRecording.Downloading = 0;
 				
-				LoadRecording(iRecording);
-
-				ArrayList hClientInfo = iRecording.ClientInfo;
-				for (int i=0; i<hClientInfo.Length; i++) {
-					int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
-					if (!IsClientInGame(iRecBot)) {
-						LogError("Tried using iRecBot=%d but the client is not in-game", i);
-						return;
-					}
-
-					EquipRec(i, iRecording);
+				if (!(LoadRecording(iRecording) && PrepareBots(iRecording) && LoadFrames(iRecording))) {
+					g_iClientInstruction = INST_NOP;
+					doReturn();
+					return;
 				}
-
-				LoadFrames(iRecording);
+				
 				SetPlaybackSpeedCOI();
 
 				g_iClientInstruction |= INST_PLAY;
