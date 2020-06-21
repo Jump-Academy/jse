@@ -982,7 +982,7 @@ public void OnGameFrame() {
 						g_eClientState[iEntity].fAng = fAng;
 						g_eClientState[iEntity].iButtons = iButtons; // & ~(7 << 26);
 
-						if (g_iInterFrameLength) {
+						if (g_iInterFrameLength > 1 && iBotID != -1) {
 							RecBot eRecBot;
 							g_hRecordingBots.GetArray(iBotID, eRecBot);
 							
@@ -1095,7 +1095,7 @@ public void OnGameFrame() {
 							}
 						}
 
-						if (g_iInterFrameLength) {
+						if (g_iInterFrameLength > 1) {
 							RecEnt eRecEnt;
 							g_hRecordingEntities.GetArray(iRecEntIdx, eRecEnt);
 
@@ -2006,6 +2006,7 @@ public Action cmdStateLoad(int iClient, int iArgC) {
 				CPrintToChat(iClient, "{dodgerblue}[jb] {white}Load state slot %d (%d frames)", iSaveID, g_hRecBufferFrames.Length);
 				g_iClientOfInterest = iClient;
 				g_iStateLoadLast = iSaveID;
+				g_hRecordingClients.Push(iClient);
 			} else {
 				CPrintToChat(iClient, "{dodgerblue}[jb] {white}Failed to load state slot %d", iSaveID);
 				g_iClientOfInterest = -1;
