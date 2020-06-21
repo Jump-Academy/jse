@@ -238,11 +238,6 @@ int g_iLastCallTime;
 bool g_bCoreAvailable;
 bool g_bShowKeysAvailable;
 
-Handle g_hHudDisplayForward;
-Handle g_hHudDisplayASD;
-Handle g_hHudDisplayDuck;
-Handle g_hHudDisplayJump;
-
 int g_iProjTrailColor[4];
 int g_iTrailColor[4];
 int g_iLocalRecColor[3];
@@ -386,11 +381,6 @@ public void OnPluginStart() {
 
 	strcopy(g_sRecSubDir, sizeof(g_sRecSubDir), RECORD_FOLDER);
 	
-	g_hHudDisplayForward = CreateHudSynchronizer();
-	g_hHudDisplayASD = CreateHudSynchronizer();
-	g_hHudDisplayDuck = CreateHudSynchronizer();
-	g_hHudDisplayJump = CreateHudSynchronizer();
-	
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_changeclass", Event_PlayerSpawn);
 	HookEvent("player_team", Event_PlayerTeam, EventHookMode_Pre);
@@ -474,8 +464,19 @@ public void OnLibraryAdded(const char[] sName) {
 	}
 }
 
+public void OnLibraryRemoved(const char[] sName) {
+	if (StrEqual(sName, "jse_core")) {
+		g_bCoreAvailable = false;
+	} else if (StrEqual(sName, "jse_showkeys")) {
+		g_bShowKeysAvailable = false;
+	}
+}
+
 public void OnAllPluginsLoaded() {
 	g_bSocketExtension = GetExtensionFileStatus("socket.ext") == 1;
+
+	g_bCoreAvailable = LibraryExists("jse_core");
+	g_bShowKeysAvailable = LibraryExists("jse_showkeys");
 }
 
 public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErrMax) {
@@ -1277,10 +1278,6 @@ public void OnGameFrame() {
 public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fVel[3], float fAng[3], int &iWeapon) {
 	if (!IsClientInGame(iClient)) {
 		return Plugin_Continue;
-	}
-
-	if (!IsFakeClient(iClient) && !g_bShowKeysAvailable) {
-		showKeys(iClient);
 	}
 
 	if (g_eSpawnFreeze[iClient].iFrames > 0 &&
@@ -4877,85 +4874,6 @@ void SetupBotImmunity(int iClient) {
 	SetAdminFlag(iAdmin, Admin_Reservation, true);
 	SetAdminImmunityLevel(iAdmin, 90);
 	SetUserAdmin(iClient, iAdmin, true);
-}
-
-public void showKeys(int iClient) {
-	// Show keys, adapted from JumpAssist
-	if (view_as<TFTeam>(GetClientTeam(iClient)) == TFTeam_Spectator && g_hRecordingBots.Length) {
-	
-		Obs_Mode iObserverMode = Client_GetObserverMode(iClient);
-		if (iObserverMode == OBS_MODE_IN_EYE || iObserverMode == OBS_MODE_CHASE) {
-			int iObsTarget = Client_GetObserverTarget(iClient);
-			if (g_hRecordingBots.FindValue(iObsTarget, RecBot::iEnt) == -1) {
-				return;
-			}
-			
-			ClearSyncHud(iClient, g_hHudDisplayForward);
-			ClearSyncHud(iClient, g_hHudDisplayASD);
-			ClearSyncHud(iClient, g_hHudDisplayDuck);
-			ClearSyncHud(iClient, g_hHudDisplayJump);
-				
-			int iButtons = GetClientButtons(iObsTarget);
-			SetHudTextParams(0.60, 0.40, 0.3, 255, 255, 255, 255, 0, 0.0, 0.0, 0.0);
-			
-			if (iButtons & IN_FORWARD) {
-				ShowSyncHudText(iClient, g_hHudDisplayForward, "W");
-			} else {
-				ShowSyncHudText(iClient, g_hHudDisplayForward, "-");
-			}
-			
-			if (iButtons & IN_BACK || iButtons & IN_MOVELEFT || iButtons & IN_MOVERIGHT) {
-				char sButtons[64];
-				char sBack[2];
-				char sLeft[2];
-				char sRight[2];
-				
-				if (iButtons & IN_BACK) {
-					Format(sBack, sizeof(sBack), "S");
-				} else {
-					Format(sBack, sizeof(sBack), "-");
-				}
-				if (iButtons & IN_MOVELEFT) {
-					Format(sLeft, sizeof(sLeft), "A");
-				} else {
-					Format(sLeft, sizeof(sLeft), "-");
-				}
-				
-				if (iButtons & IN_MOVERIGHT) {
-					Format(sRight, sizeof(sRight), "D");
-				} else {
-					Format(sRight, sizeof(sRight), "-");
-				}
-				Format(sButtons, sizeof(sButtons), "%s %s %s", sLeft, sBack, sRight);
-				SetHudTextParams(0.58, 0.45, 0.3, 255, 255, 255, 255, 0, 0.0, 0.0, 0.0);
-				ShowSyncHudText(iClient, g_hHudDisplayASD, sButtons);
-			} else {
-				char sButtons[64];
-				Format(sButtons, sizeof(sButtons), " - - -");
-				SetHudTextParams(0.58, 0.45, 0.3, 255, 255, 255, 255, 0, 0.0, 0.0, 0.0);
-				ShowSyncHudText(iClient, g_hHudDisplayASD, sButtons);
-			}
-			if (iButtons & IN_DUCK) {
-				SetHudTextParams(0.64, 0.45, 0.3, 255, 255, 255, 255, 0, 0.0, 0.0, 0.0);
-				ShowSyncHudText(iClient, g_hHudDisplayDuck, "%t", "Duck");
-			}
-			
-			if (iButtons & IN_JUMP) {
-				SetHudTextParams(0.64, 0.40, 0.3, 255, 255, 255, 255, 0, 0.0, 0.0, 0.0);
-				ShowSyncHudText(iClient, g_hHudDisplayJump, "%t", "Jump");
-			}
-			
-			if (iButtons & IN_ATTACK) {
-				SetHudTextParams(0.54, 0.4, 0.3, 255, 255, 255, 255, 0, 0.0, 0.0, 0.0);
-				ShowSyncHudText(iClient, g_hHudDisplayJump, "%t", "Mouse1");
-			}
-			
-			if (iButtons & IN_ATTACK2) {
-				SetHudTextParams(0.54, 0.45, 0.3, 255, 255, 255, 255, 0, 0.0, 0.0, 0.0);
-				ShowSyncHudText(iClient, g_hHudDisplayJump, "%t", "Mouse2");
-			}
-		}
-	}
 }
 
 void RefreshModels() {
