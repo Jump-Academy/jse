@@ -4187,7 +4187,7 @@ bool LoadRecording(Recording iRecording) {
 
 	char sFileMapName[32];
 	hFile.ReadString(sFileMapName, sizeof(sFileMapName));
-	if (!StrEqual(sMapName, sFileMapName, false)) {
+	if (!iRecording.Repo && !StrEqual(sMapName, sFileMapName, false)) {
 		LogError("Map mismatch (%s): %s", sFileMapName, sFilePath);
 		delete hFile;
 		return false;
@@ -5027,8 +5027,8 @@ void TE_SendToAllInRangeVisible(float fPos[3]) {
 }
 
 void TF2_GetClassName(TFClassType iClass, char[] sName, int iLength) {
-  char sClass[10][10] = {"unknown", "scout", "sniper", "soldier", "demoman", "medic", "heavy", "pyro", "spy", "engineer"};
-  strcopy(sName, iLength, sClass[view_as<int>(iClass)]);
+	char sClass[10][10] = {"unknown", "scout", "sniper", "soldier", "demoman", "medic", "heavy", "pyro", "spy", "engineer"};
+	strcopy(sName, iLength, sClass[view_as<int>(iClass)]);
 }
 
 void ToTimeDisplay(char[] sBuffer, int iLength, int iTime) {
