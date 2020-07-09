@@ -3,7 +3,7 @@
 //#define DEBUG
 
 #define PLUGIN_AUTHOR		"AI"
-#define PLUGIN_VERSION		"0.2.4"
+#define PLUGIN_VERSION		"0.2.5"
 
 #define CAMERA_MODEL		"models/combine_scanner.mdl"
 
@@ -29,6 +29,13 @@ ConVar g_hAlpha;
 
 ArrayList g_hCameras;
 FSCamera g_iActiveCamera[MAXPLAYERS+1] = {NULL_CAMERA, ...};
+
+enum struct FOV {
+	int iFOV;
+	int iDefaultFOV;
+}
+
+FOV g_eFOVBackup[MAXPLAYERS+1];
 
 public Plugin myinfo = {
 	name = "Jump Server Essentials - Foresight",
@@ -184,6 +191,7 @@ public Action Event_PlayerChangeState(Event hEvent, const char[] sName, bool bDo
 public Action cmdForesight(int iClient, int iArgC) {
 	if (g_iActiveCamera[iClient] != NULL_CAMERA) {
 		DisableForesight(g_iActiveCamera[iClient]);
+
 		return Plugin_Handled;
 	}
 
@@ -201,6 +209,9 @@ public Action cmdForesight(int iClient, int iArgC) {
 		Entity_Kill(iEntity);
 		return Plugin_Handled;
 	}
+
+	g_eFOVBackup[iClient].iFOV = GetEntProp(iClient, Prop_Send, "m_iFOV");
+	g_eFOVBackup[iClient].iDefaultFOV = GetEntProp(iClient, Prop_Send, "m_iDefaultFOV");
 	
 	SetEntityModel(iEntity, CAMERA_MODEL);
 	SetEntityRenderMode(iEntity, RENDER_TRANSALPHA);
@@ -256,6 +267,9 @@ public Action cmdForesight(int iClient, int iArgC) {
 
 	Client_SetObserverTarget(iClient, 0);
 	Client_SetObserverMode(iClient, OBS_MODE_DEATHCAM, false);
+
+	SetEntProp(iClient, Prop_Send, "m_iFOV", g_eFOVBackup[iClient].iFOV);
+	SetEntProp(iClient, Prop_Send, "m_iDefaultFOV", g_eFOVBackup[iClient].iDefaultFOV);
 
 	#endif
 
@@ -337,13 +351,19 @@ void DisableForesight(FSCamera iCamera) {
 	if (IsClientInGame(iClient)) {
 		Client_SetObserverTarget(iClient, -1);
 		Client_SetObserverMode(iClient, OBS_MODE_NONE);
-		SetEntityMoveType(iClient, MOVETYPE_WALK);
-	
 		Client_SetHideHud(iClient, 0);
+		ResetFOV(iClient);
+
+		SetEntityMoveType(iClient, MOVETYPE_WALK);
 
 		PrintHintText(iClient, " ");
 		StopSound(iClient, SNDCHAN_STATIC, "ui/hint.wav");
 	}
 
 	g_iActiveCamera[iClient] = NULL_CAMERA;
+}
+
+void ResetFOV(int iClient) {
+	SetEntProp(iClient, Prop_Send, "m_iFOV", g_eFOVBackup[iClient].iFOV);
+	SetEntProp(iClient, Prop_Send, "m_iDefaultFOV", g_eFOVBackup[iClient].iDefaultFOV);
 }
