@@ -3,7 +3,7 @@
 //#define DEBUG
 
 #define PLUGIN_AUTHOR		"AI"
-#define PLUGIN_VERSION		"0.2.5"
+#define PLUGIN_VERSION		"0.2.6"
 
 #define CAMERA_MODEL		"models/combine_scanner.mdl"
 
@@ -33,6 +33,7 @@ FSCamera g_iActiveCamera[MAXPLAYERS+1] = {NULL_CAMERA, ...};
 enum struct FOV {
 	int iFOV;
 	int iDefaultFOV;
+	bool bForceTauntCam;
 }
 
 FOV g_eFOVBackup[MAXPLAYERS+1];
@@ -120,6 +121,10 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 	if (iButtons & IN_ATTACK || fTimeLeft <= 0.0) {
 		DisableForesight(iCamera);
 		return Plugin_Continue;
+	}
+
+	if (GetEntProp(iClient, Prop_Send, "m_nForceTauntCam")) {
+		SetEntProp(iClient, Prop_Send, "m_nForceTauntCam", 0);
 	}
 
 	int iEntity = EntRefToEntIndex(iCamera.Entity);
@@ -212,6 +217,7 @@ public Action cmdForesight(int iClient, int iArgC) {
 
 	g_eFOVBackup[iClient].iFOV = GetEntProp(iClient, Prop_Send, "m_iFOV");
 	g_eFOVBackup[iClient].iDefaultFOV = GetEntProp(iClient, Prop_Send, "m_iDefaultFOV");
+	g_eFOVBackup[iClient].bForceTauntCam = view_as<bool>(GetEntProp(iClient, Prop_Send, "m_nForceTauntCam"));
 	
 	SetEntityModel(iEntity, CAMERA_MODEL);
 	SetEntityRenderMode(iEntity, RENDER_TRANSALPHA);
@@ -366,4 +372,5 @@ void DisableForesight(FSCamera iCamera) {
 void ResetFOV(int iClient) {
 	SetEntProp(iClient, Prop_Send, "m_iFOV", g_eFOVBackup[iClient].iFOV);
 	SetEntProp(iClient, Prop_Send, "m_iDefaultFOV", g_eFOVBackup[iClient].iDefaultFOV);
+	SetEntProp(iClient, Prop_Send, "m_nForceTauntCam", g_eFOVBackup[iClient].bForceTauntCam);
 }
