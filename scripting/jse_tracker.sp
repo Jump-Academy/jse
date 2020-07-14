@@ -405,7 +405,7 @@ public int Native_GetPlayerProgress(Handle hPlugin, int iArgC) {
 		return 0; // null
 	}
 
-	TFTeam iTeam = view_as<TFTeam>(GetClientTeam(iClient));
+	TFTeam iTeam = TF2_GetClientTeam(iClient);
 	TFClassType iClass = TF2_GetPlayerClass(iClient);
 
 	ArrayList hList = new ArrayList(sizeof(Checkpoint));
@@ -597,7 +597,7 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 							iCourseNumber,
 							j,
 							false,
-							view_as<TFTeam>(GetClientTeam(iClient)),
+							TF2_GetClientTeam(iClient),
 							TF2_GetPlayerClass(iClient)
 						);
 						g_eNearestCheckpoint[iClient].iTimestamp = iTime;
@@ -622,7 +622,7 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 							iCourseNumber,
 							0,
 							true,
-							view_as<TFTeam>(GetClientTeam(iClient)),
+							TF2_GetClientTeam(iClient),
 							TF2_GetPlayerClass(iClient)
 						);
 						g_eNearestCheckpoint[iClient].iTimestamp = iTime;
@@ -649,7 +649,7 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 
 		eCheckpoint.iHash = g_eNearestCheckpoint[i].iHash;
 
-		TFTeam iTeam = view_as<TFTeam>(GetClientTeam(i));
+		TFTeam iTeam = TF2_GetClientTeam(i);
 		TFClassType iClass = TF2_GetPlayerClass(i);
 
 		int iHash = eCheckpoint.iHash;
@@ -957,7 +957,7 @@ public Action cmdProgress(int iClient, int iArgC) {
 	for (int i = 0; i < iTargetCount; i++) {
 		int iTarget = iTargetList[i];
 
-		TFTeam iTeam = view_as<TFTeam>(GetClientTeam(iTarget));
+		TFTeam iTeam = TF2_GetClientTeam(iTarget);
 		TFClassType iClass = TF2_GetPlayerClass(iTarget);
 
 		if (iArgC) {

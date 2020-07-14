@@ -619,7 +619,7 @@ public Action Timer_BuildingRegen(Handle hTimer) {
 
 public Action Timer_Respawn(Handle hTimer, any aData) {
 	int iClient = GetClientFromSerial(aData);
-	if (iClient && view_as<TFTeam>(GetClientTeam(iClient)) > TFTeam_Spectator && !IsPlayerAlive(iClient)) {
+	if (iClient && TF2_GetClientTeam(iClient) > TFTeam_Spectator && !IsPlayerAlive(iClient)) {
 		TF2_RespawnPlayer(iClient);
 	}
 	
@@ -690,7 +690,7 @@ public Action cmdAmmo(int iClient, int iArgC) {
 /*
 bool checkSpawned(int iClient) {
 	TFClassType iClass = TF2_GetPlayerClass(iClient);
-	TFTeam iTFTeam = view_as<TFTeam>(GetClientTeam(iClient));
+	TFTeam iTFTeam = TF2_GetClientTeam(iClient);
 	
 	if (iTFTeam <= TFTeam_Spectator || iClass == TFClass_Unknown) {
 		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}You must be spawned to use this command.");

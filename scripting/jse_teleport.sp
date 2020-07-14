@@ -157,7 +157,7 @@ bool CheckProgress(int iClient, int iCourseNumber, int iJumpNumber, bool bContro
 		return false;
 	}
 
-	TFTeam iTeam = view_as<TFTeam>(GetClientTeam(iClient));
+	TFTeam iTeam = TF2_GetClientTeam(iClient);
 	TFClassType iClass = TF2_GetPlayerClass(iClient);
 
 	ArrayList hProgress = GetPlayerProgress(iClient);

@@ -1281,7 +1281,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 	}
 
 	if (g_eSpawnFreeze[iClient].iFrames > 0 &&
-		view_as<TFTeam>(GetClientTeam(iClient)) == g_eSpawnFreeze[iClient].iTeam &&
+		TF2_GetClientTeam(iClient) == g_eSpawnFreeze[iClient].iTeam &&
 		TF2_GetPlayerClass(iClient) == g_eSpawnFreeze[iClient].iClass) {
 
 		fAng = g_eSpawnFreeze[iClient].fAng;
@@ -1705,7 +1705,7 @@ public Action cmdRecord(int iClient, int iArgC) {
 		iClientInfo.SetName(sName);
 		iClientInfo.SetAuthID(sAuthID);
 		iClientInfo.Class = TF2_GetPlayerClass(iRecClient);
-		iClientInfo.Team = view_as<TFTeam>(GetClientTeam(iRecClient));
+		iClientInfo.Team = TF2_GetClientTeam(iRecClient);
 		
 		for (int iSlot = TFWeaponSlot_Primary; iSlot <= TFWeaponSlot_Item2; iSlot++) {
 			int iWeapon = GetPlayerWeaponSlot(iRecClient, iSlot);
@@ -2681,7 +2681,7 @@ public Action cmdShowMe(int iClient, int iArgC) {
 		return Plugin_Handled;
 	}
 	
-	if (view_as<TFTeam>(GetClientTeam(iClient)) > TFTeam_Spectator && !(GetEntityFlags(iClient) & FL_ONGROUND)) {
+	if (TF2_GetClientTeam(iClient) > TFTeam_Spectator && !(GetEntityFlags(iClient) & FL_ONGROUND)) {
 		CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%t", "Cannot Call Air");
 		return Plugin_Handled;
 	}
@@ -2712,7 +2712,7 @@ public Action cmdShowMe(int iClient, int iArgC) {
 		}
 	} else {
 		FindResult iFind;
-		if (view_as<TFTeam>(GetClientTeam(iClient)) > TFTeam_Spectator) {
+		if (TF2_GetClientTeam(iClient) > TFTeam_Spectator) {
 			TFClassType iClass = TF2_GetPlayerClass(iClient);
 
 			int iEquipFilterItemDefIdx = 0;
@@ -2879,7 +2879,7 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 	
 	if (g_iClientInstructionPost & INST_RETURN) {
 		for (int i=1; i<=MaxClients; i++) {
-			if (IsClientInGame(i) && i != iClient && view_as<TFTeam>(GetClientTeam(i)) == TFTeam_Spectator) {
+			if (IsClientInGame(i) && i != iClient && TF2_GetClientTeam(i) == TFTeam_Spectator) {
 				Obs_Mode iObserverMode = Client_GetObserverMode(i);
 				if (iObserverMode == OBS_MODE_IN_EYE || iObserverMode == OBS_MODE_CHASE) {
 					int iObsTarget = Client_GetObserverTarget(i);
@@ -3031,7 +3031,7 @@ public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroa
 	}
 
 	int iBotID = -1;
-	if (iClient == g_iClientOfInterest && !(g_iClientInstruction & INST_PLAYALL) && view_as<TFTeam>(GetClientTeam(iClient)) > TFTeam_Spectator) {
+	if (iClient == g_iClientOfInterest && !(g_iClientInstruction & INST_PLAYALL) && TF2_GetClientTeam(iClient) > TFTeam_Spectator) {
 		doFullStop();
 		g_iRecBufferIdx = 0;
 		g_iRecBufferFrame = 0;
@@ -3064,11 +3064,11 @@ public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroa
 	} else {
 		// Have bots join a team after a player joins one
 		if (!IsFakeClient(iClient) && g_hRecordingBots.Length) {
-			TFTeam iTeam = view_as<TFTeam>(GetClientTeam(iClient));
+			TFTeam iTeam = TF2_GetClientTeam(iClient);
 			for (int i=0; i<g_hRecordingBots.Length; i++) {
 				int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
 
-				if (view_as<TFTeam>(GetClientTeam(iRecBot)) <= TFTeam_Spectator) {
+				if (TF2_GetClientTeam(iRecBot) <= TFTeam_Spectator) {
 					ChangeClientTeam(iRecBot, view_as<int>(iTeam));
 				}
 			}
@@ -3702,7 +3702,7 @@ void doPlayerQueueAdd(int iClient, Recording iRecording, Obs_Mode iMode) {
 	eQueue.iClient = iClient;
 	eQueue.iRecording = iRecording;
 	eQueue.fTime = (g_iWarmupFrames + iRecording.Length) / 66.0;
-	eQueue.iTeam = view_as<TFTeam>(GetClientTeam(iClient));
+	eQueue.iTeam = TF2_GetClientTeam(iClient);
 	eQueue.iObsMode = iMode;
 	g_hQueue.PushArray(eQueue);
 }
@@ -3742,7 +3742,7 @@ void doPlayerQueueClear() {
 
 void doRespawn(int iClient) {
 	g_eSpawnFreeze[iClient].iFrames = RESPAWN_FREEZE_FRAMES;
-	if (view_as<TFTeam>(GetClientTeam(iClient)) != g_eSpawnFreeze[iClient].iTeam) {
+	if (TF2_GetClientTeam(iClient) != g_eSpawnFreeze[iClient].iTeam) {
 		ChangeClientTeam(iClient, view_as<int>(g_eSpawnFreeze[iClient].iTeam));
 	}
 
@@ -4037,9 +4037,9 @@ void findTargetFollow() {
 			
 			fMinDist = MAX_TARGET_FOLLOW_DISTANCE;
 			
-			TFTeam iTeam = view_as<TFTeam>(GetClientTeam(iRecBot));
+			TFTeam iTeam = TF2_GetClientTeam(iRecBot);
 			for (int i = 0; i < iClientsCount; i++) {
-				TFTeam iClientTeam = view_as<TFTeam>(GetClientTeam(iClients[i]));
+				TFTeam iClientTeam = TF2_GetClientTeam(iClients[i]);
 				if (IsFakeClient(iClients[i]) || !g_bInteract[iClients[i]] || iClientTeam <= TFTeam_Spectator || iClientTeam != iTeam) {
 					continue;
 				}
@@ -5057,7 +5057,7 @@ bool IsRecordingVisible(Recording iRecording, int iClient) {
 		return true;
 	}
 
-	if (view_as<TFTeam>(GetClientTeam(iClient)) == TFTeam_Spectator) {
+	if (TF2_GetClientTeam(iClient) == TFTeam_Spectator) {
 		if (iClient == g_iClientOfInterest) {
 			return g_iRecording == iRecording;
 		}
@@ -5341,7 +5341,7 @@ bool PrepareBots(Recording iRecording) {
 			bRespawnRequired = true;
 		}
 
-		if (view_as<TFTeam>(GetClientTeam(iRecBot)) != iRecTeam) {
+		if (TF2_GetClientTeam(iRecBot) != iRecTeam) {
 			ChangeClientTeam(iRecBot, view_as<int>(iRecTeam));
 			bRespawnRequired = true;
 		}

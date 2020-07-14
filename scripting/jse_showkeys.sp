@@ -13,6 +13,7 @@
 #include <sdktools>
 #include <smlib/clients>
 #include <tf2>
+#include <tf2_stocks>
 
 #undef REQUIRE_PLUGIN
 #include <updater>
@@ -165,7 +166,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 				} else {
 					g_iTarget[iClient] = 0;
 				}
-			} else if (view_as<TFTeam>(GetClientTeam(iClient)) == TFTeam_Spectator) {
+			} else if (TF2_GetClientTeam(iClient) == TFTeam_Spectator) {
 				Obs_Mode iObserverMode = Client_GetObserverMode(iClient);
 				if (iObserverMode == OBS_MODE_IN_EYE || iObserverMode == OBS_MODE_CHASE) {
 					iObsTarget = Client_GetObserverTarget(iClient);
@@ -342,6 +343,10 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 // Custom callbacks
 public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
+	if (!iClient) {
+		return Plugin_Handled;
+	}
+	
 	g_iMode[iClient] = DISPLAY;
 	
 	return Plugin_Continue;
