@@ -133,9 +133,7 @@ public int Native_Jump_Instance(Handle hPlugin, int iArgC) {
 		}
 	}
 
-	hJumps.PushArray(eJump);
-
-	return hJumps.Length;
+	return hJumps.PushArray(eJump) + 1;
 }
 
 public int Native_Jump_Destroy(Handle hPlugin, int iArgC) {
@@ -359,7 +357,9 @@ public int Native_Course_Destroy(Handle hPlugin, int iArgC) {
 		}
 		delete hJumpList;
 
-		ControlPoint.Destroy(eCourse.iControlPoint);
+		if (eCourse.iControlPoint) {
+			ControlPoint.Destroy(eCourse.iControlPoint);
+		}
 
 		hCourses.Set(view_as<int>(iCourse)-1, 1, _Course::bGCFlag);
 	}
