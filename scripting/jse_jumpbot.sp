@@ -5291,6 +5291,10 @@ void RespawnFrameRecEnt(int iFrame) {
 }
 
 bool PrepareBots(Recording iRecording) {
+	if (!iRecording) {
+		return false;
+	}
+
 	if (!g_hRecordingBots.Length) {
 		SetupBot();
 		return false;
