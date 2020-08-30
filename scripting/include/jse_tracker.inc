@@ -63,6 +63,13 @@ public void __pl_jse_tracker_SetNTVOptional()
 	
 	MarkNativeAsOptional("GetPlayerProgress");
 	MarkNativeAsOptional("ResetPlayerProgress");
+
+	MarkNativeAsOptional("ResolveCourseNumber");
+	MarkNativeAsOptional("ResolveJumpNumber");
+
+	MarkNativeAsOptional("GetCourseDisplayName");
+	MarkNativeAsOptional("GetCheckpointDisplayName");
+	MarkNativeAsOptional("GetCourseCheckpointDisplayName");
 }
 #endif
 
