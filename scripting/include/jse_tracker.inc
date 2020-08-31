@@ -256,6 +256,7 @@ const Course NULL_COURSE = view_as<Course>(0);
 const Jump NULL_JUMP = view_as<Jump>(0);
 const ControlPoint NULL_CONTROLPOINT = view_as<ControlPoint>(0);
 
+forward void OnTrackerDatabaseConnected(Database hDatabase);
 forward void OnTrackerLoaded(ArrayList hCourses);
 
 forward void OnCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint);

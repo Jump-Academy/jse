@@ -15,6 +15,10 @@ public void DB_Callback_Connect(Handle hOwner, Handle hHandle, char[] sError, an
 
 	DB_CreateTables();
 	DB_AddMap();
+
+	Call_StartForward(g_hTrackerDBConnectedForward);
+	Call_PushCell(g_hDatabase);
+	Call_Finish();
 }
 
 public void DB_Callback_CreateTable(Database hDatabase, DBResultSet hResultSet, char[] sError, any aData) {
@@ -62,7 +66,8 @@ public void DB_Callback_LoadMapData(Database hDatabase, DBResultSet hResultSet, 
 		int iCourseID = hResultSet.FetchInt(0);
 		iCourse.iID = iCourseID;
 
-		iCourse.iNumber = hResultSet.FetchInt(1);
+		int iCourseNumber = hResultSet.FetchInt(1);
+		iCourse.iNumber = iCourseNumber;
 
 		char sCourseName[128];
 		hResultSet.FetchString(2, sCourseName, sizeof(sCourseName));
@@ -76,6 +81,12 @@ public void DB_Callback_LoadMapData(Database hDatabase, DBResultSet hResultSet, 
 		hTxn.AddQuery(sQuery, iCourse);
 
 		g_hCourses.Push(iCourse);
+
+		if (iCourseNumber <= 0) {
+			g_iBonusCourses++;
+		} else {
+			g_iNormalCourses++;
+		}
 	}
 
 	g_hDatabase.Execute(hTxn, DB_Callback_LoadMapInfo_Txn_Success, DB_Callback_LoadMapInfo_Txn_Failure);

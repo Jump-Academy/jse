@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.3.4"
+#define PLUGIN_VERSION "0.3.5"
 
 #define API_URL "https://api.jumpacademy.tf/mapinfo_json"
 
@@ -21,6 +21,7 @@
 #define CHECKPOINT_TIME_CUTOFF	20
 
 GlobalForward g_hTrackerLoadedForward;
+GlobalForward g_hTrackerDBConnectedForward;
 GlobalForward g_hCheckpointReachedForward;
 GlobalForward g_hNewCheckpointReachedForward;
 
@@ -92,6 +93,7 @@ public void OnPluginStart() {
 	}
 
 	g_hTrackerLoadedForward = new GlobalForward("OnTrackerLoaded", ET_Ignore, Param_Cell);
+	g_hTrackerDBConnectedForward = new GlobalForward("OnTrackerDatabaseConnected", ET_Ignore, Param_Cell);
 	g_hCheckpointReachedForward = new GlobalForward("OnCheckpointReached", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_hNewCheckpointReachedForward = new GlobalForward("OnNewCheckpointReached", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 
