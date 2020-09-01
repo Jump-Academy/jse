@@ -114,7 +114,7 @@ enum struct SpawnFreeze {
 #include <updater>
 #include <jse_core>
 #include <jse_showkeys>
-#include <jse_snapshot>
+#include <jse_autosave>
 
 #pragma newdecls required
 
@@ -3562,7 +3562,7 @@ public Action Hook_TouchFuncRegenerate(int iEntity, int iOther) {
 	return Plugin_Continue;
 }
 
-public Action OnSnapshotPreLoad(int iClient) {
+public Action OnAutosavePreLoad(int iClient) {
 	if (iClient == g_iLastCaller) {
 		return Plugin_Handled;
 	}
