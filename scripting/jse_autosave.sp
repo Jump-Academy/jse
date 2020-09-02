@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.1"
+#define PLUGIN_VERSION "0.1.2"
 
 #include <sourcemod>
 #include <clientprefs>
@@ -39,7 +39,7 @@ public Plugin myinfo = {
 };
 
 public void OnPluginStart() {
-	CreateConVar("jse_autosave_version", PLUGIN_VERSION, "Jump Server Essentials snapshot version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
+	CreateConVar("jse_autosave_version", PLUGIN_VERSION, "Jump Server Essentials autosave version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 	g_hCVBackupInterval = CreateConVar("jse_autosave_backup_interval", "300.0", "Time in seconds between database backups", FCVAR_NOTIFY, true, 0.0);
 	g_hCVSpawnPopup = CreateConVar("jse_autosave_spawnpopup", "5", "Time in seconds to show autosave panel after player spawn (0 to disable)", FCVAR_NOTIFY, true, 0.0);
 
@@ -302,6 +302,8 @@ void SendToCheckpoint(int iClient) {
 	}
 
 	TeleportEntity(iClient, fPos, fAng, fVel);
+
+	CPrintToChat(iClient, "{dodgerblue}[jse] {white}Autosave loaded");
 }
 
 void DeleteCheckpoint(int iClient) {
@@ -327,7 +329,7 @@ void DeleteCheckpoint(int iClient) {
 	for (int i=0; i<hCheckpoint.Length; i++) {
 		if (eCheckpoint.iHash == hCheckpoint.Get(i, Checkpoint::iHash)) {
 			hCheckpoint.Erase(i);
-			CPrintToChat(iClient, "{dodgerblue}[jse] {white}Autosave has been deleted.");
+			CPrintToChat(iClient, "{dodgerblue}[jse] {white}Autosave deleted");
 
 			DB_DeleteAutosave(iClient, eCheckpoint.GetCourseNumber(), eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), iTeam, iClass);
 			break;
