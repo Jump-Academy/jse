@@ -106,7 +106,7 @@ void DB_CreateTables(Database hDatabase) {
 	...		"`timestamp` DATETIME ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,"
 	...		"PRIMARY KEY(`id`),"
 	...		"INDEX (`timestamp`),"
-	... 	"UNIQUE(`auth`, `map_id`, `class`, `team`, `course_id`),"
+	... 	"UNIQUE(`auth`, `map_id`, `team`, `class`, `course_id`),"
 	...		"CONSTRAINT `fk_autosave_map` FOREIGN KEY(`map_id`)"
 	...		"REFERENCES `jse_maps`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
 	...		"CONSTRAINT `fk_autosave_course` FOREIGN KEY(`course_id`)"
@@ -115,7 +115,7 @@ void DB_CreateTables(Database hDatabase) {
 	...		"REFERENCES `jse_map_jumps`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
 	...		"CONSTRAINT `fk_autosave_controlpoint` FOREIGN KEY(`controlpoint_id`)"
 	...		"REFERENCES `jse_map_controlpoints`(`id`) ON DELETE CASCADE ON UPDATE CASCADE"
-	... ") ENGINE=INNODB");
+	... ") ENGINE=INNODB", 0, DBPrio_High);
 }
 
 void DB_LoadAutosaves(int iClient) {
