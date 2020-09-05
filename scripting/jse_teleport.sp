@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"0.3.4"
+#define PLUGIN_VERSION	"0.3.5"
 
 #include <tf2>
 #include <tf2_stocks>
@@ -428,6 +428,10 @@ public Action cmdSend(int iClient, int iArgC) {
 				GetClientAbsOrigin(iTarget, fPos);
 
 				for (int i = 0; i < iTargetCount; i++) {
+					if (iTargetList[i] == iTarget) {
+						continue;
+					}
+
 					GotoPlayer(iTargetList[i], iTarget, iTargetList[i] != iClient);
 				}
 
