@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.3"
+#define PLUGIN_VERSION "0.1.4"
 
 #include <sourcemod>
 #include <clientprefs>
@@ -69,9 +69,10 @@ public void OnMapStart() {
 }
 
 public void OnMapEnd() {
+	DB_BackupAutosaves();
+
 	for (int i=1; i<=MaxClients; i++) {
 		if (IsClientInGame(i) && !IsFakeClient(i)) {
-			DB_BackupAutosaves(i);
 			ResetClient(i);
 		}
 	}
@@ -397,6 +398,7 @@ void SendLastSavePanel(int iClient) {
 	}
 
 	hPanel.Send(iClient, MenuHandler_Confirmation, g_hCVSpawnPopup.IntValue);
+	delete hPanel;
 }
 
 void SendCourseListPanel(int iClient) {
@@ -501,6 +503,7 @@ void SendConfirmationPanel(int iClient, ArrayList hCheckpoint, int iIndex) {
 	}
 
 	hPanel.Send(iClient, MenuHandler_Confirmation, 0);
+	delete hPanel;
 }
 
 // Menu handlers
@@ -552,9 +555,6 @@ public int MenuHandler_Confirmation(Menu hMenu, MenuAction iAction, int iClient,
 					SendCourseListPanel(iClient);
 				}
 			}
-		}
-		case MenuAction_End: {
-			delete hMenu;
 		}
 	}
 }

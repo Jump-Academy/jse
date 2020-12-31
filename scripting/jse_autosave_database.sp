@@ -27,8 +27,6 @@ public void DB_Callback_LoadAutosaves(Database hDatabase, DBResultSet hResultSet
 		return;
 	}
 
-	ArrayList hCourses = GetTrackerCourses();
-
 	while (hResultSet.FetchRow()) {
 		int iTeam = hResultSet.FetchInt(0);
 		int iClass = hResultSet.FetchInt(1);
@@ -56,8 +54,6 @@ public void DB_Callback_LoadAutosaves(Database hDatabase, DBResultSet hResultSet
 
 		hAutosave.PushArray(eCheckpoint);
 	}
-
-	delete hCourses;
 }
 
 public void DB_Callback_BackupAutosaves_Txn_Success(Database hDatabase, any aData, int iNumQueries, DBResultSet[] hResults, any[] aQueryData) {
@@ -157,7 +153,7 @@ void DB_BackupAutosaves(int iClient=0) {
 	}
 
 	Transaction hTxn = new Transaction();
-	int iTotalQueries;
+	int iTotalQueries = 0;
 
 	if (iClient) {
 		iTotalQueries = DB_BackupAutosaves_Client(hDatabase, hTxn, iClient);
@@ -186,8 +182,8 @@ int DB_BackupAutosaves_Client(Database hDatabase, Transaction hTxn, int iClient)
 	Checkpoint eCheckpoint;
 
 	char sQuery[1024];
-
 	int iTotalQueries = 0;
+
 	for (int i=0; i<sizeof(g_hAutosave[]); i++) {
 		for (int j=0; j<sizeof(g_hAutosave[][]); j++) {
 			ArrayList hCheckpoint = g_hAutosave[iClient][i][j];
