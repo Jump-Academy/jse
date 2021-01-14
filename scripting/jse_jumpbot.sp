@@ -2316,8 +2316,6 @@ public Action cmdPlayAll(int iClient, int iArgC) {
 
 	g_iClientOfInterest = iClient;
 	g_iClientInstructionPost = INST_NOP;
-	g_iRecBufferIdx = 0;
-	g_iRecBufferFrame = 0;
 
 	SetAllBubbleAlpha(50);
 	
@@ -3298,11 +3296,11 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		char sClass[32];
 		char sEquipName[64];
 
-		ArrayList hClientInfo = iRecording.ClientInfo;
 		if (!IsRecordingVisible(iRecording, iOther)) {
 			return Plugin_Handled;
 		}
 
+		ArrayList hClientInfo = iRecording.ClientInfo;
 		if (hClientInfo.Length) {
 			// Primary author
 			ClientInfo iClientInfo = hClientInfo.Get(0);

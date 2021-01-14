@@ -373,6 +373,9 @@ void parseIndex(char[] sPath) {
 		
 		hKV.GetString("authorid", sBuffer, sizeof(sBuffer), NULL_STRING);
 		iClientInfo.SetAuthID(sBuffer);
+
+		hKV.GetString("date", sBuffer, sizeof(sBuffer), NULL_STRING);
+		iRecording.Timestamp = StringToInt(sBuffer);
 		
 		hKV.GetString("hash", sBuffer, sizeof(sBuffer));
 		BuildPath(Path_SM, sFilePath, sizeof(sFilePath), "%s/%s", CACHE_FOLDER, sBuffer);

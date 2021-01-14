@@ -458,12 +458,16 @@ public int Sort_Recordings(int iIdx1, int iIdx2, Handle hArray, Handle hParam) {
 	Recording iRecording1 = view_as<Recording>(hArrayList.Get(iIdx1));
 	Recording iRecording2 = view_as<Recording>(hArrayList.Get(iIdx2));
 	
-	if (iRecording1.Repo && !iRecording2.Repo) {
+	if (iRecording1.Repo) {
+		if (iRecording2.Repo) {
+			return iRecording1.Timestamp - iRecording2.Timestamp;
+		}
+
 		return -1;
-	} else if (iRecording1.Repo && !iRecording2.Repo) {
+	}
+
+	if (iRecording2.Repo) {
 		return 1;
-	} else if (iRecording1.Repo && iRecording2.Repo) {
-		return 0;
 	}
 	
 	return iRecording1.Timestamp - iRecording2.Timestamp;
