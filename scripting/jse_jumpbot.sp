@@ -2702,7 +2702,12 @@ public Action cmdShowMe(int iClient, int iArgC) {
 	Recording iClosestRecord;
 	if (GetTime()-g_eLastBubbleTime[iClient].iTime < 10) {
 		char sKey[32];
-		IntToString(g_eLastBubbleTime[iClient].iEnt, sKey, sizeof(sKey));
+		int iEntity = EntRefToEntIndex(g_eLastBubbleTime[iClient].iEnt);
+		if (iEntity == INVALID_ENT_REFERENCE) {
+			return Plugin_Handled;
+		}
+
+		Entity_GetName(iEntity, sKey, sizeof(sKey));
 		g_hBubbleLookup.GetValue(sKey, iClosestRecord);
 
 		if (!IsRecordingVisible(iClosestRecord, iClient)) {
@@ -3286,7 +3291,7 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		int iEntityRef = EntIndexToEntRef(iEntity);
 
 		char sKey[32];
-		IntToString(iEntityRef, sKey, sizeof(sKey));
+		Entity_GetName(iEntity, sKey, sizeof(sKey));
 
 		Recording iRecording;
 		g_hBubbleLookup.GetValue(sKey, iRecording);
@@ -3522,12 +3527,13 @@ public Action Hook_Entity_SetTransmit(int iEntity, int iClient) {
 	}
 	
 	char sKey[32];
-	IntToString(EntIndexToEntRef(iEntity), sKey, sizeof(sKey));
+	Entity_GetName(iEntity, sKey, sizeof(sKey));
+
 	Recording iRecording;
 	if (!g_hBubbleLookup.GetValue(sKey, iRecording)) {
 		return Plugin_Continue;
 	}
-	
+
 	if (IsRecordingVisible(iRecording, iClient)) {
 		return Plugin_Continue;
 	}
@@ -4893,9 +4899,13 @@ void RefreshModels() {
 
 		bool bVisible = false;
 		int iClientsNearby = GetClientsInRange(fPos, RangeType_Visibility, iClients, sizeof(iClients));
-		for (int j=0; j<iClientsNearby && !bVisible; j++) {
-			GetClientEyePosition(iClients[j], fPosClient);
-			bVisible = IsRecordingVisible(iRecording, iClients[j]) && GetVectorDistance(fPos, fPosClient) < MAX_NEARBY_SEARCH_DISTANCE;
+		for (int j=0; j<iClientsNearby; j++) {
+			bool bVisibility = IsRecordingVisible(iRecording, iClients[j], true);
+
+			if (!bVisible) {
+				GetClientEyePosition(iClients[j], fPosClient);
+				bVisible |= bVisibility && GetVectorDistance(fPos, fPosClient) < MAX_NEARBY_SEARCH_DISTANCE;
+			}
 		}
 
 		bool bHasModel = iRecording.NodeModel != INVALID_ENT_REFERENCE;
@@ -4910,10 +4920,15 @@ void RefreshModels() {
 
 		int iEntity = CreateEntityByName("prop_dynamic");
 		if (IsValidEntity(iEntity)) {
+			char sKey[32];
+			FormatEx(sKey, sizeof(sKey), "_jumpbot_rec_node:%d", i);
+			g_hBubbleLookup.SetValue(sKey, iRecording);
+
 			SetEntityModel(iEntity, HINT_MODEL_MARKER);
 			SetEntPropFloat(iEntity, Prop_Data, "m_flModelScale", 0.5);
 			SetEntProp(iEntity, Prop_Data, "m_CollisionGroup", COLLISION_GROUP_PLAYER);
 			SetEntProp(iEntity, Prop_Data, "m_usSolidFlags", FSOLID_NOT_SOLID | FSOLID_TRIGGER);
+			DispatchKeyValue(iEntity, "targetname", sKey);
 			DispatchSpawn(iEntity);
 			SetEntityRenderMode(iEntity, RENDER_TRANSALPHA);
 			
@@ -4933,24 +4948,24 @@ void RefreshModels() {
 			
 			SDKHook(iEntity, SDKHook_StartTouch, Hook_StartTouchInfo);
 			SDKHook(iEntity, SDKHook_EndTouch, Hook_EndTouchInfo);
-
-			char sKey[32];
-			IntToString(iEntityRef, sKey, sizeof(sKey));
-			g_hBubbleLookup.SetValue(sKey, iRecording);
-			
 			SDKHook(iEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);
 		}
 
 		TFClassType iClass = iClientInfo.Class;
 		if ((iClass == TFClass_Soldier || iClass == TFClass_DemoMan) && (iEntity = CreateEntityByName("prop_dynamic")) != INVALID_ENT_REFERENCE) {
+			char sKey[32];
+			FormatEx(sKey, sizeof(sKey), "_jumpbot_rec_weapon:%d", i);
+			g_hBubbleLookup.SetValue(sKey, iRecording);
+
 			if (iClass == TFClass_Soldier) {
 				SetEntityModel(iEntity, HINT_MODEL_ROCKET);
 			} else {
 				SetEntityModel(iEntity, HINT_MODEL_STICKY);
 			}
 			
-			DispatchKeyValue(iEntity, "Solid", "0");
 			SetEntPropFloat(iEntity, Prop_Data, "m_flModelScale", 0.75);
+			DispatchKeyValue(iEntity, "Solid", "0");
+			DispatchKeyValue(iEntity, "targetname", sKey);
 			DispatchSpawn(iEntity);
 			SetEntityRenderMode(iEntity, RENDER_TRANSALPHA);
 			
@@ -4965,10 +4980,6 @@ void RefreshModels() {
 			fAng[0] = 0.0;
 			fAng[1] = 90.0 + float((RoundFloat(fAng[1]) - 90) % 360);
 			TeleportEntity(iEntity, fPos, fAng, NULL_VECTOR);
-
-			char sKey[32];
-			IntToString(iEntityRef, sKey, sizeof(sKey));
-			g_hBubbleLookup.SetValue(sKey, iRecording);
 			
 			SDKHook(iEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);				
 		}
@@ -4990,11 +5001,11 @@ void RemoveModels(Recording iRecording) {
 		if (iEntity > 0 && IsValidEntity(iEntity)) {
 			AcceptEntityInput(iEntity, "Kill");
 			iRecording.NodeModel = INVALID_ENT_REFERENCE;
-		}
 
-		char sKey[32];
-		IntToString(iEntityRef, sKey, sizeof(sKey));
-		g_hBubbleLookup.Remove(sKey);
+			char sKey[32];
+			Entity_GetName(iEntity, sKey, sizeof(sKey));
+			g_hBubbleLookup.Remove(sKey);
+		}
 	}
 	
 	iEntityRef = iRecording.WeaponModel;
@@ -5003,11 +5014,11 @@ void RemoveModels(Recording iRecording) {
 		if (iEntity > 0 && IsValidEntity(iEntity)) {
 			AcceptEntityInput(iEntity, "Kill");
 			iRecording.WeaponModel = INVALID_ENT_REFERENCE;
-		}
 
-		char sKey[32];
-		IntToString(iEntityRef, sKey, sizeof(sKey));
-		g_hBubbleLookup.Remove(sKey);
+			char sKey[32];
+			Entity_GetName(iEntity, sKey, sizeof(sKey));
+			g_hBubbleLookup.Remove(sKey);
+		}
 	}
 }
 
@@ -5046,27 +5057,31 @@ int GetItemDefIndex(int iItem) {
 	return GetEntProp(iItem, Prop_Send, "m_iItemDefinitionIndex");
 }
 
-bool IsRecordingVisible(Recording iRecording, int iClient) {
+bool IsRecordingVisible(Recording iRecording, int iClient, bool bRefresh=false) {
 	if (IsFakeClient(iClient) || !iRecording) {
 		return false;
 	}
 
+	if (!bRefresh) {
+		return iRecording.GetVisibility(iClient);
+	}
+
 	if ((g_hAllowMedic.BoolValue && TF2_GetPlayerClass(iClient) == TFClass_Medic) || g_hDebug.BoolValue) {
-		return true;
+		return iRecording.SetVisibility(iClient, true);
 	}
 
 	if (TF2_GetClientTeam(iClient) == TFTeam_Spectator) {
 		if (iClient == g_iClientOfInterest) {
-			return g_iRecording == iRecording;
+			return iRecording.SetVisibility(iClient, g_iRecording == iRecording);
 		}
 
 		Obs_Mode iObserverMode = Client_GetObserverMode(iClient);
 		int iObsTarget = Client_GetObserverTarget(iClient);
 		if ((iObserverMode == OBS_MODE_IN_EYE || iObserverMode == OBS_MODE_CHASE) && g_hRecordingBots.FindValue(iObsTarget, RecBot::iEnt) != -1) {
-			return g_iRecording == iRecording;
+			return iRecording.SetVisibility(iClient, g_iRecording == iRecording);
 		}
 
-		return checkAccess(iClient);
+		return iRecording.SetVisibility(iClient, checkAccess(iClient));
 	}
 
 	TFClassType iClass = TF2_GetPlayerClass(iClient);
@@ -5081,27 +5096,27 @@ bool IsRecordingVisible(Recording iRecording, int iClient) {
 			if (iItemDefIdx) {
 				int iWeapon = GetPlayerWeaponSlot(iClient, iSlot);
 				if (iWeapon == -1 || GetItemDefIndex(iWeapon) != iItemDefIdx) {
-					return false;
+					return iRecording.SetVisibility(iClient, false);
 				}
 			} else if (iClass == TFClass_Soldier) {
 				int iWeapon = GetPlayerWeaponSlot(iClient, TFWeaponSlot_Primary);
 				if (iWeapon == -1) {
-					return false;
+					return iRecording.SetVisibility(iClient, false);
 				}
 				
 				// Hide stock recording if player is equipped with Original or Beggar's Bazooka
 				switch (GetItemDefIndex(iWeapon)) {
 					case 513, 730: {
-						return false;
+						return iRecording.SetVisibility(iClient, false);
 					}
 				}
 			}
 
-			return true;
+			return iRecording.SetVisibility(iClient, true);
 		}
 	}
 
-	return false;
+	return iRecording.SetVisibility(iClient, false);
 }
 
 int CloneProjectile(int iEntity, int iOwner=-1) {

@@ -222,6 +222,7 @@ enum struct _Recording {
 	int iEquipFilter;
 	int iNodeModel;
 	int iWeaponModel;
+	int iVisibility[2];
 	bool bGCFlag;
 }
 
@@ -262,6 +263,9 @@ public void Recording_SetupNatives() {
 	
 	CreateNative("Recording.WeaponModel.get",		Native_Recording_GetWeaponModel);
 	CreateNative("Recording.WeaponModel.set",		Native_Recording_SetWeaponModel);
+
+	CreateNative("Recording.GetVisibility",			Native_Recording_GetVisibility);
+	CreateNative("Recording.SetVisibility",			Native_Recording_SetVisibility);
 	
 	CreateNative("Recording.Instance",				Native_Recording_Instance);
 	CreateNative("Recording.Destroy",				Native_Recording_Destroy);
@@ -408,6 +412,30 @@ public int Native_Recording_SetWeaponModel(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
 	int iWeaponModel = GetNativeCell(2);
 	hRecordings.Set(iThis, iWeaponModel, _Recording::iWeaponModel);
+}
+
+public int Native_Recording_GetVisibility(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1)-1;
+	int iClient = GetNativeCell(2);
+
+	int iOffset = iClient/32;
+	int iBit = iClient % 32;
+
+	return (hRecordings.Get(iThis, _Recording::iVisibility+iOffset) & 1<<iBit) != 0;
+}
+
+public int Native_Recording_SetVisibility(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1)-1;
+	int iClient = GetNativeCell(2);
+	bool bVisible = GetNativeCell(3) != 0;
+
+	int iOffset = iClient/32;
+	int iBit = iClient % 32;
+
+	int iMask = hRecordings.Get(iThis, _Recording::iVisibility+iOffset) & ~(1<<iBit);
+	hRecordings.Set(iThis, iMask | view_as<int>(bVisible)<<iBit, _Recording::iVisibility+iOffset);
+
+	return bVisible;
 }
 
 public int Native_Recording_Instance(Handle hPlugin, int iArgC) {
