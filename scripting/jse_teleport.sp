@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"0.3.5"
+#define PLUGIN_VERSION	"0.3.6"
 
 #include <tf2>
 #include <tf2_stocks>
@@ -222,7 +222,7 @@ public Action cmdBring(int iClient, int iArgC) {
 
 	if (iArgC == 0) {
 		PrintToConsole(iClient, "[jse] Usage: sm_bring [target]");
-		SendPlayerMenu(iClient, MenuHandler_BringPlayer, false);
+		SendPlayerMenu(iClient, MenuHandler_BringPlayer, false, true);
 		return Plugin_Handled;
 	}
 
@@ -541,37 +541,39 @@ void SendMainMenu(int iClient, MenuHandler fnMainHandler, MenuHandler fnPlayerHa
 	delete hCourses;
 }
 
-void SendPlayerMenu(int iClient, MenuHandler fnHandler, bool bBackButton=true) {
-	Menu hMenu = new Menu(fnHandler);
-	hMenu.SetTitle("Select Player");
-	hMenu.ExitBackButton = bBackButton;
-	hMenu.ExitButton = true;
-
+void SendPlayerMenu(int iClient, MenuHandler fnHandler, bool bBackButton=true, bool bImmunity=false) {
 	ArrayList hPlayers = new ArrayList(ByteCountToCells(1+MAX_NAME_LENGTH));
 
 	char sKey[8], sBlock[1+MAX_NAME_LENGTH];
 	for (int i=1; i<=MaxClients; i++) {
-		if (i != iClient && CheckSafeTeleportTarget(iClient, i, false)) {
+		if (i != iClient && CheckSafeTeleportTarget(iClient, i, false) && (!bImmunity || CanUserTarget(iClient, i))) {
 			GetClientName(i, sBlock, MAX_NAME_LENGTH);
 			sBlock[MAX_NAME_LENGTH] = i & 0xFF;
 			hPlayers.PushArray(view_as<any>(sBlock));
 		}
 	}
 
-	if (fnHandler == MenuHandler_GotoPlayer && !hPlayers.Length) {
-		delete hMenu;
-
-		CPrintToChat(iClient, "{dodgerblue}[jse] {white}No other players to go to.");
+	if (!hPlayers.Length) {
+		delete hPlayers;
 		
-		// Prevent infinite loop
-		if (IsTrackerLoaded()) {
-			SendMainMenu(iClient, MenuHandler_GotoMain, MenuHandler_GotoPlayer);
+		if (fnHandler == MenuHandler_GotoPlayer) {
+			CPrintToChat(iClient, "{dodgerblue}[jse] {white}No other players to go to.");
+			
+			// Prevent infinite loop
+			if (IsTrackerLoaded()) {
+				SendMainMenu(iClient, MenuHandler_GotoMain, MenuHandler_GotoPlayer);
+			}
 		}
 
 		return;
 	}
 
 	SortADTArray(hPlayers, Sort_Ascending, Sort_String);
+
+	Menu hMenu = new Menu(fnHandler);
+	hMenu.SetTitle("Select Player");
+	hMenu.ExitBackButton = bBackButton;
+	hMenu.ExitButton = true;
 
 	for (int i=0; i<hPlayers.Length; i++) {
 		hPlayers.GetArray(i, view_as<any>(sBlock), 4*sizeof(sBlock));
