@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"1.0.0-rc3"
+#define PLUGIN_VERSION	"1.0.0-rc4"
 
 #define UPDATE_URL		"http://jumpacademy.tf/plugins/jse/jumpbot/updatefile.txt"
 #define API_HOST		"api.jumpacademy.tf"
@@ -91,6 +91,9 @@ enum struct SpawnFreeze {
 #define TRAIL_MATERIAL_LASER	"sprites/laser.vmt"
 #define TRAIL_MATERIAL_HALO		"sprites/halo01.vmt"
 
+#define POSITIVE_INFINITY	view_as<float>(0x7F800000)
+#define NEGATIVE_INFINITY	view_as<float>(0xFF800000)
+
 #include <sourcemod>
 #include <sdkhooks>
 #include <sdktools>
@@ -115,6 +118,7 @@ enum struct SpawnFreeze {
 #include <jse_core>
 #include <jse_showkeys>
 #include <jse_autosave>
+#include <octree>
 
 #pragma newdecls required
 
@@ -183,6 +187,7 @@ int g_iTargetFollow;
 ArrayList g_hRecordings;
 Recording g_iRecording;
 ArrayList g_hPlaybackQueue;
+Octree g_iSpatialIdx;
 
 #include "jse_jumpbot_rec.sp"
 
@@ -227,6 +232,9 @@ ArrayList g_hQueue;
 Panel g_hQueuePanel[MAXPLAYERS+1] = {null, ...};
 Handle g_hQueueTimer;
 
+ArrayList g_hVisibleRecordings;
+ArrayList g_hLastVisibleRecordings;
+
 StringMap g_hBubbleLookup;
 Bubble g_eLastBubbleTime[MAXPLAYERS+1];
 int g_iCallKeyMask;
@@ -237,6 +245,7 @@ int g_iLastCallTime;
 
 bool g_bCoreAvailable;
 bool g_bShowKeysAvailable;
+bool g_bOctreeAvailable;
 
 int g_iProjTrailColor[4];
 int g_iTrailColor[4];
@@ -367,6 +376,9 @@ public void OnPluginStart() {
 	g_hRecordings = new ArrayList();
 	g_hPlaybackQueue = new ArrayList();
 
+	g_hVisibleRecordings = new ArrayList();
+	g_hLastVisibleRecordings = new ArrayList();
+
 	g_hBubbleLookup = new StringMap();
 	g_hProjMap = new StringMap();
 	g_hSpecList = new ArrayList();
@@ -450,6 +462,10 @@ public void OnPluginEnd() {
 		int iClient = g_hRecordingBots.Get(i, RecBot::iEnt);
 		KickClient(iClient, "%t", "Punt Bot");
 	}
+
+	if (g_bOctreeAvailable) {
+		Octree.Destroy(g_iSpatialIdx);
+	}
 }
 
 public void OnLibraryAdded(const char[] sName) {
@@ -457,6 +473,9 @@ public void OnLibraryAdded(const char[] sName) {
 		g_bCoreAvailable = true;
 	} else if (StrEqual(sName, "jse_showkeys")) {
 		g_bShowKeysAvailable = true;
+	} else if (StrEqual(sName, "octree")) {
+		g_bOctreeAvailable = true;
+		CreateSpatialIndex();
 	} else if (StrEqual(sName, "updater")) {
 		Updater_AddPlugin(UPDATE_URL);
 	} else if (StrEqual(sName, "socket.ext")) {
@@ -469,6 +488,9 @@ public void OnLibraryRemoved(const char[] sName) {
 		g_bCoreAvailable = false;
 	} else if (StrEqual(sName, "jse_showkeys")) {
 		g_bShowKeysAvailable = false;
+	} else if (StrEqual(sName, "octree")) {
+		g_bOctreeAvailable = false;
+		g_iSpatialIdx = NULL_OCTREE;
 	}
 }
 
@@ -477,6 +499,7 @@ public void OnAllPluginsLoaded() {
 
 	g_bCoreAvailable = LibraryExists("jse_core");
 	g_bShowKeysAvailable = LibraryExists("jse_showkeys");
+	g_bOctreeAvailable = LibraryExists("octree");
 }
 
 public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErrMax) {
@@ -658,12 +681,12 @@ public void OnMapEnd() {
 	g_hSpecList.Clear();
 	doPlayerQueueClear();
 	g_hPlaybackQueue.Clear();
-	clearRecordings(g_hRecordings);
+	ClearRecordings(g_hRecordings);
 	g_hRecordingClients.Clear();
-	clearRecEntities();
+	ClearRecEntities();
 	g_hRecordingEntTypes.Clear();
 	g_iRecordingEntTotal = 0;
-	clearRecBotData();
+	ClearRecBotData();
 	if (g_hRecBufferFrames != null) {
 		g_hRecBufferFrames.Clear();
 	}
@@ -828,7 +851,7 @@ public void OnGameFrame() {
 
 		if (g_iRecBufferIdx >= g_hRecBuffer.Length || (g_iRecBufferIdx >= g_iRecBufferUsed)) {
 			ResetBubbleRotation(g_iRecording);
-			clearRecEntities();
+			ClearRecEntities();
 			
 			if (g_hPlaybackQueue.Length && g_iClientInstruction & INST_PLAYALL) {
 				g_iRecording = g_hPlaybackQueue.Get(0);
@@ -850,7 +873,7 @@ public void OnGameFrame() {
 				
 				if (g_iRecording.Repo && !FileExists(sFilePath)) {
 					g_iClientInstruction = INST_NOP | INST_PLAYALL;
-					fetchRecording(g_iRecording);
+					FetchRecording(g_iRecording);
 				} else if (!LoadFrames(g_iRecording)) {
 					if (g_hDebug.BoolValue)
 						CPrintToChatAll("{dodgerblue}[jb] {white}%t", "Cannot File Read");
@@ -1445,7 +1468,7 @@ public void OnClientDisconnect(int iClient) {
 
 	if (IsFakeClient(iClient)) {
 		if ((iID = g_hRecordingBots.FindValue(iClient, RecBot::iEnt)) != -1) {
-			clearRecBotData(iID);
+			ClearRecBotData(iID);
 			doFullStop();
 			
 			if (!g_bShuttingDown && iPlayerCount) {
@@ -1509,7 +1532,7 @@ public int Native_PlayRecording(Handle hPlugin, int iArgC) {
 
 	g_iRecBufferIdx = 0;
 	g_iRecBufferFrame = 0;
-	clearRecEntities();
+	ClearRecEntities();
 	g_iRecordingEntTotal = 0;
 
 	if (!PrepareBots(iRecording)) {
@@ -1789,7 +1812,7 @@ public Action cmdPlay(int iClient, int iArgC) {
 
 	g_iRecBufferIdx = 0;
 	g_iRecBufferFrame = 0;
-	clearRecEntities();
+	ClearRecEntities();
 	g_iRecordingEntTotal = 0;
 	
 	g_iRecording = iRecording;
@@ -2151,10 +2174,21 @@ public Action cmdNearby(int iClient, int iArgC) {
 	
 	float fPos[3];
 	GetClientEyePosition(iClient, fPos);
-		
+
+	ArrayList hRecordings;
+	int iRecordingsTotal;
+
+	if (g_bOctreeAvailable) {
+		hRecordings = new ArrayList();
+		iRecordingsTotal = g_iSpatialIdx.Find(fPos, MAX_NEARBY_SEARCH_DISTANCE, hRecordings, true);
+	} else {
+		hRecordings = g_hRecordings;
+		iRecordingsTotal = g_hRecordings.Length;
+	}
+
 	float fPosRecord[3];
-	for (int i=0; i<g_hRecordings.Length; i++) {
-		Recording iRecording = g_hRecordings.Get(i);
+	for (int i=0; i<iRecordingsTotal; i++) {
+		Recording iRecording = hRecordings.Get(i);
 		ArrayList hClientInfo = iRecording.ClientInfo;
 		for (int j=0; j<hClientInfo.Length; j++) {
 			ClientInfo iClientInfo = hClientInfo.Get(j);
@@ -2176,12 +2210,18 @@ public Action cmdNearby(int iClient, int iArgC) {
 					
 					char sAuthID[24];
 					iClientInfo.GetAuthID(sAuthID, sizeof(sAuthID));
+
+					int iID = g_hRecordings.FindValue(iRecording);
 					
-					CReplyToCommand(iClient, "{white}ID: %3d    %t: %5.1f    %t: %10t    %t: %3d    %t: %20s    %t: %s", i, "Distance", fVecDist, "Class", sClass, "Frames", iRecording.Length, "Author", sAuthID, "File", sFilePath[iFilePart+1]);
+					CReplyToCommand(iClient, "{white}ID: %3d    %t: %5.1f    %t: %10t    %t: %3d    %t: %20s    %t: %s", iID, "Distance", fVecDist, "Class", sClass, "Frames", iRecording.Length, "Author", sAuthID, "File", sFilePath[iFilePart+1]);
 				}
 				delete hTr;
 			}
 		}
+	}
+
+	if (g_bOctreeAvailable) {
+		delete hRecordings;
 	}
 	
 	return Plugin_Handled;
@@ -2268,7 +2308,7 @@ public Action cmdPlayAll(int iClient, int iArgC) {
 
 	g_iRecBufferIdx = 0;
 	g_iRecBufferFrame = 0;
-	clearRecEntities();
+	ClearRecEntities();
 	g_iRecordingEntTotal = 0;
 
 	LoadRecordings(true);
@@ -2306,7 +2346,7 @@ public Action cmdPlayAll(int iClient, int iArgC) {
 
 	if (iRecording.Repo && !FileExists(sFilePath)) {
 		g_iClientInstruction = INST_NOP | INST_PLAYALL; // Wait for download completion
-		fetchRecording(iRecording);
+		FetchRecording(iRecording);
 	} else {
 		g_iClientInstruction = INST_WARMUP | INST_PLAYALL;
 		LoadFrames(iRecording);
@@ -2733,9 +2773,9 @@ public Action cmdShowMe(int iClient, int iArgC) {
 				iEquipFilterItemDefIdx = GetItemDefIndex(iWeapon);
 			}
 
-			iFind = findNearestRecording(fPos, iClass, iClosestRecord, iEquipFilterItemDefIdx);
+			iFind = FindNearestRecording(fPos, iClass, iClosestRecord, iEquipFilterItemDefIdx);
 		} else {
-			iFind = findNearestRecording(fPos, TFClass_Unknown, iClosestRecord);
+			iFind = FindNearestRecording(fPos, TFClass_Unknown, iClosestRecord);
 		}
 		
 		if (iFind != FOUND_RECORDING) {
@@ -2778,7 +2818,7 @@ public Action cmdShowMe(int iClient, int iArgC) {
 	
 	// Prefetch file from repository, even if player is waiting in queue
 	if (g_iClientInstruction != INST_NOP && iClosestRecord.Repo && !bFileExists) {
-		fetchRecording(iClosestRecord, true);
+		FetchRecording(iClosestRecord, true);
 	}
 	
 	doPlayerQueueRemove(iClient);
@@ -2811,7 +2851,7 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 		}
 		
 		if (!iRecording.Downloading) {
-			fetchRecording(iRecording);
+			FetchRecording(iRecording);
 		}
 	} else {
 		if (!(LoadRecording(iRecording) && PrepareBots(iRecording) && LoadFrames(iRecording))) {
@@ -2844,7 +2884,7 @@ void doShowMe(int iClient, Recording iRecording, TFTeam iTeam, Obs_Mode iMode) {
 	g_iRecording = iRecording;
 	g_iRecBufferFrame =  0;
 	g_iRecBufferIdx = 0;
-	clearRecEntities();
+	ClearRecEntities();
 	g_iRecordingEntTotal = 0;
 
 	g_iLastCaller = iClient;
@@ -2945,7 +2985,7 @@ public Action cmdChdir(int iClient, int iArgC) {
 public Action cmdClearCache(int iClient, int iArgC) {
 	doReturn();
 	doFullStop();
-	clearRecordings(g_hRecordings);
+	ClearRecordings(g_hRecordings);
 	g_hBubbleLookup.Clear();
 	g_hProjMap.Clear();
 	g_hSpecList.Clear();
@@ -3020,7 +3060,7 @@ public Action cmdUpgrade(int iClient, int iArgC) {
 		return Plugin_Handled;
 	}
 	
-	fetchHashes(hFile, hDirInfo);
+	FetchHashes(hFile, hDirInfo);
 	
 	return Plugin_Handled;
 }
@@ -3658,7 +3698,7 @@ bool CheckMap(File hFile, char[] sMapName) {
 	return StrEqual(sMapName, sFileMapName, false);
 }
 
-void clearRecBotData(int iID = -1) {
+void ClearRecBotData(int iID = -1) {
 	if (iID == -1) {
 		for (int i=0; i<g_hRecordingBots.Length; i++) {
 			delete view_as<DataPack>(g_hRecordingBots.Get(i, RecBot::hEquip));
@@ -3671,15 +3711,19 @@ void clearRecBotData(int iID = -1) {
 	}
 }
 
-void clearRecordings(ArrayList hRecordings) {
+void ClearRecordings(ArrayList hRecordings) {
 	for (int i=0; i<hRecordings.Length; i++) {
 		Recording iRecording = hRecordings.Get(i);
 		Recording.Destroy(iRecording);
 	}
 	hRecordings.Clear();
+
+	if (g_bOctreeAvailable) {
+		Octree.Destroy(g_iSpatialIdx);
+	}
 }
 
-void clearRecEntities() {
+void ClearRecEntities() {
 	for (int i=0; i<g_hRecordingEntities.Length; i++) {
 		RecEnt eRecEnt;
 		g_hRecordingEntities.GetArray(i, eRecEnt);
@@ -3837,7 +3881,7 @@ void doFullStop() {
 	}
 
 	g_hRecordingClients.Clear();
-	clearRecEntities();
+	ClearRecEntities();
 	g_hPlaybackQueue.Clear();
 	g_hRecBufferFrames = null;
 	
@@ -3937,7 +3981,7 @@ void EquipRec(int iBotID, Recording iRecording, bool bImmediate = true) {
 	}
 }
 
-FindResult findNearestRecording(float fPos[3], TFClassType iClass, Recording &iClosestRecord, int iEquipFilterItemDefIdx=0) {
+FindResult FindNearestRecording(float fPos[3], TFClassType iClass, Recording &iClosestRecord, int iEquipFilterItemDefIdx=0) {
 	bool bSearchedClass = false;
 	
 	iClosestRecord = NULL_RECORDING;
@@ -3947,10 +3991,22 @@ FindResult findNearestRecording(float fPos[3], TFClassType iClass, Recording &iC
 		return NO_RECORDING;
 	}
 
+	ArrayList hRecordings;
+	int iRecordingsTotal; 
+
+	if (g_bOctreeAvailable) {
+		hRecordings = new ArrayList();
+		iRecordingsTotal = g_iSpatialIdx.Find(fPos, MAX_NEARBY_SEARCH_DISTANCE, hRecordings);
+	} else {
+		hRecordings = g_hRecordings;
+		iRecordingsTotal = g_hRecordings.Length;
+	}
+
 	float fPosRecord[3];
-	for (int i=0; i<g_hRecordings.Length; i++) {
-		Recording iRecording = g_hRecordings.Get(i);
+	for (int i=0; i<iRecordingsTotal; i++) {
+		Recording iRecording = hRecordings.Get(i);
 		ArrayList hClientInfo = iRecording.ClientInfo;
+
 		for (int j=0; j<hClientInfo.Length; j++) {
 			ClientInfo iClientInfo = hClientInfo.Get(j);
 
@@ -3996,6 +4052,10 @@ FindResult findNearestRecording(float fPos[3], TFClassType iClass, Recording &iC
 				delete hTr;
 			}
 		}
+	}
+
+	if (g_bOctreeAvailable) {
+		delete hRecordings;
 	}
 	
 	if (!iClosestRecord) {
@@ -4053,7 +4113,6 @@ void findTargetFollow() {
 					continue;
 				}
 				
-				
 				Handle hTr = TR_TraceRayFilterEx(fPos, fPosOther, MASK_SHOT_HULL, RayType_EndPoint, traceHitEnvironment);
 				if (!TR_DidHit(hTr)) {
 					float fDist = GetVectorDistance(fPos, fPosOther);
@@ -4077,7 +4136,7 @@ void findTargetFollow() {
 		fMinDist = GetVectorDistance(fPos, fPosOther);
 	
 		Recording iClosestRecord;
-		if (findNearestRecording(fPos, TF2_GetPlayerClass(g_iClientControl), iClosestRecord) == FOUND_RECORDING) {
+		if (FindNearestRecording(fPos, TF2_GetPlayerClass(g_iClientControl), iClosestRecord) == FOUND_RECORDING) {
 			if (g_iRecording == iClosestRecord || LoadFrames(iClosestRecord)) {
 				g_iRecording = iClosestRecord;
 				
@@ -4303,7 +4362,7 @@ bool LoadRecording(Recording iRecording) {
 }
 
 void LoadRecordings(bool bUseCachedRepoIndex = false) {
-	clearRecordings(g_hRecordings);
+	ClearRecordings(g_hRecordings);
 	
 	char sFilePath[PLATFORM_MAX_PATH];
 	
@@ -4311,12 +4370,12 @@ void LoadRecordings(bool bUseCachedRepoIndex = false) {
 		if (bUseCachedRepoIndex) {
 			BuildPath(Path_SM, sFilePath, sizeof(sFilePath), "%s/%s", CACHE_FOLDER, INDEX_FILE_NAME);
 			if (!FileExists(sFilePath)) {
-				fetchRepository();
+				FetchRepository();
 			} else {
-				parseIndex(sFilePath);
+				ParseIndex(sFilePath);
 			}
 		} else {
-			fetchRepository();
+			FetchRepository();
 		}
 	}
 
@@ -4380,6 +4439,10 @@ void LoadRecordings(bool bUseCachedRepoIndex = false) {
 	delete hDir;
 
 	SortADTArrayCustom(g_hRecordings, Sort_Recordings);
+
+	if (!g_hUseRepo.BoolValue) {
+		CreateSpatialIndex();
+	}
 }
 
 bool LoadFrames(Recording iRecording) {
@@ -4483,6 +4546,68 @@ bool LoadFrames(Recording iRecording) {
 	delete hFile;
 	
 	return true;
+}
+
+void CreateSpatialIndex() {
+	if (!g_bOctreeAvailable || !g_hRecordings.Length) {
+		return;
+	}
+
+	// Compute octree boundaries
+
+	float fMin[3] = {POSITIVE_INFINITY, ...};
+	float fMax[3] = {NEGATIVE_INFINITY, ...};
+	float fStartPos[3];
+
+	for (int i=0; i<g_hRecordings.Length; i++) {
+		Recording iRecording = g_hRecordings.Get(i);
+		ArrayList hClientInfo = iRecording.ClientInfo;
+
+		for (int j=0; j<hClientInfo.Length; j++) {
+			ClientInfo iClientInfo = hClientInfo.Get(j);
+			iClientInfo.GetStartPos(fStartPos);
+
+			fMin[0] = fStartPos[0] < fMin[0] ? fStartPos[0] : fMin[0];
+			fMin[1] = fStartPos[1] < fMin[1] ? fStartPos[1] : fMin[1];
+			fMin[2] = fStartPos[2] < fMin[2] ? fStartPos[2] : fMin[2];
+
+			fMax[0] = fStartPos[0] > fMax[0] ? fStartPos[0] : fMax[0];
+			fMax[1] = fStartPos[1] > fMax[1] ? fStartPos[1] : fMax[1];
+			fMax[2] = fStartPos[2] > fMax[2] ? fStartPos[2] : fMax[2];
+		}
+	}
+
+	float fCenter[3];
+	AddVectors(fMin, fMax, fCenter);
+	ScaleVector(fCenter, 0.5);
+
+	float fHalfWidth[3];
+	SubtractVectors(fMax, fMin, fHalfWidth);
+	ScaleVector(fHalfWidth, 0.5);
+
+	float fMaxHalfWidth = fHalfWidth[0];
+	fMaxHalfWidth = fHalfWidth[1] > fMaxHalfWidth ? fHalfWidth[1] : fMaxHalfWidth;
+	fMaxHalfWidth = fHalfWidth[2] > fMaxHalfWidth ? fHalfWidth[2] : fMaxHalfWidth;
+
+	if (g_iSpatialIdx) {
+		Octree.Destroy(g_iSpatialIdx);
+	}
+
+	g_iSpatialIdx = Octree.Instance(fCenter, fMaxHalfWidth, 50);
+
+	// Insert all recording start positions into octree
+
+	for (int i=0; i<g_hRecordings.Length; i++) {
+		Recording iRecording = g_hRecordings.Get(i);
+		ArrayList hClientInfo = iRecording.ClientInfo;
+
+		for (int j=0; j<hClientInfo.Length; j++) {
+			ClientInfo iClientInfo = hClientInfo.Get(j);
+			iClientInfo.GetStartPos(fStartPos);
+
+			g_iSpatialIdx.Insert(fStartPos, iRecording);
+		}
+	}
 }
 
 ArrayList GetSaveStates() {
@@ -4885,10 +5010,33 @@ void RefreshModels() {
 		return;
 	}
 
+	ArrayList hTemp = g_hLastVisibleRecordings;
+	g_hLastVisibleRecordings = g_hVisibleRecordings;
+	g_hVisibleRecordings = hTemp;
+	g_hVisibleRecordings.Clear();
+
 	static int iClients[MAXPLAYERS+1];
-	
-	for (int i=0; i<g_hRecordings.Length; i++) {
-		Recording iRecording = g_hRecordings.Get(i);
+
+	ArrayList hRecordings;
+	int iRecordingsTotal;
+
+	if (g_bOctreeAvailable && g_iSpatialIdx) {
+		hRecordings = new ArrayList();
+		float fPos[3];
+
+		for (int i=1; i<=MaxClients; i++) {
+			if (IsClientInGame(i) && !IsFakeClient(i)) {
+				GetClientAbsOrigin(i, fPos);
+				iRecordingsTotal += g_iSpatialIdx.Find(fPos, MAX_NEARBY_SEARCH_DISTANCE, hRecordings);
+			}
+		}
+	} else {
+		hRecordings = g_hRecordings;
+		iRecordingsTotal = g_hRecordings.Length;
+	}
+
+	for (int i=0; i<iRecordingsTotal; i++) {
+		Recording iRecording = hRecordings.Get(i);
 
 		// Primary author
 		ClientInfo iClientInfo = iRecording.ClientInfo.Get(0);
@@ -4913,6 +5061,8 @@ void RefreshModels() {
 			RemoveModels(iRecording);
 			continue;
 		}
+
+		g_hVisibleRecordings.Push(iRecording);
 
 		if (bHasModel || !bVisible) {
 			continue;
@@ -4982,6 +5132,17 @@ void RefreshModels() {
 			TeleportEntity(iEntity, fPos, fAng, NULL_VECTOR);
 			
 			SDKHook(iEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);				
+		}
+	}
+
+	if (g_bOctreeAvailable && g_iSpatialIdx) {
+		delete hRecordings;
+	}
+
+	for (int i=0; i<g_hLastVisibleRecordings.Length; i++) {
+		Recording iRecording = g_hLastVisibleRecordings.Get(i);
+		if (g_hVisibleRecordings.FindValue(iRecording) == -1) {
+			RemoveModels(iRecording);
 		}
 	}
 }

@@ -18,7 +18,7 @@ enum DLType {
 
 #define MAX_RETRIES		5
 
-void fetchRecording(Recording iRecording, bool bPrefetchOnly = false) {
+void FetchRecording(Recording iRecording, bool bPrefetchOnly = false) {
 	if (!g_bSocketExtension || !g_hUseRepo.BoolValue || !iRecording || iRecording.Downloading) {
 		return;
 	}
@@ -67,7 +67,7 @@ void fetchRecording(Recording iRecording, bool bPrefetchOnly = false) {
 	SocketConnect(hSocket, OnSocketConnected, OnSocketReceive, OnSocketDisconnected, API_HOST, 80);
 }
 
-void fetchRepository() {
+void FetchRepository() {
 	if (!g_bSocketExtension || !g_hUseRepo.BoolValue) {
 		return;
 	}
@@ -108,7 +108,7 @@ void fetchRepository() {
 	SocketConnect(hSocket, OnSocketConnected, OnSocketReceive, OnSocketDisconnected, API_HOST, 80);
 }
 
-void fetchHashes(File hFile, any aData) {
+void FetchHashes(File hFile, any aData) {
 	if (!g_bSocketExtension || !g_hUseRepo.BoolValue) {
 		return;
 	}	
@@ -172,7 +172,7 @@ public int OnSocketError(Handle hSocket, const int iErrorType, const int iErrorN
 		DeleteFile(sFilePath);
 		
 		if (iRecording.Downloading++ < MAX_RETRIES) {
-			fetchRecording(iRecording, iType == DL_Prefetch);
+			FetchRecording(iRecording, iType == DL_Prefetch);
 		} else if (iType == DL_Play) {
 			g_iClientInstruction = INST_NOP;
 			doReturn();
@@ -260,7 +260,7 @@ public int OnSocketDisconnected(Handle hSocket, any aArg) {
 		case DL_Index: {
 			char sPath[PLATFORM_MAX_PATH];
 			BuildPath(Path_SM, sPath, sizeof(sPath), "%s/%s", CACHE_FOLDER, INDEX_FILE_NAME);
-			parseIndex(sPath);
+			ParseIndex(sPath);
 			delete hFile;
 		}
 		
@@ -281,7 +281,7 @@ public int OnSocketDisconnected(Handle hSocket, any aArg) {
 				DeleteFile(sFilePath);
 				
 				if (iRecording.Downloading++ < MAX_RETRIES) {
-					fetchRecording(iRecording, true);
+					FetchRecording(iRecording, true);
 				}
 			}
 		}
@@ -314,7 +314,7 @@ public int OnSocketDisconnected(Handle hSocket, any aArg) {
 				DeleteFile(sFilePath);
 				
 				if (iRecording.Downloading++ < MAX_RETRIES) {
-					fetchRecording(iRecording, false);
+					FetchRecording(iRecording, false);
 				} else {
 					g_iClientInstruction = INST_NOP;
 					doReturn();
@@ -344,7 +344,7 @@ public int OnSocketDisconnected(Handle hSocket, any aArg) {
 	CloseHandle(hSocket);
 }
 
-void parseIndex(char[] sPath) {
+void ParseIndex(char[] sPath) {
 	char sMapName[32];
 	GetCurrentMap(sMapName, sizeof(sMapName));
 	
@@ -423,4 +423,6 @@ void parseIndex(char[] sPath) {
 	LogMessage("%T", "Loaded Repo", LANG_SERVER, i);
 	
 	delete hKV;
+
+	CreateSpatialIndex();
 }
