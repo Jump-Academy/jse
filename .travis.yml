@@ -18,6 +18,7 @@ before_script:
   - cp -r addons/sourcemod/scripting/* scripting  
   - wget https://raw.githubusercontent.com/Impact123/AutoExecConfig/development/autoexecconfig.inc -O scripting/include/autoexecconfig.inc
   - wget https://raw.githubusercontent.com/VoiDeD/sourcemod-botcontroller/master/scripting/botcontroller.inc -O scripting/include/botcontroller.inc
+  - wget https://raw.githubusercontent.com/geominorai/sm-octree/master/scripting/include/octree.inc -O scripting/include/octree.inc
   - wget https://github.com/Bara/Multi-Colors/archive/master.zip -O multicolors.zip
   - unzip multicolors.zip
   - cp -r Multi-Colors-master/addons/sourcemod/scripting/include/* scripting/include/

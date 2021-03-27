@@ -23,6 +23,7 @@ JSE is a set of modular plugins for enabling standard features present in most T
 * [AutoExecConfig](https://github.com/Impact123/AutoExecConfig)
 * [BotController](https://github.com/VoiDeD/sourcemod-botcontroller)
 * [Multi Colors](https://github.com/Bara/Multi-Colors)
+* [Octree](https://github.com/geominorai/sm-octree)
 * [REST in Pawn](https://github.com/ErikMinekus/sm-ripext)
 * [SMLib](https://github.com/bcserv/smlib/tree/transitional_syntax)
 * [Socket](https://github.com/JoinedSenses/sm-ext-socket)
