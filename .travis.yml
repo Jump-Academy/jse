@@ -29,7 +29,7 @@ before_script:
   - wget https://raw.githubusercontent.com/ErikMinekus/sm-ripext/master/pawn/scripting/include/ripext.inc -O scripting/include/ripext.inc
   - wget https://raw.githubusercontent.com/ErikMinekus/sm-ripext/master/pawn/scripting/include/ripext/http.inc -O scripting/include/ripext/http.inc
   - wget https://raw.githubusercontent.com/ErikMinekus/sm-ripext/master/pawn/scripting/include/ripext/json.inc -O scripting/include/ripext/json.inc
-  - wget https://bitbucket.org/GoD_Tony/updater/raw/default/include/updater.inc -O scripting/include/updater.inc
+  - wget https://raw.githubusercontent.com/JoinedSenses/SourceMod-IncludeLibrary/master/include/updater.inc -O scripting/include/updater.inc
   - wget https://github.com/bcserv/smlib/archive/transitional_syntax.zip -O smlib.zip
   - unzip smlib.zip
   - cp -r smlib-transitional_syntax/scripting/include/* scripting/include/
