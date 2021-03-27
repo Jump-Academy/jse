@@ -204,6 +204,8 @@ public void DB_Callback_LoadMapInfo_Txn_Success(Database hDatabase, any aData, i
 
 	g_bLoaded = true;
 
+	SetupCheckpointCache();
+
 	Call_StartForward(g_hTrackerLoadedForward);
 	Call_PushCell(g_hCourses);
 	Call_Finish();

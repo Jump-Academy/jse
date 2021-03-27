@@ -21,6 +21,17 @@
 
 #define CHECKPOINT_TIME_CUTOFF	20
 
+#define POSITIVE_INFINITY	view_as<float>(0x7F800000)
+
+enum struct CheckpointCache {
+	float fOrigin[3];
+	Course iCourse;
+	int iCourseNumber;
+	Jump iJump;
+	int iJumpNumber;
+	ControlPoint iControlPoint;
+}
+
 GlobalForward g_hTrackerLoadedForward;
 GlobalForward g_hTrackerDBConnectedForward;
 GlobalForward g_hProgressLoadForward;
@@ -31,6 +42,7 @@ GlobalForward g_hNewCheckpointReachedForward;
 int g_iMapID = -1;
 bool g_bLoaded = false;
 
+ArrayList g_hCheckpointCache;
 ArrayList g_hCourses;
 int g_iNormalCourses;
 int g_iBonusCourses;
@@ -75,7 +87,7 @@ public void OnPluginStart() {
 	g_hCVTeleSettleTime = CreateConVar("jse_tracker_tele_settle_time", "1.0", "Time in seconds to ignore checkpoints after touching a teleport trigger", FCVAR_NOTIFY, true, 0.0);
 	g_hCVInterval = CreateConVar("jse_tracker_interval", "0.5", "Time in seconds between progress checks", FCVAR_NOTIFY, true, 0.0);
 	g_hCVPersist = CreateConVar("jse_tracker_persist", "1", "Persist player progress between sessions", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	
+
 	RegConsoleCmd("sm_whereami", cmdWhereAmI, "Locate calling player");
 	RegConsoleCmd("sm_whereis", cmdWhereIs, "Locate player");
 
@@ -91,6 +103,7 @@ public void OnPluginStart() {
 	g_hHTTPClient.FollowLocation = true;
 	g_hHTTPClient.Timeout = 5;
 
+	g_hCheckpointCache = new ArrayList(sizeof(CheckpointCache));
 	g_hCourses = new ArrayList();
 
 	HookEvent("teamplay_round_start", Event_RoundStart);
@@ -162,6 +175,7 @@ public void OnMapEnd() {
 		Course.Destroy(iCourse);
 	}
 
+	g_hCheckpointCache.Clear();
 	g_hCourses.Clear();
 
 	g_iMapID = -1;
@@ -743,77 +757,55 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 	int iTime = GetTime();
 	float fGameTime = GetGameTime();
 
-	float fGroundPos[MAXPLAYERS+1][3];
+	Course iActiveCourse[MAXPLAYERS + 1];
+
+	Checkpoint eCheckpoint;
+	CheckpointCache eCheckpointCache;
 
 	for (int i=1; i<=MaxClients; i++) {
 		if (IsClientInGame(i) && IsPlayerAlive(i)) {
-			GetClientGroundPosition(i, fGroundPos[i]);
 			g_eNearestCheckpoint[i].Clear();
-		}
-	}
 
-	int iClients[MAXPLAYERS];
-	float fMinDist[MAXPLAYERS + 1] =  { view_as<float>(0x7F800000), ... }; // +inf
-	Course iActiveCourse[MAXPLAYERS + 1];
-
-	float fOrigin[3];
-	for (int i=0; i<g_hCourses.Length; i++) {
-		Course iCourseIter = g_hCourses.Get(i);
-		int iCourseNumber = iCourseIter.iNumber;
-
-		ArrayList hJumps = iCourseIter.hJumps;
-		for (int j=1; j<=hJumps.Length; j++) {
-			Jump iJumpIter = hJumps.Get(j-1);
-			iJumpIter.GetOrigin(fOrigin);
-
-			int iClientsCount = GetClientsInRange(fOrigin, RangeType_Visibility, iClients, sizeof(iClients));
-			for (int k = 0; k < iClientsCount; k++) {
-				int iClient = iClients[k];
-				if (IsPlayerAlive(iClient) && (fGameTime - g_fLastTeleport[iClient]) > g_fTeleSettleTime) {
-					float fDist = GetVectorDistance(fGroundPos[iClient], fOrigin);
-					if ((fDist < g_fProximity) && (fDist < fMinDist[iClient]) && IsVisible(fGroundPos[iClient], fOrigin)) {
-						g_eNearestCheckpoint[iClient].Init(
-							iCourseNumber,
-							j,
-							false,
-							TF2_GetClientTeam(iClient),
-							TF2_GetPlayerClass(iClient)
-						);
-						g_eNearestCheckpoint[iClient].iTimestamp = iTime;
-						iActiveCourse[iClient] = iCourseIter;
-						fMinDist[iClient] = fDist;
-					}
-				}
+			if (fGameTime-g_fLastTeleport[i] < g_fTeleSettleTime) {
+				continue;
 			}
-		}
 
-		ControlPoint iControlPointItr = iCourseIter.iControlPoint;
-		if (iControlPointItr) {
-			iControlPointItr.GetOrigin(fOrigin);
+			float fGroundPos[3];
+			GetClientGroundPosition(i, fGroundPos);
 
-			int iClientsCount = GetClientsInRange(fOrigin, RangeType_Visibility, iClients, sizeof(iClients));
-			for (int k = 0; k < iClientsCount; k++) {
-				int iClient = iClients[k];
-				if (IsPlayerAlive(iClient) && (fGameTime - g_fLastTeleport[iClient]) > g_fTeleSettleTime) {
-					float fDist = GetVectorDistance(fGroundPos[iClient], fOrigin);
-					if ((fDist < g_fProximity) && (fDist < fMinDist[iClient]) && IsVisible(fGroundPos[iClient], fOrigin)) {
-						g_eNearestCheckpoint[iClient].Init(
-							iCourseNumber,
+			float fMinDist = POSITIVE_INFINITY;
+
+			for (int j=0; j<g_hCheckpointCache.Length; j++) {
+				g_hCheckpointCache.GetArray(j, eCheckpointCache);
+
+				float fDist = GetVectorDistance(fGroundPos, eCheckpointCache.fOrigin);
+				if ((fDist < g_fProximity) && (fDist < fMinDist) && IsVisible(fGroundPos, eCheckpointCache.fOrigin)) {
+					if (eCheckpointCache.iControlPoint) {
+						g_eNearestCheckpoint[i].Init(
+							eCheckpointCache.iCourseNumber,
 							0,
 							true,
-							TF2_GetClientTeam(iClient),
-							TF2_GetPlayerClass(iClient)
+							TF2_GetClientTeam(i),
+							TF2_GetPlayerClass(i)
 						);
-						g_eNearestCheckpoint[iClient].iTimestamp = iTime;
-						iActiveCourse[iClient] = iCourseIter;
-						fMinDist[iClient] = fDist;
+					} else {
+						g_eNearestCheckpoint[i].Init(
+							eCheckpointCache.iCourseNumber,
+							eCheckpointCache.iJumpNumber,
+							false,
+							TF2_GetClientTeam(i),
+							TF2_GetPlayerClass(i)
+						);
 					}
+
+					g_eNearestCheckpoint[i].iTimestamp = iTime;
+					iActiveCourse[i] = eCheckpointCache.iCourse;
+					fMinDist = fDist;
 				}
 			}
 		}
 	}
 
-	Checkpoint eCheckpoint;
 	eCheckpoint.iTimestamp = iTime;
 
 	for (int i=1; i<=MaxClients; i++) {
@@ -854,7 +846,7 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 
 		ArrayList hJumps = iActiveCourse[i].hJumps;
 		int iPreviousJumps = bControlPoint ? hJumps.Length : iJumpNumber - 1;
-		
+
 		for (int j=1; j<=iPreviousJumps; j++) {
 			eCheckpoint.Init(
 				iCourseNumber,
@@ -895,7 +887,7 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 
 		DB_BackupProgress(i);
 	}
-	
+
 	return Plugin_Continue;
 }
 
@@ -1007,6 +999,60 @@ bool IsVisible(float fPos[3], float fPosTarget[3]) {
 
 public bool TraceFilter_Environment(int iEntity, int iMask) {
 	return false;
+}
+
+void SetupCheckpointCache() {
+	Checkpoint eCheckpoint;
+	float fOrigin[3];
+
+	for (int i=0; i<g_hCourses.Length; i++) {
+		Course iCourseIter = g_hCourses.Get(i);
+		int iCourseNumber = iCourseIter.iNumber;
+
+		ArrayList hJumps = iCourseIter.hJumps;
+		for (int j=1; j<=hJumps.Length; j++) {
+			Jump iJumpIter = hJumps.Get(j-1);
+			iJumpIter.GetOrigin(fOrigin);
+
+			eCheckpoint.Init(
+				iCourseNumber,
+				j,
+				false,
+				TFTeam_Unassigned,
+				TFClass_Unknown
+			);
+
+			CheckpointCache eCheckpointCache;
+			eCheckpointCache.fOrigin = fOrigin;
+			eCheckpointCache.iCourse = iCourseIter;
+			eCheckpointCache.iCourseNumber = iCourseNumber;
+			eCheckpointCache.iJump = iJumpIter;
+			eCheckpointCache.iJumpNumber = iJumpIter.iNumber;
+
+			g_hCheckpointCache.PushArray(eCheckpointCache);
+		}
+
+		ControlPoint iControlPointItr = iCourseIter.iControlPoint;
+		if (iControlPointItr) {
+			iControlPointItr.GetOrigin(fOrigin);
+
+			eCheckpoint.Init(
+				iCourseNumber,
+				0,
+				true,
+				TFTeam_Unassigned,
+				TFClass_Unknown
+			);
+
+			CheckpointCache eCheckpointCache;
+			eCheckpointCache.fOrigin = fOrigin;
+			eCheckpointCache.iCourse = iCourseIter;
+			eCheckpointCache.iCourseNumber = iCourseNumber;
+			eCheckpointCache.iControlPoint = iControlPointItr;
+
+			g_hCheckpointCache.PushArray(eCheckpointCache);
+		}
+	}
 }
 
 void SetupTeleportHook() {
