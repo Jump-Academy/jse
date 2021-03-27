@@ -80,6 +80,8 @@ public void OnPluginStart() {
 	RegConsoleCmd("sm_whereis", cmdWhereIs, "Locate player");
 
 	RegConsoleCmd("sm_progress", cmdProgress, "Show player progress");
+	RegConsoleCmd("sm_progressme", cmdProgressMe, "Show own progress");
+	RegConsoleCmd("sm_pme", cmdProgressMe, "Show own progress");
 
 	RegAdminCmd("sm_regress", cmdRegress, ADMFLAG_BAN, "Removes the progress of a player");
 
@@ -1132,7 +1134,10 @@ public Action cmdWhereIs(int iClient, int iArgC) {
 }
 
 public Action cmdProgress(int iClient, int iArgC) {
-	// Usage: sm_progress [target] [*/red/blue] [*/scout/sniper/soldier/demoman/medic/heavy/pyro/spy/engineer] [*/map]
+	if (iArgC == 0 || iArgC > 4) {
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Usage: sm_progress [target] [*/scout/sniper/(s)oldier/(d)emoman/medic/heavy/pyro/spy/engineer] [*/(r)ed/(b)lue] [map]");
+		return Plugin_Handled;
+	}
 
 	if (!g_hCourses.Length && iArgC < 4) {
 		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}No courses were found for this map.");
@@ -1143,32 +1148,26 @@ public Action cmdProgress(int iClient, int iArgC) {
 	int iTargetList[MAXPLAYERS], iTargetCount;
 	bool bTnIsML;
 
-	if (iArgC == 0) {
-		iTargetList[iTargetCount++] = iClient;
+	char sArg1[32];
+	GetCmdArg(1, sArg1, sizeof(sArg1));
 
-		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing your progress:");
+	if ((iTargetCount = ProcessTargetString(
+			sArg1,
+			iClient,
+			iTargetList,
+			MAXPLAYERS,
+			COMMAND_FILTER_NO_IMMUNITY | COMMAND_FILTER_NO_BOTS,
+			sTargetName,
+			sizeof(sTargetName),
+			bTnIsML)) <= 0) {
+		ReplyToTargetError(iClient, iTargetCount);
+		return Plugin_Handled;
+	}
+
+	if (bTnIsML) {
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing progress for %t:", sTargetName);
 	} else {
-		char sArg1[32];
-		GetCmdArg(1, sArg1, sizeof(sArg1));
-	 
-		if ((iTargetCount = ProcessTargetString(
-				sArg1,
-				iClient,
-				iTargetList,
-				MAXPLAYERS,
-				COMMAND_FILTER_NO_IMMUNITY | COMMAND_FILTER_NO_BOTS,
-				sTargetName,
-				sizeof(sTargetName),
-				bTnIsML)) <= 0) {
-			ReplyToTargetError(iClient, iTargetCount);
-			return Plugin_Handled;
-		}
-
-		if (bTnIsML) {
-			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing progress for %t:", sTargetName);
-		} else {
-			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing progress for %s:", sTargetName);
-		}
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing progress for %s:", sTargetName);
 	}
 
 	TFTeam iTeam = TFTeam_Unassigned;
@@ -1178,30 +1177,36 @@ public Action cmdProgress(int iClient, int iArgC) {
 		char sArg2[32];
 		GetCmdArg(2, sArg2, sizeof(sArg2));
 
-		if (StrEqual(sArg2, "*", false)) {
-			iTeam = TFTeam_Unassigned;
-		} else if (StrEqual(sArg2, "blue", false)) {
-			iTeam = TFTeam_Blue;
-		} else if (StrEqual(sArg2, "red", false)) {
-			iTeam = TFTeam_Red;
+		if (StrEqual(sArg2, "*")) {
+			iClass = TFClass_Unknown;
 		} else {
-			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Unknown team '%s'. Expected */red/blue.", sArg2);
-			return Plugin_Handled;
+			iClass = TF2_GetClass(sArg2);
+
+			if (iClass == TFClass_Unknown) {
+				if (StrEqual(sArg2, "s")) {
+					iClass = TFClass_Soldier;
+				} else if (StrEqual(sArg2, "d")) {
+					iClass = TFClass_DemoMan;
+				} else {
+					CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Unknown class '%s'. Expected */scout/sniper/(s)oldier/(d)emoman/medic/heavy/pyro/spy/engineer.", sArg2);
+					return Plugin_Handled;
+				}
+			}
 		}
 
 		if (iArgC >= 3) {
 			char sArg3[32];
 			GetCmdArg(3, sArg3, sizeof(sArg3));
 
-			if (StrEqual(sArg3, "*")) {
-				iClass = TFClass_Unknown;
+			if (StrEqual(sArg3, "*", false)) {
+			iTeam = TFTeam_Unassigned;
+			} else if (StrEqual(sArg3, "blue", false) || StrEqual(sArg3, "b", false)) {
+				iTeam = TFTeam_Blue;
+			} else if (StrEqual(sArg3, "red", false) || StrEqual(sArg3, "r", false)) {
+				iTeam = TFTeam_Red;
 			} else {
-				iClass = TF2_GetClass(sArg3);
-
-				if (iClass == TFClass_Unknown) {
-					CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Unknown class '%s'. Expected */scout/sniper/soldier/demoman/medic/heavy/pyro/spy/engineer.", sArg3);
-					return Plugin_Handled;
-				}
+				CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Unknown team '%s'. Expected */(r)ed/(b)lue.", sArg3);
+				return Plugin_Handled;
 			}
 		}
 	}
@@ -1264,10 +1269,14 @@ public Action cmdProgress(int iClient, int iArgC) {
 	return Plugin_Handled;
 }
 
+public Action cmdProgressMe(int iClient, int iArgC) {
+	FakeClientCommand(iClient, "sm_progress @me");
+	return Plugin_Handled;
+}
 
 public Action cmdRegress(int iClient, int iArgC) {
 	if (iArgC == 0 || iArgC > 4) {
-		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Usage: sm_regress <target> [*/red/blue] [*/scout/sniper/soldier/demoman/medic/heavy/pyro/spy/engineer] [*/map]");
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Usage: sm_regress <target> [*/scout/sniper/(s)oldier/(d)emoman/medic/heavy/pyro/spy/engineer] [*/(r)ed/(b)lue] [*/map]");
 		return Plugin_Handled;
 	}
 
@@ -1278,30 +1287,36 @@ public Action cmdRegress(int iClient, int iArgC) {
 		char sArg2[32];
 		GetCmdArg(2, sArg2, sizeof(sArg2));
 
-		if (StrEqual(sArg2, "*", false)) {
-			iTeam = TFTeam_Unassigned;
-		} else if (StrEqual(sArg2, "blue", false)) {
-			iTeam = TFTeam_Blue;
-		} else if (StrEqual(sArg2, "red", false)) {
-			iTeam = TFTeam_Red;
+		if (StrEqual(sArg2, "*")) {
+			iClass = TFClass_Unknown;
 		} else {
-			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Unknown team '%s'. Expected */red/blue.", sArg2);
-			return Plugin_Handled;
+			iClass = TF2_GetClass(sArg2);
+
+			if (iClass == TFClass_Unknown) {
+				if (StrEqual(sArg2, "s")) {
+					iClass = TFClass_Soldier;
+				} else if (StrEqual(sArg2, "d")) {
+					iClass = TFClass_DemoMan;
+				} else {
+					CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Unknown class '%s'. Expected */scout/sniper/(s)oldier/(d)emoman/medic/heavy/pyro/spy/engineer.", sArg2);
+					return Plugin_Handled;
+				}
+			}
 		}
 
 		if (iArgC >= 3) {
 			char sArg3[32];
 			GetCmdArg(3, sArg3, sizeof(sArg3));
 
-			if (StrEqual(sArg3, "*")) {
-				iClass = TFClass_Unknown;
+			if (StrEqual(sArg3, "*", false)) {
+			iTeam = TFTeam_Unassigned;
+			} else if (StrEqual(sArg3, "blue", false) || StrEqual(sArg3, "b", false)) {
+				iTeam = TFTeam_Blue;
+			} else if (StrEqual(sArg3, "red", false) || StrEqual(sArg3, "r", false)) {
+				iTeam = TFTeam_Red;
 			} else {
-				iClass = TF2_GetClass(sArg3);
-
-				if (iClass == TFClass_Unknown) {
-					CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Unknown class '%s'. Expected */scout/sniper/soldier/demoman/medic/heavy/pyro/spy/engineer.", sArg3);
-					return Plugin_Handled;
-				}
+				CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Unknown team '%s'. Expected */(r)ed/(b)lue.", sArg3);
+				return Plugin_Handled;
 			}
 		}
 	}
