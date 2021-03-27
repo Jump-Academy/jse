@@ -1,9 +1,10 @@
 #pragma semicolon 1
+#pragma newdecls required
 
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.3.5"
+#define PLUGIN_VERSION "0.4.0"
 
 #define API_URL "https://api.jumpacademy.tf/mapinfo_json"
 
@@ -22,6 +23,8 @@
 
 GlobalForward g_hTrackerLoadedForward;
 GlobalForward g_hTrackerDBConnectedForward;
+GlobalForward g_hProgressLoadForward;
+GlobalForward g_hProgressLoadedForward;
 GlobalForward g_hCheckpointReachedForward;
 GlobalForward g_hNewCheckpointReachedForward;
 
@@ -34,19 +37,23 @@ int g_iBonusCourses;
 
 #include <jse_tracker>
 #include "jse_tracker_course.sp"
-#include "jse_tracker_database.sp"
+
+ArrayList g_hProgress[MAXPLAYERS+1];
+int g_iLastBackupTime[MAXPLAYERS+1];
 
 ConVar g_hCVProximity;
 ConVar g_hCVTeleSettleTime;
 ConVar g_hCVInterval;
+ConVar g_hCVPersist;
 
 float g_fProximity;
 float g_fTeleSettleTime;
+bool g_bPersist;
+
+#include "jse_tracker_database.sp"
 
 Checkpoint g_eNearestCheckpoint[MAXPLAYERS+1];
 Checkpoint g_eNearestCheckpointLanded[MAXPLAYERS+1];
-
-ArrayList g_hProgress[MAXPLAYERS+1];
 
 float g_fLastTeleport[MAXPLAYERS+1];
 
@@ -67,11 +74,14 @@ public void OnPluginStart() {
 	g_hCVProximity = CreateConVar("jse_tracker_proximity", "1000.0", "Max distance to check near checkpoints", FCVAR_NOTIFY, true, 0.0);
 	g_hCVTeleSettleTime = CreateConVar("jse_tracker_tele_settle_time", "1.0", "Time in seconds to ignore checkpoints after touching a teleport trigger", FCVAR_NOTIFY, true, 0.0);
 	g_hCVInterval = CreateConVar("jse_tracker_interval", "0.5", "Time in seconds between progress checks", FCVAR_NOTIFY, true, 0.0);
+	g_hCVPersist = CreateConVar("jse_tracker_persist", "1", "Persist player progress between sessions", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
 	RegConsoleCmd("sm_whereami", cmdWhereAmI, "Locate calling player");
 	RegConsoleCmd("sm_whereis", cmdWhereIs, "Locate player");
 
 	RegConsoleCmd("sm_progress", cmdProgress, "Show player progress");
+
+	RegAdminCmd("sm_regress", cmdRegress, ADMFLAG_BAN, "Removes the progress of a player");
 
 	DB_Connect();
 
@@ -94,10 +104,16 @@ public void OnPluginStart() {
 
 	g_hTrackerLoadedForward = new GlobalForward("OnTrackerLoaded", ET_Ignore, Param_Cell);
 	g_hTrackerDBConnectedForward = new GlobalForward("OnTrackerDatabaseConnected", ET_Ignore, Param_Cell);
+	g_hProgressLoadForward = new GlobalForward("OnProgressLoad", ET_Hook, Param_Cell);
+	g_hProgressLoadedForward = new GlobalForward("OnProgressLoaded", ET_Ignore, Param_Cell);
 	g_hCheckpointReachedForward = new GlobalForward("OnCheckpointReached", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_hNewCheckpointReachedForward = new GlobalForward("OnNewCheckpointReached", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 
 	AutoExecConfig(true, "jse_tracker");
+}
+
+public void OnPluginEnd() {
+	DB_BackupProgress();
 }
 
 public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErrMax) {
@@ -123,10 +139,6 @@ public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErr
 public void OnMapStart() {
 	DB_AddMap();
 
-	for (int i=1; i<=MaxClients; i++) {
-		ResetClient(i);
-	}
-
 	if (Client_GetCount(true, false)) {
 		SetupTeleportHook();
 		SetupTimer();
@@ -134,6 +146,15 @@ public void OnMapStart() {
 }
 
 public void OnMapEnd() {
+	DB_BackupProgress();
+
+	for (int i=1; i<=MaxClients; i++) {
+		if (IsClientInGame(i)) {
+			ResetClient(i);
+			g_fLastTeleport[i] = 0.0;
+		}
+	}
+
 	for (int i=0; i<g_hCourses.Length; i++) {
 		Course iCourse = view_as<Course>(g_hCourses.Get(i));
 		Course.Destroy(iCourse);
@@ -147,15 +168,24 @@ public void OnMapEnd() {
 	delete g_hTimer;
 }
 
-public void OnClientPutInServer(int iClient) {
+public void OnClientPostAdminCheck(int iClient) {
 	g_hProgress[iClient] = new ArrayList(sizeof(Checkpoint));
 
-	SetupTimer();
+	if (!IsFakeClient(iClient)) {
+		DB_LoadProgress(iClient);
+		SetupTimer();
+	}
 }
 
 public void OnClientDisconnect(int iClient) {
-	ResetClient(iClient);
+	if (!IsFakeClient(iClient)) {
+		DB_BackupProgress(iClient);
+	}
+
+	g_eNearestCheckpoint[iClient].Clear();
+	g_eNearestCheckpointLanded[iClient].Clear();
 	delete g_hProgress[iClient];
+	g_fLastTeleport[iClient] = 0.0;
 
 	if (!Client_GetCount(true, false)) {
 		delete g_hTimer;
@@ -165,6 +195,7 @@ public void OnClientDisconnect(int iClient) {
 public void OnConfigsExecuted() {
 	g_fProximity = g_hCVProximity.FloatValue;
 	g_fTeleSettleTime = g_hCVTeleSettleTime.FloatValue;
+	g_bPersist = g_hCVPersist.BoolValue;
 }
 
 // Custom Callbacks
@@ -324,7 +355,7 @@ public int Native_GetPlayerNearestCheckpoint(Handle hPlugin, int iArgC) {
 	SetNativeCellRef(2, 0);
 	SetNativeCellRef(3, 0);
 	SetNativeCellRef(4, false);
-	
+
 	return false;
 }
 
@@ -429,7 +460,14 @@ public int Native_GetPlayerProgress(Handle hPlugin, int iArgC) {
 
 public int Native_ResetPlayerProgress(Handle hPlugin, int iArgC) {
 	int iClient = GetNativeCell(1);
-	ResetClient(iClient);
+	TFTeam iTeam = GetNativeCell(2);
+	TFClassType iClass = GetNativeCell(3);
+	bool bPersist = GetNativeCell(4);
+
+	char sMapName[32];
+	GetNativeString(5, sMapName, sizeof(sMapName));
+
+	ResetClient(iClient, iTeam, iClass, bPersist, sMapName);
 }
 
 public int Native_ResolveCourseNumber(Handle hPlugin, int iArgC) {
@@ -657,14 +695,14 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 		int iHash = eCheckpoint.iHash;
 		int iCourseNumber = eCheckpoint.GetCourseNumber();
 		int iJumpNumber = eCheckpoint.GetJumpNumber();
-		bool bIsControlPoint = eCheckpoint.IsControlPoint();
+		bool bControlPoint = eCheckpoint.IsControlPoint();
 
 		if (GetEntityFlags(i) & FL_ONGROUND) {
 			Call_StartForward(g_hCheckpointReachedForward);
 			Call_PushCell(i);
 			Call_PushCell(iCourseNumber);
 			Call_PushCell(iJumpNumber);
-			Call_PushCell(bIsControlPoint);
+			Call_PushCell(bControlPoint);
 			Call_Finish();
 
 			g_eNearestCheckpointLanded[i].iHash = iHash;
@@ -676,52 +714,28 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 		}
 
 		ArrayList hJumps = iActiveCourse[i].hJumps;
+		int iPreviousJumps = bControlPoint ? hJumps.Length : iJumpNumber - 1;
 		
-		if (bIsControlPoint) {	
-			for (int j=1; j<=hJumps.Length; j++) {
-				eCheckpoint.Init(
-					iCourseNumber,
-					j,
-					false,
-					iTeam,
-					iClass
-				);
+		for (int j=1; j<=iPreviousJumps; j++) {
+			eCheckpoint.Init(
+				iCourseNumber,
+				j,
+				false,
+				iTeam,
+				iClass
+			);
 
-				if (g_hProgress[i].FindValue(eCheckpoint.iHash, Checkpoint::iHash) == -1) {
-					g_hProgress[i].PushArray(eCheckpoint);
+			if (g_hProgress[i].FindValue(eCheckpoint.iHash, Checkpoint::iHash) == -1) {
+				g_hProgress[i].PushArray(eCheckpoint);
 
-					//SortADTArray(g_hProgress[i], Sort_Ascending, Sort_Integer);
+				//SortADTArray(g_hProgress[i], Sort_Ascending, Sort_Integer);
 
-					Call_StartForward(g_hNewCheckpointReachedForward);
-					Call_PushCell(i);
-					Call_PushCell(iCourseNumber);
-					Call_PushCell(j);
-					Call_PushCell(false);
-					Call_Finish();
-				}
-			}
-		} else {
-			for (int j=1; j<iJumpNumber && j<=hJumps.Length; j++) {
-				eCheckpoint.Init(
-					iCourseNumber,
-					j,
-					false,
-					iTeam,
-					iClass
-				);
-
-				if (g_hProgress[i].FindValue(eCheckpoint.iHash, Checkpoint::iHash) == -1) {
-					g_hProgress[i].PushArray(eCheckpoint);
-
-					//SortADTArray(g_hProgress[i], Sort_Ascending, Sort_Integer);
-
-					Call_StartForward(g_hNewCheckpointReachedForward);
-					Call_PushCell(i);
-					Call_PushCell(iCourseNumber);
-					Call_PushCell(j);
-					Call_PushCell(false);
-					Call_Finish();
-				}
+				Call_StartForward(g_hNewCheckpointReachedForward);
+				Call_PushCell(i);
+				Call_PushCell(iCourseNumber);
+				Call_PushCell(j);
+				Call_PushCell(false);
+				Call_Finish();
 			}
 		}
 
@@ -736,9 +750,11 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 			Call_PushCell(i);
 			Call_PushCell(iCourseNumber);
 			Call_PushCell(iJumpNumber);
-			Call_PushCell(bIsControlPoint);
+			Call_PushCell(bControlPoint);
 			Call_Finish();
 		}
+
+		DB_BackupProgress(i);
 	}
 	
 	return Plugin_Continue;
@@ -756,15 +772,75 @@ void FetchMapData() {
 	g_hHTTPClient.Get(sEndpoint, HTTPRequestCallback_FetchedLayout);
 }
 
-void ResetClient(int iClient) {
-	g_eNearestCheckpoint[iClient].Clear();
-	g_eNearestCheckpointLanded[iClient].Clear();
+void ResetClient(int iClient, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown, bool bPersist=false, char[] sMapName=NULL_STRING) {
+	if (sMapName[0]) {
+		char sCurrentMapName[32];
+		GetCurrentMap(sCurrentMapName, sizeof(sCurrentMapName));
 
-	if (g_hProgress[iClient] != null) {
-		g_hProgress[iClient].Clear();
+		if (StrEqual(sCurrentMapName, sMapName)) {
+			sMapName[0] = '\0';
+		}
 	}
 
-	g_fLastTeleport[iClient] = 0.0;
+	if (!sMapName[0] || sMapName[0] == '*') {
+		bool bReset = sMapName[0] == '*';
+
+		if (!iTeam && !iClass) {
+			g_eNearestCheckpoint[iClient].Clear();
+			g_eNearestCheckpointLanded[iClient].Clear();
+
+			if (g_hProgress[iClient] != null && g_hProgress[iClient].Length) {
+				bReset = true;
+				g_hProgress[iClient].Clear();
+			}
+		} else if (iTeam) {
+			if (g_eNearestCheckpoint[iClient].GetTeam() == iTeam && (!iClass || g_eNearestCheckpoint[iClient].GetClass() == iClass)) {
+				g_eNearestCheckpoint[iClient].Clear();
+			}
+
+			if (g_eNearestCheckpointLanded[iClient].GetTeam() == iTeam && (!iClass || g_eNearestCheckpointLanded[iClient].GetClass() == iClass)) {
+				g_eNearestCheckpointLanded[iClient].Clear();
+			}
+
+			ArrayList hProgress = g_hProgress[iClient];
+			Checkpoint eCheckpoint;
+
+			for (int i=0; i<hProgress.Length; i++) {
+				hProgress.GetArray(i, eCheckpoint);
+
+				if (eCheckpoint.GetTeam() == iTeam && (!iClass || eCheckpoint.GetClass() == iClass)) {
+					bReset = true;
+					hProgress.Erase(i--);
+				}
+			}
+		} else {
+			if (g_eNearestCheckpoint[iClient].GetClass() == iClass) {
+				g_eNearestCheckpoint[iClient].Clear();
+			}
+
+			if (g_eNearestCheckpointLanded[iClient].GetClass() == iClass) {
+				g_eNearestCheckpointLanded[iClient].Clear();
+			}
+
+			ArrayList hProgress = g_hProgress[iClient];
+			Checkpoint eCheckpoint;
+
+			for (int i=0; i<hProgress.Length; i++) {
+				hProgress.GetArray(i, eCheckpoint);
+
+				if (eCheckpoint.GetClass() == iClass) {
+					bReset = true;
+					hProgress.Erase(i--);
+				}
+			}
+		}
+
+		if (bReset && bPersist) {
+			DB_DeleteProgress(iClient, iTeam, iClass, sMapName);
+		}
+	} else if (bPersist) {
+		DB_DeleteProgress(iClient, iTeam, iClass, sMapName);
+	}
 }
 
 void GetClientGroundPosition(int iClient, float fPos[3]) {
@@ -807,12 +883,12 @@ void SetupTimer() {
 	}
 }
 
-void TF2_GetClassName(TFClassType iClass, char[] sName, iLength) {
+void TF2_GetClassName(TFClassType iClass, char[] sName, int iLength) {
   static char sClass[10][10] = {"unknown", "scout", "sniper", "soldier", "demoman", "medic", "heavy", "pyro", "spy", "engineer"};
   strcopy(sName, iLength, sClass[view_as<int>(iClass)]);
 }
 
-void TF2_GetTeamName(TFTeam iTeam, char[] sName, iLength) {
+void TF2_GetTeamName(TFTeam iTeam, char[] sName, int iLength) {
   static char sTeam[4][11] = {"unassigned", "spectator", "red", "blue"};
   strcopy(sName, iLength, sTeam[view_as<int>(iTeam)]);
 }
@@ -1039,6 +1115,105 @@ public Action cmdProgress(int iClient, int iArgC) {
 	}
 
 	delete hCourseList;
+
+	return Plugin_Handled;
+}
+
+
+public Action cmdRegress(int iClient, int iArgC) {
+	if (iArgC == 0 || iArgC > 4) {
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Usage: sm_regress <target> [*/red/blue] [*/scout/sniper/soldier/demoman/medic/heavy/pyro/spy/engineer] [*/map]");
+		return Plugin_Handled;
+	}
+
+	TFTeam iTeam = TFTeam_Unassigned;
+	TFClassType iClass = TFClass_Unknown;
+
+	if (iArgC >= 2) {
+		char sArg2[32];
+		GetCmdArg(2, sArg2, sizeof(sArg2));
+
+		if (StrEqual(sArg2, "*", false)) {
+			iTeam = TFTeam_Unassigned;
+		} else if (StrEqual(sArg2, "blue", false)) {
+			iTeam = TFTeam_Blue;
+		} else if (StrEqual(sArg2, "red", false)) {
+			iTeam = TFTeam_Red;
+		} else {
+			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Unknown team '%s'. Expected */red/blue.", sArg2);
+			return Plugin_Handled;
+		}
+
+		if (iArgC >= 3) {
+			char sArg3[32];
+			GetCmdArg(3, sArg3, sizeof(sArg3));
+
+			if (StrEqual(sArg3, "*")) {
+				iClass = TFClass_Unknown;
+			} else {
+				iClass = TF2_GetClass(sArg3);
+
+				if (iClass == TFClass_Unknown) {
+					CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Unknown class '%s'. Expected */scout/sniper/soldier/demoman/medic/heavy/pyro/spy/engineer.", sArg3);
+					return Plugin_Handled;
+				}
+			}
+		}
+	}
+
+	char sArg1[MAX_NAME_LENGTH];
+	GetCmdArg(1, sArg1, sizeof(sArg1));
+
+	char sTargetName[MAX_TARGET_LENGTH];
+	int iTargetList[MAXPLAYERS], iTargetCount;
+	bool bTnIsML;
+
+	if ((iTargetCount = ProcessTargetString(
+			sArg1,
+			iClient,
+			iTargetList,
+			MAXPLAYERS,
+			COMMAND_FILTER_NO_BOTS,
+			sTargetName,
+			sizeof(sTargetName),
+			bTnIsML)) <= 0) {
+		ReplyToTargetError(iClient, iTargetCount);
+		return Plugin_Handled;
+	}
+
+	char sArg4[32], sMapDesc[32];
+	if (iArgC == 4) {
+		GetCmdArg(4, sArg4, sizeof(sArg4));
+		sMapDesc = sArg4[0] == '*' ? "all maps": sArg4;
+	} else {
+		GetCurrentMap(sArg4, sizeof(sArg4));
+		sMapDesc = "this map";
+	}
+
+	char sRegressType[32];
+	if (iTeam == TFTeam_Unassigned && iClass == TFClass_Unknown) {
+		sRegressType = "all";
+	} else if (iTeam) {
+		TF2_GetTeamName(iTeam, sRegressType, sizeof(sRegressType));
+	}
+
+	if (iClass) {
+		char sClassName[32];
+		TF2_GetClassName(iClass, sClassName, sizeof(sClassName));
+
+		Format(sRegressType, sizeof(sRegressType), "%s%s%s", sRegressType, sRegressType[0] ? " " : "", sClassName);
+	}
+
+	for (int i = 0; i < iTargetCount; i++) {
+		ResetClient(iTargetList[i], iTeam, iClass, true, iArgC < 4 ? "" : sArg4);
+		LogAction(iClient, iTargetList[i], "%L reset %s progress for %L on %s.", iClient, sRegressType, iTargetList[i], iArgC < 4 ? sArg4 : sMapDesc);
+	}
+
+	if (bTnIsML) {
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Reset %s progress for %t on %s.", sRegressType, sTargetName, sMapDesc);
+	} else {
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Reset %s progress for %s on %s.", sRegressType, sTargetName, sMapDesc);
+	}
 
 	return Plugin_Handled;
 }

@@ -259,6 +259,8 @@ const ControlPoint NULL_CONTROLPOINT = view_as<ControlPoint>(0);
 forward void OnTrackerDatabaseConnected(Database hDatabase);
 forward void OnTrackerLoaded(ArrayList hCourses);
 
+forward Action OnProgressLoad(int iClient);
+forward void OnProgressLoaded(int iClient);
 forward void OnCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint);
 forward void OnNewCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint);
 
@@ -272,7 +274,7 @@ native bool GetPlayerNewestCheckpoint(int iClient, int &iCourseNumber, int &iJum
 native bool GetPlayerLastCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint, int &iTimestamp=0, TFTeam &iTeam=TFTeam_Unassigned, TFClassType &iClass=TFClass_Unknown);
 
 native ArrayList GetPlayerProgress(int iClient);
-native void ResetPlayerProgress(int iClient);
+native void ResetPlayerProgress(int iClient, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown, bool bPersist=false, char[] sMapName=NULL_STRING);
 
 native Course ResolveCourseNumber(int iCourseNumber);
 native Jump ResolveJumpNumber(Course iCourse, int iJumpNumber);

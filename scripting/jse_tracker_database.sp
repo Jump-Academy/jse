@@ -14,18 +14,18 @@ public void DB_Callback_Connect(Handle hOwner, Handle hHandle, char[] sError, an
 	g_hDatabase.SetCharset("utf8mb4");
 
 	DB_CreateTables();
-	DB_AddMap();
 
 	Call_StartForward(g_hTrackerDBConnectedForward);
 	Call_PushCell(g_hDatabase);
 	Call_Finish();
 }
 
-public void DB_Callback_CreateTable(Database hDatabase, DBResultSet hResultSet, char[] sError, any aData) {
-	if (hResultSet == null) {
-		SetFailState("Database error while creating table: %s", sError);
-		return;
-	}
+public void DB_Callback_CreateTable_Txn_Success(Database hDatabase, any aData, int iNumQueries, DBResultSet[] hResults, any[] aQueryData) {
+	DB_AddMap();
+}
+
+public void DB_Callback_CreateTable_Txn_Failure(Database hDatabase, any aData, int iNumQueries, const char[] sError, int iFailIndex, any[] aQueryData) {
+	SetFailState("Database error while creating tables: %s", sError);
 }
 
 public void DB_Callback_AddMap(Database hDatabase, DBResultSet hResultSet, char[] sError, any aData) {
@@ -207,11 +207,89 @@ public void DB_Callback_LoadMapInfo_Txn_Success(Database hDatabase, any aData, i
 	Call_StartForward(g_hTrackerLoadedForward);
 	Call_PushCell(g_hCourses);
 	Call_Finish();
+
+	if (g_bPersist) {
+		// Late load
+		for (int i=1; i<=MaxClients; i++) {
+			if (IsClientInGame(i) && !IsFakeClient(i)) {
+				DB_LoadProgress(i);
+			}
+		}
+	}
 }
 
 public void DB_Callback_LoadMapInfo_Txn_Failure(Database hDatabase, any aData, int iNumQueries, const char[] sError, int iFailIndex, any[] aQueryData) {
 	Course iCourse = view_as<Course>(aQueryData[iFailIndex]);
 	LogError("Database error while loading info for course %d: %s", iCourse.iNumber, sError);
+}
+
+public void DB_Callback_BackupProgress_Txn_Success(Database hDatabase, any aData, int iNumQueries, DBResultSet[] hResults, any[] aQueryData) {
+	for (int i=0; i<iNumQueries; i++) {
+		int iClient = GetClientFromSerial(aQueryData[i]);
+		if (iClient) {
+			g_iLastBackupTime[iClient] = aData;
+		}
+	}
+}
+
+public void DB_Callback_BackupProgress_Txn_Failure(Database hDatabase, any aData, int iNumQueries, const char[] sError, int iFailIndex, any[] aQueryData) {
+	int iClient;
+	if (iFailIndex == -1 || !(iClient = GetClientFromSerial(aQueryData[iFailIndex]))) {
+		LogError("Database error while backing up progress: %s", sError);
+	} else {
+		LogError("Database error while backing up progress for %N: %s", iClient, sError);
+	}
+}
+
+public void DB_Callback_LoadProgress(Database hDatabase, DBResultSet hResultSet, char[] sError, any aData) {
+	int iClient = GetClientFromSerial(aData);
+	if (!iClient) {
+		return;
+	}
+
+	if (hResultSet == null) {
+		LogError("Database error while loading progress for player %N: %s", iClient, sError);
+		return;
+	}
+
+	ArrayList hProgress = g_hProgress[iClient];
+	Checkpoint eCheckpoint;
+
+	while (hResultSet.FetchRow()) {
+		int iTeam = hResultSet.FetchInt(0);
+		int iClass = hResultSet.FetchInt(1);
+
+		int iCourseNumber = hResultSet.FetchInt(2);
+		int iJumpNumber = hResultSet.FetchInt(3);
+
+		bool bControlPoint = hResultSet.FetchInt(4) > 0;
+		int iTimestamp = hResultSet.FetchInt(5);
+
+		eCheckpoint.Init(iCourseNumber, iJumpNumber, bControlPoint, view_as<TFTeam>(iTeam), view_as<TFClassType>(iClass));
+		eCheckpoint.iTimestamp = iTimestamp;
+
+		hProgress.PushArray(eCheckpoint);
+	}
+
+	//SortADTArray(hProgress, Sort_Ascending, Sort_Integer);
+
+	g_iLastBackupTime[iClient] = GetTime();
+
+	Call_StartForward(g_hProgressLoadedForward);
+	Call_PushCell(iClient);
+	Call_Finish();
+}
+
+public void DB_Callback_DeleteProgress_Txn_Success(Database hDatabase, any aData, int iNumQueries, DBResultSet[] hResults, any[] aQueryData) {
+}
+
+public void DB_Callback_DeleteProgress_Txn_Failure(Database hDatabase, any aData, int iNumQueries, const char[] sError, int iFailIndex, any[] aQueryData) {
+	int iClient;
+	if (iFailIndex == -1 || !(iClient = GetClientFromSerial(aQueryData[iFailIndex]))) {
+		LogError("Database error while deleting progress: %s", sError);
+	} else {
+		LogError("Database error while deleting progress for %N: %s", iClient, sError);
+	}
 }
 
 // Database helpers
@@ -221,7 +299,9 @@ void DB_Connect() {
 }
 
 void DB_CreateTables() {
-	g_hDatabase.Query(DB_Callback_CreateTable, \
+	Transaction hTxn = new Transaction();
+
+	hTxn.AddQuery( \
 		"CREATE TABLE IF NOT EXISTS `jse_maps`("
 	...		"`id` INT AUTO_INCREMENT,"
 	...		"`filename` VARCHAR(256),"
@@ -230,7 +310,7 @@ void DB_CreateTables() {
 	... 	"UNIQUE(`filename`)"
 	... ") ENGINE=INNODB");
 
-	g_hDatabase.Query(DB_Callback_CreateTable, \
+	hTxn.AddQuery( \
 		"CREATE TABLE IF NOT EXISTS `jse_map_courses`("
 	...		"`id` INT AUTO_INCREMENT,"
 	...		"`map_id` INT NOT NULL,"
@@ -242,7 +322,7 @@ void DB_CreateTables() {
 	...		"REFERENCES `jse_maps`(`id`) ON DELETE CASCADE ON UPDATE CASCADE"
 	... ") ENGINE=INNODB");
 
-	g_hDatabase.Query(DB_Callback_CreateTable, \
+	hTxn.AddQuery( \
 		"CREATE TABLE IF NOT EXISTS `jse_map_jumps`("
 	...		"`id` INT AUTO_INCREMENT,"
 	...		"`map_id` INT NOT NULL,"
@@ -260,7 +340,7 @@ void DB_CreateTables() {
 	...		"REFERENCES `jse_map_courses`(`id`) ON DELETE CASCADE ON UPDATE CASCADE"
 	... ") ENGINE=INNODB");
 
-	g_hDatabase.Query(DB_Callback_CreateTable, \
+	hTxn.AddQuery( \
 		"CREATE TABLE IF NOT EXISTS `jse_map_controlpoints`("
 	...		"`id` INT AUTO_INCREMENT,"
 	...		"`map_id` INT NOT NULL,"
@@ -276,6 +356,50 @@ void DB_CreateTables() {
 	...		"CONSTRAINT `fk_controlpoint_course` FOREIGN KEY(`course_id`)"
 	...		"REFERENCES `jse_map_courses`(`id`) ON DELETE CASCADE ON UPDATE CASCADE"
 	... ") ENGINE=INNODB");
+
+	hTxn.AddQuery( \
+		"CREATE TABLE IF NOT EXISTS `jse_progress_jumps`("
+	...		"`id` INT AUTO_INCREMENT,"
+	...		"`auth` BIGINT NOT NULL,"
+	...		"`map_id` INT NOT NULL,"
+	...		"`team` INT NOT NULL,"
+	...		"`class` INT NOT NULL,"
+	...		"`course_id` INT NOT NULL,"
+	...		"`jump_id` INT NOT NULL,"
+	...		"`timestamp` DATETIME ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+	...		"PRIMARY KEY(`id`),"
+	...		"INDEX (`timestamp`),"
+	... 	"UNIQUE(`auth`, `map_id`, `team`, `class`, `course_id`, `jump_id`),"
+	...		"CONSTRAINT `fk_progress_jump_map` FOREIGN KEY(`map_id`)"
+	...		"REFERENCES `jse_maps`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+	...		"CONSTRAINT `fk_progress_jump_course` FOREIGN KEY(`course_id`)"
+	...		"REFERENCES `jse_map_courses`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+	...		"CONSTRAINT `fk_progress_jump_jump` FOREIGN KEY(`jump_id`)"
+	...		"REFERENCES `jse_map_jumps`(`id`) ON DELETE CASCADE ON UPDATE CASCADE"
+	... ") ENGINE=INNODB");
+
+	hTxn.AddQuery( \
+		"CREATE TABLE IF NOT EXISTS `jse_progress_controlpoints`("
+	...		"`id` INT AUTO_INCREMENT,"
+	...		"`auth` BIGINT NOT NULL,"
+	...		"`map_id` INT NOT NULL,"
+	...		"`team` INT NOT NULL,"
+	...		"`class` INT NOT NULL,"
+	...		"`course_id` INT NOT NULL,"
+	...		"`controlpoint_id` INT NOT NULL,"
+	...		"`timestamp` DATETIME ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+	...		"PRIMARY KEY(`id`),"
+	...		"INDEX (`timestamp`),"
+	... 	"UNIQUE(`auth`, `map_id`, `team`, `class`, `course_id`, `controlpoint_id`),"
+	...		"CONSTRAINT `fk_progress_controlpoint_map` FOREIGN KEY(`map_id`)"
+	...		"REFERENCES `jse_maps`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+	...		"CONSTRAINT `fk_progress_controlpoint_course` FOREIGN KEY(`course_id`)"
+	...		"REFERENCES `jse_map_courses`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+	...		"CONSTRAINT `fk_progress_controlpoint_controlpoint` FOREIGN KEY(`controlpoint_id`)"
+	...		"REFERENCES `jse_map_controlpoints`(`id`) ON DELETE CASCADE ON UPDATE CASCADE"
+	... ") ENGINE=INNODB");
+
+	g_hDatabase.Execute(hTxn, DB_Callback_CreateTable_Txn_Success, DB_Callback_CreateTable_Txn_Failure, 0, DBPrio_High);
 }
 
 void DB_AddMap() {
@@ -291,7 +415,7 @@ void DB_AddMap() {
 		"INSERT IGNORE INTO `jse_maps`(`filename`)"
 	...	"VALUES ('%s')", sMapName);
 
-	g_hDatabase.Query(DB_Callback_AddMap, sQuery);
+	g_hDatabase.Query(DB_Callback_AddMap, sQuery, 0, DBPrio_High);
 }
 
 void DB_AddCourse(Transaction hTxn, int iCourse, char[] sName) {
@@ -346,13 +470,13 @@ void DB_ExecuteAddMapInfoTX(Transaction hTxn) {
 	char sQuery[1024];
 	g_hDatabase.Format(sQuery, sizeof(sQuery), "UPDATE `jse_maps` SET `lastupdate`=UTC_TIMESTAMP WHERE `id`=%d", g_iMapID);
 	hTxn.AddQuery(sQuery);
-	g_hDatabase.Execute(hTxn, DB_Callback_AddMapInfo_Txn_Success, DB_Callback_AddMapInfo_Txn_Failure);
+	g_hDatabase.Execute(hTxn, DB_Callback_AddMapInfo_Txn_Success, DB_Callback_AddMapInfo_Txn_Failure, 0, DBPrio_High);
 }
 
 void DB_LoadMapData() {
 	char sQuery[1024];
 	g_hDatabase.Format(sQuery, sizeof(sQuery), "SELECT `id`, `course`, `name` FROM `jse_map_courses` WHERE `map_id`=%d", g_iMapID);
-	g_hDatabase.Query(DB_Callback_LoadMapData, sQuery);
+	g_hDatabase.Query(DB_Callback_LoadMapData, sQuery, 0, DBPrio_High);
 }
 
 void DB_LookupMapID() {
@@ -361,7 +485,162 @@ void DB_LookupMapID() {
 
 	char sQuery[1024];
 	g_hDatabase.Format(sQuery, sizeof(sQuery), "SELECT `id`, `lastupdate` FROM `jse_maps` WHERE `filename`='%s'", sMapName);
-	g_hDatabase.Query(DB_Callback_LookupMapID, sQuery);
+	g_hDatabase.Query(DB_Callback_LookupMapID, sQuery, 0, DBPrio_High);
+}
+
+void DB_LoadProgress(int iClient) {
+	if (!g_bPersist) {
+		return;
+	}
+
+	char sAuthID[64];
+	if (!GetClientAuthId(iClient, AuthId_SteamID64, sAuthID, sizeof(sAuthID))) {
+		LogError("Failed to load progress due to bad auth ID: %L", iClient);
+		return;
+	}
+
+	Call_StartForward(g_hProgressLoadForward);
+	Call_PushCell(iClient);
+
+	Action iReturn;
+	if (Call_Finish(iReturn) == SP_ERROR_NONE && iReturn != Plugin_Continue) {
+		return;
+	}
+
+	char sQuery[1024];
+	g_hDatabase.Format(sQuery, sizeof(sQuery), \
+		"SELECT `team`, `class`, `course`, `jump`, `controlpoint_id`, `timestamp`"
+	...	"FROM"
+	...	"("
+	...	"	SELECT `team`, `class`, `course_id`, NULL AS `jump_id`, `controlpoint_id`, `timestamp` FROM `jse_progress_controlpoints`"
+	...	"	WHERE `auth`=%s AND `map_id`=%d"
+	...	"	UNION ALL"
+	...	"	SELECT `team`, `class`, `course_id`, `jump_id`, NULL AS `controlpoint_id`, `timestamp` FROM `jse_progress_jumps`"
+	...	"	WHERE `auth`=%s AND `map_id`=%d"
+	...	") `p`"
+	...	"LEFT JOIN `jse_map_courses` AS `mc` ON `p`.`course_id`=`mc`.`id`"
+	...	"LEFT JOIN `jse_map_jumps` AS `mj` ON `p`.`jump_id`=`mj`.`id`",
+		sAuthID, g_iMapID, sAuthID, g_iMapID);
+
+	g_hDatabase.Query(DB_Callback_LoadProgress, sQuery, GetClientSerial(iClient));
+}
+
+void DB_BackupProgress(int iClient=0) {
+	if (!g_bPersist) {
+		return;
+	}
+
+	Transaction hTxn = new Transaction();
+	int iTotalQueries = 0;
+
+	if (iClient) {
+		iTotalQueries = DB_BackupProgress_Client(hTxn, iClient);
+	} else {
+		for (int i=1; i<=MaxClients; i++) {
+			if (IsClientInGame(i) && !IsFakeClient(i)) {
+				iTotalQueries += DB_BackupProgress_Client(hTxn, i);
+			}
+		}
+	}
+
+	if (iTotalQueries) {
+		g_hDatabase.Execute(hTxn, DB_Callback_BackupProgress_Txn_Success, DB_Callback_BackupProgress_Txn_Failure, GetTime(), DBPrio_Low);
+	} else {
+		delete hTxn;
+	}
+}
+
+int DB_BackupProgress_Client(Transaction hTxn, int iClient) {
+	char sAuthID[64];
+	if (!GetClientAuthId(iClient, AuthId_SteamID64, sAuthID, sizeof(sAuthID))) {
+		LogError("Failed to back up progress due to bad auth ID: %L", iClient);
+		return 0;
+	}
+
+	ArrayList hProgress = g_hProgress[iClient];
+	int iLastBackupTime = g_iLastBackupTime[iClient];
+
+	Checkpoint eCheckpoint;
+
+	char sQuery[1024];
+	int iTotalQueries = 0;
+
+	for (int i=0; i<hProgress.Length; i++) {
+		hProgress.GetArray(i, eCheckpoint);
+
+		if (eCheckpoint.iTimestamp <= iLastBackupTime) {
+			continue;
+		}
+
+		Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
+
+		if (eCheckpoint.IsControlPoint()) {
+			ControlPoint iControlPoint = iCourse.iControlPoint;
+
+			g_hDatabase.Format(sQuery, sizeof(sQuery), \
+				"INSERT IGNORE INTO `jse_progress_controlpoints`(`auth`, `map_id`, `team`, `class`, `course_id`, `controlpoint_id`)"
+			...	"VALUES (%s, %d, %d, %d, %d, %d)",
+			sAuthID, GetTrackerMapID(), eCheckpoint.GetTeam(), eCheckpoint.GetClass(), iCourse.iID, iControlPoint.iID);
+		} else {
+			Jump iJump = ResolveJumpNumber(iCourse, eCheckpoint.GetJumpNumber());
+
+			g_hDatabase.Format(sQuery, sizeof(sQuery), \
+				"INSERT IGNORE INTO `jse_progress_jumps`(`auth`, `map_id`, `team`, `class`, `course_id`, `jump_id`)"
+			...	"VALUES (%s, %d, %d, %d, %d, %d)",
+			sAuthID, GetTrackerMapID(), eCheckpoint.GetTeam(), eCheckpoint.GetClass(), iCourse.iID, iJump.iID);
+		}
+
+		hTxn.AddQuery(sQuery, GetClientSerial(iClient));
+		iTotalQueries++;
+	}
+
+	return iTotalQueries;
+}
+
+void DB_DeleteProgress(int iClient, TFTeam iTeam, TFClassType iClass, char[] sMapName) {
+	char sAuthID[64];
+	if (!GetClientAuthId(iClient, AuthId_SteamID64, sAuthID, sizeof(sAuthID))) {
+		LogError("Failed to delete progress due to bad auth ID: %L", iClient);
+		return;
+	}
+
+	char sQuery[1024];
+
+	Transaction hTxn = new Transaction();
+
+	char sQueryMapID[256];
+
+	if (sMapName[0]) {
+		if (sMapName[0] != '*') {
+			g_hDatabase.Format(sQueryMapID, sizeof(sQueryMapID), "AND `map_id`=(SELECT `id` FROM `jse_maps` WHERE `filename`='%s')", sMapName);
+		}
+	} else {
+		FormatEx(sQueryMapID, sizeof(sQueryMapID), "AND `map_id`=%d", g_iMapID);
+	}
+
+	char sQueryTeam[32];
+	if (iTeam) {
+		FormatEx(sQueryTeam, sizeof(sQueryTeam), "AND `team`=%d", iTeam);
+	}
+
+	char sQueryClass[32];
+	if (iClass) {
+		FormatEx(sQueryClass, sizeof(sQueryClass), "AND `class`=%d", iClass);
+	}
+
+	FormatEx(sQuery, sizeof(sQuery), \
+		"DELETE FROM `jse_progress_jumps` WHERE `auth`=%s %s %s %s",
+		sAuthID, sQueryMapID, sQueryTeam, sQueryClass);
+
+	hTxn.AddQuery(sQuery, GetClientSerial(iClient));
+
+	FormatEx(sQuery, sizeof(sQuery), \
+		"DELETE FROM `jse_progress_controlpoints` WHERE `auth`=%s %s %s %s",
+		sAuthID, sQueryMapID, sQueryTeam, sQueryClass);
+
+	hTxn.AddQuery(sQuery, GetClientSerial(iClient));
+
+	g_hDatabase.Execute(hTxn, DB_Callback_DeleteProgress_Txn_Success, DB_Callback_DeleteProgress_Txn_Failure);
 }
 
 // Timers
