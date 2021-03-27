@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.2"
+#define PLUGIN_VERSION "0.1.3"
 
 #include <sourcemod>
 #include <sdktools>
@@ -142,12 +142,13 @@ void AddScore(int iClient, int iScore) {
 }
 
 int ComputeScore(int iClient) {
-	ArrayList hProgress = GetPlayerProgress(iClient);
+	ArrayList hProgress = new ArrayList(sizeof(Checkpoint));
+	int iCheckpoints = GetPlayerProgress(iClient, hProgress);
 
 	Checkpoint eCheckpoint;
 
 	int iScore = 0;
-	for (int i=0; i<hProgress.Length; i++) {
+	for (int i=0; i<iCheckpoints; i++) {
 		hProgress.GetArray(i, eCheckpoint, sizeof(Checkpoint));
 		if (eCheckpoint.IsControlPoint() || eCheckpoint.GetJumpNumber() > 1) {
 			iScore++;

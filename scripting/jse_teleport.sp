@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"0.3.6"
+#define PLUGIN_VERSION	"0.3.7"
 
 #include <tf2>
 #include <tf2_stocks>
@@ -160,10 +160,11 @@ bool CheckProgress(int iClient, int iCourseNumber, int iJumpNumber, bool bContro
 	TFTeam iTeam = TF2_GetClientTeam(iClient);
 	TFClassType iClass = TF2_GetPlayerClass(iClient);
 
-	ArrayList hProgress = GetPlayerProgress(iClient);
+	ArrayList hProgress = new ArrayList(sizeof(Checkpoint));
+	int iCheckpoints = GetPlayerProgress(iClient, hProgress);
 
 	bool bFound = false;
-	for (int i=0; i<hProgress.Length && !bFound; i++) {
+	for (int i=0; i<iCheckpoints && !bFound; i++) {
 		Checkpoint eCheckpoint;
 		hProgress.GetArray(i, eCheckpoint, sizeof(Checkpoint));
 
@@ -537,8 +538,6 @@ void SendMainMenu(int iClient, MenuHandler fnMainHandler, MenuHandler fnPlayerHa
 	hMenu.AddItem(NULL_STRING, "Jump", hCourses.Length ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
 
 	hMenu.Display(iClient, 5);
-
-	delete hCourses;
 }
 
 void SendPlayerMenu(int iClient, MenuHandler fnHandler, bool bBackButton=true, bool bImmunity=false) {
@@ -592,7 +591,6 @@ void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJump
 	ArrayList hCourses = GetTrackerCourses();
 
 	if (!hCourses.Length) {
-		delete hCourses;
 		SendMainMenu(iClient, MenuHandler_GotoMain, MenuHandler_GotoPlayer);
 		return;
 	}
@@ -607,8 +605,10 @@ void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJump
 			hCourseNumbers.Push(iCourse.iNumber);
 		}
 	} else {
-		ArrayList hProgress = GetPlayerProgress(iClient);
-		for (int i=0; i<hProgress.Length; i++) {
+		ArrayList hProgress = new ArrayList(sizeof(Checkpoint));
+		int iCheckpoints = GetPlayerProgress(iClient, hProgress);
+
+		for (int i=0; i<iCheckpoints; i++) {
 			Checkpoint eCheckpoint;
 			hProgress.GetArray(i, eCheckpoint, sizeof(Checkpoint));
 
@@ -628,7 +628,6 @@ void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJump
 	if (hCourses.Length == 1 && hCourseNumbers.Length) {
 		SendJumpMenu(iClient, fnJumpHandler, hCourses.Get(0));
 		delete hCourseNumbers;
-		delete hCourses;
 		return;
 	}
 
@@ -667,7 +666,6 @@ void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJump
 
 	delete hBonusCourses;
 	delete hCourseNumbers;
-	delete hCourses;
 
 	hMenu.Display(iClient, 0);
 }
@@ -699,8 +697,10 @@ void SendJumpMenu(int iClient, MenuHandler fnHandler, Course iCourse) {
 	} else {
 		int iFurthestJumpNumber = 0;
 
-		ArrayList hProgress = GetPlayerProgress(iClient);
-		for (int i=0; i<hProgress.Length; i++) {
+		ArrayList hProgress = new ArrayList(sizeof(Checkpoint));
+		int iCheckpoints = GetPlayerProgress(iClient, hProgress);
+
+		for (int i=0; i<iCheckpoints; i++) {
 			Checkpoint eCheckpoint;
 			hProgress.GetArray(i, eCheckpoint, sizeof(Checkpoint));
 

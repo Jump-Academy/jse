@@ -273,8 +273,10 @@ native bool GetPlayerNearestCheckpoint(int iClient, int &iCourseNumber, int &iJu
 native bool GetPlayerNewestCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint, int &iTimestamp=0, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown);
 native bool GetPlayerLastCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint, int &iTimestamp=0, TFTeam &iTeam=TFTeam_Unassigned, TFClassType &iClass=TFClass_Unknown);
 
-native ArrayList GetPlayerProgress(int iClient);
+native int GetPlayerProgress(int iClient, ArrayList hResult, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown, char[] sMapName=NULL_STRING, ProgressLookup pCallback=view_as<ProgressLookup>(0), any aData=0);
 native void ResetPlayerProgress(int iClient, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown, bool bPersist=false, char[] sMapName=NULL_STRING);
+
+typedef ProgressLookup = function void (int iClient, ArrayList hResult, int iResults, char[] sMapName, StringMap hCourseNames, StringMap hCourseLengths, any aData);
 
 native Course ResolveCourseNumber(int iCourseNumber);
 native Jump ResolveJumpNumber(Course iCourse, int iJumpNumber);

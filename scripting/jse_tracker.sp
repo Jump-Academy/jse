@@ -319,18 +319,126 @@ int Sort_Courses(int iIdx1, int iIdx2, Handle hArr, Handle hHandle) {
 	}
 }
 
+public void Callback_ProgressLookup(int iClient, ArrayList hResult, int iResults, char[] sMapName, StringMap hCourseNames, StringMap hCourseLengths, any aData) {
+	// (Team, Class) => StringMap(char[] => int)
+	StringMap hProgressMap[4][10];
+
+	int iCaller = aData;
+
+	char sBuffer[256];
+	char sKey[8], sCourseName[128];
+
+	Checkpoint eCheckpoint;
+
+	for (int i=0; i<iResults; i++) {
+		hResult.GetArray(i, eCheckpoint, sizeof(Checkpoint));
+
+		TFTeam iTeam = eCheckpoint.GetTeam();
+		TFClassType iClass = eCheckpoint.GetClass();
+
+		StringMap hMap = hProgressMap[iTeam][iClass];
+		if (!hMap) {
+			hMap = new StringMap();
+			hProgressMap[iTeam][iClass] = hMap;
+		}
+
+		int iCourseNumber = eCheckpoint.GetCourseNumber();
+		IntToString(iCourseNumber, sKey, sizeof(sKey));
+
+		int iJumpNumber = eCheckpoint.GetJumpNumber();
+
+		int iLastJump;
+		if (hMap.GetValue(sKey, iLastJump)) {
+			// iLastJump = 0 if checkpoint was a control point
+			if (iLastJump && iJumpNumber > iLastJump) {
+				hMap.SetValue(sKey, iJumpNumber);
+			}
+		} else {
+			hMap.SetValue(sKey, iJumpNumber);
+		}
+	}
+
+	delete hResult;
+
+	int iBufferCount = 1;
+
+	for (int i=0; i<sizeof(hProgressMap); i++) {
+		for (int j=0; j<sizeof(hProgressMap[]); j++) {
+			StringMap hMap = hProgressMap[i][j];
+			if (!hMap) {
+				continue;
+			}
+
+			StringMapSnapshot hSnapshot = hMap.Snapshot();
+
+			for (int k=0; k<hSnapshot.Length; k++) {
+				hSnapshot.GetKey(k, sKey, sizeof(sKey));
+				hCourseNames.GetString(sKey, sCourseName, sizeof(sCourseName));
+
+				if (!sCourseName[0]) {
+					FormatEx(sCourseName, sizeof(sCourseName), "Course");
+				}
+
+				int iJumpsTotal;
+				hCourseLengths.GetValue(sKey, iJumpsTotal);
+
+				int iLastJump;
+				if (!hMap.GetValue(sKey, iLastJump)) {
+					continue;
+				}
+
+				char sTeamName[11];
+				TF2_GetTeamName(view_as<TFTeam>(i), sTeamName, sizeof(sTeamName));
+
+				char sClassName[10];
+				TF2_GetClassName(view_as<TFClassType>(j), sClassName, sizeof(sClassName));
+
+				Format(sBuffer, sizeof(sBuffer), "%s{white}- %N (%s, %s):\n", sBuffer, iClient, sTeamName, sClassName);
+
+				if (iLastJump) {
+					Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\n", sBuffer, sCourseName, iLastJump, iJumpsTotal);
+				} else {
+					Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\t\t{lime}Completed\n", sBuffer, sCourseName, iJumpsTotal, iJumpsTotal);
+				}
+
+				if (++iBufferCount >= 3) {
+					int iLength = strlen(sBuffer);
+					sBuffer[iLength-1] = '\0'; // Remove newline
+
+					CReplyToCommand(iCaller, sBuffer);
+
+					sBuffer[0] = '\0';
+					iBufferCount = 0;
+				}
+
+			}
+
+			delete hSnapshot;
+			delete hMap;
+		}
+	}
+
+	if (!iResults) {
+		Format(sBuffer, sizeof(sBuffer), "%s\n{white}- %N {lightgray}(No progress recorded)", sBuffer, iClient);
+	}
+
+	if (sBuffer[0]) {
+		CReplyToCommand(iCaller, sBuffer);
+	}
+}
+
 // Natives
 
 public int Native_IsLoaded(Handle hPlugin, int iArgC) {
 	return g_bLoaded;
 }
 
-public int Native_GetDatabase(Handle hPlugin, int iArgC) {
-	return view_as<int>(g_hDatabase);
+public any Native_GetDatabase(Handle hPlugin, int iArgC) {
+	return g_hDatabase;
 }
 
-public int Native_GetCourses(Handle hPlugin, int iArgC) {
-	return view_as<int>(g_hCourses.Clone());
+public any Native_GetCourses(Handle hPlugin, int iArgC) {
+	return g_hCourses;
 }
 
 public int Native_GetMapID(Handle hPlugin, int iArgC) {
@@ -432,30 +540,59 @@ public int Native_GetPlayerLastCheckpoint(Handle hPlugin, int iArgC) {
 
 public int Native_GetPlayerProgress(Handle hPlugin, int iArgC) {
 	int iClient = GetNativeCell(1);
+	ArrayList hResult = GetNativeCell(2);
+
+	if (hResult.BlockSize != sizeof(Checkpoint)) {
+		ThrowError("ArrayList block size must match Checkpoint struct size");
+	}
+
+	TFTeam iTeam = GetNativeCell(3);
+	TFClassType iClass = GetNativeCell(4);
+
+	char sMapName[32];
+	GetNativeString(5, sMapName, sizeof(sMapName));
+
+	ProgressLookup pCallback = view_as<ProgressLookup>(GetNativeFunction(6));
+
+	any aData = GetNativeCell(7);
+
+	if (sMapName[0] && !pCallback) {
+		ThrowError("Callback function is required with map query");
+	}
+
+	if (sMapName[0]) {
+		DB_GetProgress(iClient, hResult, iTeam, iClass, sMapName, pCallback, aData);
+		return -1;
+	}
 
 	ArrayList hProgress = g_hProgress[iClient];
-	if (hProgress == null) {
-		return 0; // null
-	}
+	int iCheckpoints = hProgress.Length;
 
-	TFTeam iTeam = TF2_GetClientTeam(iClient);
-	TFClassType iClass = TF2_GetPlayerClass(iClient);
+	int iCount;
 
-	ArrayList hList = new ArrayList(sizeof(Checkpoint));
+	if (hProgress != null && iCheckpoints) {
+		Checkpoint eCheckpoint;
 
-	Checkpoint eCheckpoint;
+		for (int i=0; i<iCheckpoints; i++) {
+			hProgress.GetArray(i, eCheckpoint);
 
-	for (int i=0; i<hProgress.Length; i++) {
-		hProgress.GetArray(i, eCheckpoint, sizeof(Checkpoint));
-
-		if (eCheckpoint.GetTeam() != iTeam || eCheckpoint.GetClass() != iClass) {
-			continue;
+			if ((!iTeam || eCheckpoint.GetTeam() == iTeam) && (!iClass || eCheckpoint.GetClass() == iClass)) {
+				hResult.PushArray(eCheckpoint);
+				iCount++;
+			}
 		}
-
-		hList.PushArray(eCheckpoint);
 	}
 
-	return view_as<int>(hList);
+	if (pCallback) {
+		Call_StartFunction(null, pCallback);
+		Call_PushCell(iClient);
+		Call_PushCell(hResult);
+		Call_PushCell(iCount);
+		Call_PushCell(aData);
+		Call_Finish();
+	}
+
+	return iCount;
 }
 
 public int Native_ResetPlayerProgress(Handle hPlugin, int iArgC) {
@@ -470,7 +607,7 @@ public int Native_ResetPlayerProgress(Handle hPlugin, int iArgC) {
 	ResetClient(iClient, iTeam, iClass, bPersist, sMapName);
 }
 
-public int Native_ResolveCourseNumber(Handle hPlugin, int iArgC) {
+public any Native_ResolveCourseNumber(Handle hPlugin, int iArgC) {
 	int iCourseNumber = GetNativeCell(1);
 	Course iCourse = NULL_COURSE;
 
@@ -482,10 +619,10 @@ public int Native_ResolveCourseNumber(Handle hPlugin, int iArgC) {
 		}
 	}
 
-	return view_as<int>(iCourse);
+	return iCourse;
 }
 
-public int Native_ResolveJumpNumber(Handle hPlugin, int iArgC) {
+public any Native_ResolveJumpNumber(Handle hPlugin, int iArgC) {
 	Course iCourse = GetNativeCell(1);
 	int iJumpNumber = GetNativeCell(2);
 
@@ -495,7 +632,7 @@ public int Native_ResolveJumpNumber(Handle hPlugin, int iArgC) {
 		return view_as<int>(NULL_JUMP);
 	}
 
-	return view_as<int>(hJumps.Get(iJumpNumber-1));
+	return hJumps.Get(iJumpNumber-1);
 }
 
 public int Native_GetCourseDisplayName(Handle hPlugin, int iArgC) {
@@ -974,7 +1111,7 @@ public Action cmdWhereIs(int iClient, int iArgC) {
 	for (int i = 0; i < iTargetCount; i++) {
 		int iTarget = iTargetList[i];
 	
-		if (GetClientTeam(iTarget) <= view_as<int>(TFTeam_Spectator)) {
+		if (TF2_GetClientTeam(iTarget) <= TFTeam_Spectator) {
 			CReplyToCommand(iClient, "\t{limegreen}%N {white}has not joined a team.", iTarget);
 		} else if (iTime-g_eNearestCheckpointLanded[iTarget].iTimestamp <= CHECKPOINT_TIME_CUTOFF) {
 			Checkpoint eCheckpoint;
@@ -995,7 +1132,9 @@ public Action cmdWhereIs(int iClient, int iArgC) {
 }
 
 public Action cmdProgress(int iClient, int iArgC) {
-	if (!g_hCourses.Length) {
+	// Usage: sm_progress [target] [*/red/blue] [*/scout/sniper/soldier/demoman/medic/heavy/pyro/spy/engineer] [*/map]
+
+	if (!g_hCourses.Length && iArgC < 4) {
 		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}No courses were found for this map.");
 		return Plugin_Handled;
 	}
@@ -1004,7 +1143,11 @@ public Action cmdProgress(int iClient, int iArgC) {
 	int iTargetList[MAXPLAYERS], iTargetCount;
 	bool bTnIsML;
 
-	if (iArgC == 1) {
+	if (iArgC == 0) {
+		iTargetList[iTargetCount++] = iClient;
+
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing your progress:");
+	} else {
 		char sArg1[32];
 		GetCmdArg(1, sArg1, sizeof(sArg1));
 	 
@@ -1013,7 +1156,7 @@ public Action cmdProgress(int iClient, int iArgC) {
 				iClient,
 				iTargetList,
 				MAXPLAYERS,
-				COMMAND_FILTER_NO_IMMUNITY,
+				COMMAND_FILTER_NO_IMMUNITY | COMMAND_FILTER_NO_BOTS,
 				sTargetName,
 				sizeof(sTargetName),
 				bTnIsML)) <= 0) {
@@ -1021,42 +1164,67 @@ public Action cmdProgress(int iClient, int iArgC) {
 			return Plugin_Handled;
 		}
 
-		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing progress for %s:", sTargetName);
-	} else {
-		iTargetList[iTargetCount++] = iClient;
-
-		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing your progress:");
+		if (bTnIsML) {
+			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing progress for %t:", sTargetName);
+		} else {
+			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Showing progress for %s:", sTargetName);
+		}
 	}
 
-	ArrayList hCourseList = g_hCourses.Clone();
-	SortADTArrayCustom(hCourseList, Sort_Courses);
+	TFTeam iTeam = TFTeam_Unassigned;
+	TFClassType iClass = TFClass_Unknown;
 
-	char sBuffer[256];
-	for (int i = 0; i < iTargetCount; i++) {
-		int iTarget = iTargetList[i];
+	if (iArgC >= 2) {
+		char sArg2[32];
+		GetCmdArg(2, sArg2, sizeof(sArg2));
 
-		TFTeam iTeam = TF2_GetClientTeam(iTarget);
-		TFClassType iClass = TF2_GetPlayerClass(iTarget);
-
-		if (iArgC) {
-			char sTeamName[11];
-			TF2_GetTeamName(iTeam, sTeamName, sizeof(sTeamName));
-
-			char sClassName[10];
-			TF2_GetClassName(iClass, sClassName, sizeof(sClassName));
-
-			FormatEx(sBuffer, sizeof(sBuffer), "{white}- %N (%s, %s):\n", iTarget, sTeamName, sClassName);
+		if (StrEqual(sArg2, "*", false)) {
+			iTeam = TFTeam_Unassigned;
+		} else if (StrEqual(sArg2, "blue", false)) {
+			iTeam = TFTeam_Blue;
+		} else if (StrEqual(sArg2, "red", false)) {
+			iTeam = TFTeam_Red;
+		} else {
+			CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Unknown team '%s'. Expected */red/blue.", sArg2);
+			return Plugin_Handled;
 		}
 
-		ArrayList hProgress = g_hProgress[iTarget];
+		if (iArgC >= 3) {
+			char sArg3[32];
+			GetCmdArg(3, sArg3, sizeof(sArg3));
 
-		Checkpoint eCheckpoint;
+			if (StrEqual(sArg3, "*")) {
+				iClass = TFClass_Unknown;
+			} else {
+				iClass = TF2_GetClass(sArg3);
 
-		int iLineCount = 1;
-		int iJumpCountTotal = 0;
-		for (int j=0; j<hCourseList.Length; j++) {
-			Course iCourse = hCourseList.Get(j);
-			int iCourseID = iCourse.iNumber;
+				if (iClass == TFClass_Unknown) {
+					CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Unknown class '%s'. Expected */scout/sniper/soldier/demoman/medic/heavy/pyro/spy/engineer.", sArg3);
+					return Plugin_Handled;
+				}
+			}
+		}
+	}
+
+	if (iArgC == 4) {
+		char sArg4[32];
+		GetCmdArg(4, sArg4, sizeof(sArg4));
+
+		for (int i=0; i<iTargetCount; i++) {
+			GetPlayerProgress(iTargetList[i], new ArrayList(sizeof(Checkpoint)), iTeam, iClass, sArg4, Callback_ProgressLookup, iClient);
+		}
+	} else {
+		ArrayList hCourseList = g_hCourses.Clone();
+		SortADTArrayCustom(hCourseList, Sort_Courses);
+
+		StringMap hCourseNames = new StringMap();
+		StringMap hCourseLengths = new StringMap();
+
+		for (int i=0; i<hCourseList.Length; i++) {
+			Course iCourse = hCourseList.Get(i);
+
+			char sKey[8];
+			IntToString(iCourse.iNumber, sKey, sizeof(sKey));
 
 			char sCourseName[128];
 			GetCourseDisplayName(iCourse, sCourseName, sizeof(sCourseName));
@@ -1064,57 +1232,34 @@ public Action cmdProgress(int iClient, int iArgC) {
 			if (!sCourseName[0]) {
 				FormatEx(sCourseName, sizeof(sCourseName), "Course");
 			}
-			
-			int iJumpCount = 0;
-			int iJumpsTotal = iCourse.hJumps.Length;
 
-			for (int k=0; k<hProgress.Length; k++) {
-				hProgress.GetArray(k, eCheckpoint, sizeof(Checkpoint));
-
-				if (eCheckpoint.GetTeam() != iTeam || eCheckpoint.GetClass() != iClass) {
-					continue;
-				}
-
-				if (iCourseID == eCheckpoint.GetCourseNumber()) {
-					if (eCheckpoint.IsControlPoint()) {
-						Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\t\t{lime}Completed\n", sBuffer, sCourseName, iJumpsTotal, iJumpsTotal);
-						iJumpCount = 0;
-						iLineCount++;
-						break;
-					} else {
-						iJumpCount++;
-						iJumpCountTotal++;
-					}
-				}
-			}
-
-			if (iJumpCount) {
-				Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\n", sBuffer, sCourseName, iJumpCount, iJumpsTotal);
-				iLineCount++;
-			}
-
-			if (iLineCount >= 3) {
-				int iLength = strlen(sBuffer);
-				sBuffer[iLength-1] = '\0'; // Remove newline
-				
-				CReplyToCommand(iClient, sBuffer);
-
-				sBuffer[0] = '\0';
-				iLineCount = 0;
-			}
+			hCourseNames.SetString(sKey, sCourseName);
+			hCourseLengths.SetValue(sKey, iCourse.hJumps.Length);
 		}
 
-		if (!iJumpCountTotal) {
-			Format(sBuffer, sizeof(sBuffer), "%s\t{lightgray}No progress recorded.\n", sBuffer);
-			iLineCount++;
-		}
+		delete hCourseList;
 
-		if (sBuffer[0]) {
-			CReplyToCommand(iClient, sBuffer);
+		Checkpoint eCheckpoint;
+
+		for (int i=0; i<iTargetCount; i++) {
+			int iTarget = iTargetList[i];
+
+			ArrayList hProgress = g_hProgress[iTarget];
+			int iCheckpoints = g_hProgress[iTarget].Length;
+
+			ArrayList hProgressFiltered = new ArrayList(sizeof(Checkpoint));
+
+			for (int j=0; j<iCheckpoints; j++) {
+				hProgress.GetArray(j, eCheckpoint);
+
+				if ((!iTeam || eCheckpoint.GetTeam() == iTeam) && (!iClass || eCheckpoint.GetClass() == iClass)) {
+					hProgressFiltered.PushArray(eCheckpoint);
+				}
+			}
+
+			Callback_ProgressLookup(iTarget, hProgressFiltered, hProgressFiltered.Length, "", hCourseNames, hCourseLengths, iClient);
 		}
 	}
-
-	delete hCourseList;
 
 	return Plugin_Handled;
 }

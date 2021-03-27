@@ -241,6 +241,75 @@ public void DB_Callback_BackupProgress_Txn_Failure(Database hDatabase, any aData
 	}
 }
 
+public void DB_Callback_GetProgress(Database hDatabase, DBResultSet hResultSet, char[] sError, any aData) {
+	char sMapName[32];
+
+	DataPack hDataPack = view_as<DataPack>(aData);
+	hDataPack.Reset();
+
+	int iClient = GetClientFromSerial(hDataPack.ReadCell());
+	ArrayList hResult = hDataPack.ReadCell();
+	hDataPack.ReadString(sMapName, sizeof(sMapName));
+	Function pCallback = view_as<ProgressLookup>(hDataPack.ReadFunction());
+	aData = hDataPack.ReadCell();
+
+	delete hDataPack;
+
+	if (!iClient) {
+		return;
+	}
+
+	if (hResultSet == null) {
+		LogError("Database error while getting progress for player %N: %s", iClient, sError);
+		return;
+	}
+
+	StringMap hCourseNames = new StringMap();
+	StringMap hCourseLengths = new StringMap();
+
+	Checkpoint eCheckpoint;
+
+	while (hResultSet.FetchRow()) {
+		int iTeam = hResultSet.FetchInt(0);
+		int iClass = hResultSet.FetchInt(1);
+
+		int iCourseNumber = hResultSet.FetchInt(2);
+
+		char sCourseName[128];
+		hResultSet.FetchString(3, sCourseName, sizeof(sCourseName));
+
+		int iJumpNumber = hResultSet.FetchInt(4);
+		int iTotalJumps = hResultSet.FetchInt(5);
+
+		bool bControlPoint = hResultSet.FetchInt(6) > 0;
+		int iTimestamp = hResultSet.FetchInt(7);
+
+		eCheckpoint.Init(iCourseNumber, iJumpNumber, bControlPoint, view_as<TFTeam>(iTeam), view_as<TFClassType>(iClass));
+		eCheckpoint.iTimestamp = iTimestamp;
+
+		hResult.PushArray(eCheckpoint);
+
+		char sKey[8];
+		IntToString(iCourseNumber, sKey, sizeof(sKey));
+
+		hCourseNames.SetString(sKey, sCourseName);
+		hCourseLengths.SetValue(sKey, iTotalJumps);
+	}
+
+	Call_StartFunction(null, pCallback);
+	Call_PushCell(iClient);
+	Call_PushCell(hResult);
+	Call_PushCell(hResultSet.RowCount);
+	Call_PushString(sMapName);
+	Call_PushCell(hCourseNames);
+	Call_PushCell(hCourseLengths);
+	Call_PushCell(aData);
+	Call_Finish();
+
+	delete hCourseNames;
+	delete hCourseLengths;
+}
+
 public void DB_Callback_LoadProgress(Database hDatabase, DBResultSet hResultSet, char[] sError, any aData) {
 	int iClient = GetClientFromSerial(aData);
 	if (!iClient) {
@@ -486,6 +555,68 @@ void DB_LookupMapID() {
 	char sQuery[1024];
 	g_hDatabase.Format(sQuery, sizeof(sQuery), "SELECT `id`, `lastupdate` FROM `jse_maps` WHERE `filename`='%s'", sMapName);
 	g_hDatabase.Query(DB_Callback_LookupMapID, sQuery, 0, DBPrio_High);
+}
+
+void DB_GetProgress(int iClient, ArrayList hResult, TFTeam iTeam, TFClassType iClass, char[] sMapName, ProgressLookup pCallback, any aData) {
+	char sAuthID[64];
+	if (!GetClientAuthId(iClient, AuthId_SteamID64, sAuthID, sizeof(sAuthID))) {
+		LogError("Failed to get progress due to bad auth ID: %L", iClient);
+		return;
+	}
+
+	char sQueryMapID[256];
+
+	if (sMapName[0]) {
+		if (sMapName[0] != '*') {
+			g_hDatabase.Format(sQueryMapID, sizeof(sQueryMapID), "`p`.`map_id`=(SELECT `id` FROM `jse_maps` WHERE `filename`='%s')", sMapName);
+		}
+	} else {
+		FormatEx(sQueryMapID, sizeof(sQueryMapID), "`p`.`map_id`=%d", g_iMapID);
+	}
+
+	char sQueryTeam[32];
+	if (iTeam) {
+		FormatEx(sQueryTeam, sizeof(sQueryTeam), "AND `p`.`team`=%d", iTeam);
+	}
+
+	char sQueryClass[32];
+	if (iClass) {
+		FormatEx(sQueryClass, sizeof(sQueryClass), "AND `p`.`class`=%d", iClass);
+	}
+
+	char sQuery[1024];
+	FormatEx(sQuery, sizeof(sQuery), \
+		"SELECT `team`, `class`, `course`, `mc`.`name` AS `course_name`, `jump`, (SELECT COUNT(*) FROM `jse_map_jumps` WHERE `course_id`=`mc`.`id`) AS `total_jumps`, `controlpoint_id`, `timestamp`"
+	...	"FROM"
+	...	"("
+	...	"	SELECT `map_id`, `team`, `class`, `course_id`, NULL AS `jump_id`, `controlpoint_id`, `timestamp` FROM `jse_progress_controlpoints`"
+	...	"	WHERE `auth`=%s"
+	...	"	UNION ALL"
+	...	"	SELECT `map_id`, `team`, `class`, `course_id`, `jump_id`, NULL AS `controlpoint_id`, `timestamp` FROM `jse_progress_jumps`"
+	...	"	WHERE `auth`=%s"
+	...	") `p`"
+	...	"LEFT JOIN `jse_map_courses` AS `mc` ON `p`.`course_id`=`mc`.`id`"
+	...	"LEFT JOIN `jse_map_jumps` AS `mj` ON `p`.`jump_id`=`mj`.`id`"
+	... "WHERE %s %s %s",
+		sAuthID, sAuthID, sQueryMapID, sQueryTeam, sQueryClass);
+
+	DataPack hDataPack = new DataPack();
+	hDataPack.WriteCell(GetClientSerial(iClient));
+	hDataPack.WriteCell(hResult);
+
+	if (sMapName[0]) {
+		hDataPack.WriteString(sMapName);
+	} else {
+		char sCurrentMapName[32];
+		GetCurrentMap(sCurrentMapName, sizeof(sCurrentMapName));
+
+		hDataPack.WriteString(sCurrentMapName);
+	}
+
+	hDataPack.WriteFunction(pCallback);
+	hDataPack.WriteCell(aData);
+
+	g_hDatabase.Query(DB_Callback_GetProgress, sQuery, hDataPack);
 }
 
 void DB_LoadProgress(int iClient) {
