@@ -267,6 +267,8 @@ public void Recording_SetupNatives() {
 	CreateNative("Recording.GetVisibility",			Native_Recording_GetVisibility);
 	CreateNative("Recording.SetVisibility",			Native_Recording_SetVisibility);
 	
+	CreateNative("Recording.ResetVisibility",		Native_Recording_ResetVisibility);
+
 	CreateNative("Recording.Instance",				Native_Recording_Instance);
 	CreateNative("Recording.Destroy",				Native_Recording_Destroy);
 }
@@ -436,6 +438,13 @@ public int Native_Recording_SetVisibility(Handle hPlugin, int iArgC) {
 	hRecordings.Set(iThis, iMask | view_as<int>(bVisible)<<iBit, _Recording::iVisibility+iOffset);
 
 	return bVisible;
+}
+
+public int Native_Recording_ResetVisibility(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1)-1;
+
+	hRecordings.Set(iThis, 0, _Recording::iVisibility);
+	hRecordings.Set(iThis, 0, _Recording::iVisibility+1);
 }
 
 public int Native_Recording_Instance(Handle hPlugin, int iArgC) {

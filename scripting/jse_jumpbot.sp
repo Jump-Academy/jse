@@ -2178,7 +2178,7 @@ public Action cmdNearby(int iClient, int iArgC) {
 	ArrayList hRecordings;
 	int iRecordingsTotal;
 
-	if (g_bOctreeAvailable) {
+	if (g_bOctreeAvailable && g_iSpatialIdx) {
 		hRecordings = new ArrayList();
 		iRecordingsTotal = g_iSpatialIdx.Find(fPos, MAX_NEARBY_SEARCH_DISTANCE, hRecordings, true);
 	} else {
@@ -3994,7 +3994,7 @@ FindResult FindNearestRecording(float fPos[3], TFClassType iClass, Recording &iC
 	ArrayList hRecordings;
 	int iRecordingsTotal; 
 
-	if (g_bOctreeAvailable) {
+	if (g_bOctreeAvailable && g_iSpatialIdx) {
 		hRecordings = new ArrayList();
 		iRecordingsTotal = g_iSpatialIdx.Find(fPos, MAX_NEARBY_SEARCH_DISTANCE, hRecordings);
 	} else {
@@ -5015,58 +5015,82 @@ void RefreshModels() {
 	g_hVisibleRecordings = hTemp;
 	g_hVisibleRecordings.Clear();
 
-	static int iClients[MAXPLAYERS+1];
-
-	ArrayList hRecordings;
-	int iRecordingsTotal;
+	int iLastVisibleRecordingsLength = g_hLastVisibleRecordings.Length;
+	for (int i=0; i<iLastVisibleRecordingsLength; i++) {
+		Recording iRecording = g_hLastVisibleRecordings.Get(i);
+		iRecording.ResetVisibility();
+	}
 
 	if (g_bOctreeAvailable && g_iSpatialIdx) {
-		hRecordings = new ArrayList();
-		float fPos[3];
+		ArrayList hRecordings = new ArrayList();
 
 		for (int i=1; i<=MaxClients; i++) {
 			if (IsClientInGame(i) && !IsFakeClient(i)) {
+				float fPos[3];
 				GetClientAbsOrigin(i, fPos);
-				iRecordingsTotal += g_iSpatialIdx.Find(fPos, MAX_NEARBY_SEARCH_DISTANCE, hRecordings);
+
+				int iRecordingsTotal = g_iSpatialIdx.Find(fPos, MAX_NEARBY_SEARCH_DISTANCE, hRecordings);
+
+				for (int j=0; j<iRecordingsTotal; j++) {
+					Recording iRecording = hRecordings.Get(j);
+					if (IsRecordingVisible(iRecording, i, true) && g_hVisibleRecordings.FindValue(iRecording) == -1) {
+						g_hVisibleRecordings.Push(iRecording);
+					}
+				}
+
+				hRecordings.Clear();
 			}
 		}
+
+		delete hRecordings;
 	} else {
-		hRecordings = g_hRecordings;
-		iRecordingsTotal = g_hRecordings.Length;
+		int iRecordingsTotal = g_hRecordings.Length;
+
+		for (int i=0; i<iRecordingsTotal; i++) {
+			Recording iRecording = g_hRecordings.Get(i);
+
+			// Primary author
+			ClientInfo iClientInfo = iRecording.ClientInfo.Get(0);
+
+			float fPos[3], fPosClient[3];
+			iClientInfo.GetStartPos(fPos);
+			fPos[2] += 20.0;
+
+			static int iClients[MAXPLAYERS+1];
+
+			bool bVisible = false;
+			int iClientsNearby = GetClientsInRange(fPos, RangeType_Visibility, iClients, sizeof(iClients));
+			for (int j=0; j<iClientsNearby; j++) {
+				bool bVisibility = IsRecordingVisible(iRecording, iClients[j], true);
+
+				if (!bVisible) {
+					GetClientEyePosition(iClients[j], fPosClient);
+					bVisible |= bVisibility && GetVectorDistance(fPos, fPosClient) < MAX_NEARBY_SEARCH_DISTANCE;
+				}
+			}
+
+			if (bVisible) {
+				g_hVisibleRecordings.Push(iRecording);
+			}
+		}
 	}
 
-	for (int i=0; i<iRecordingsTotal; i++) {
-		Recording iRecording = hRecordings.Get(i);
+	int iVisibleRecordingsLength = g_hVisibleRecordings.Length;
+
+	for (int i=0; i<iVisibleRecordingsLength; i++) {
+		Recording iRecording = g_hVisibleRecordings.Get(i);
+
+		bool bHasModel = iRecording.NodeModel != INVALID_ENT_REFERENCE;
+		if (bHasModel) {
+			continue;
+		}
 
 		// Primary author
 		ClientInfo iClientInfo = iRecording.ClientInfo.Get(0);
 
-		float fPos[3], fPosClient[3];
+		float fPos[3], fAng[3];
 		iClientInfo.GetStartPos(fPos);
-		fPos[2] += 20.0;
-
-		bool bVisible = false;
-		int iClientsNearby = GetClientsInRange(fPos, RangeType_Visibility, iClients, sizeof(iClients));
-		for (int j=0; j<iClientsNearby; j++) {
-			bool bVisibility = IsRecordingVisible(iRecording, iClients[j], true);
-
-			if (!bVisible) {
-				GetClientEyePosition(iClients[j], fPosClient);
-				bVisible |= bVisibility && GetVectorDistance(fPos, fPosClient) < MAX_NEARBY_SEARCH_DISTANCE;
-			}
-		}
-
-		bool bHasModel = iRecording.NodeModel != INVALID_ENT_REFERENCE;
-		if (bHasModel && !bVisible) {
-			RemoveModels(iRecording);
-			continue;
-		}
-
-		g_hVisibleRecordings.Push(iRecording);
-
-		if (bHasModel || !bVisible) {
-			continue;
-		}
+		iClientInfo.GetStartAng(fAng);
 
 		int iEntity = CreateEntityByName("prop_dynamic");
 		if (IsValidEntity(iEntity)) {
@@ -5089,12 +5113,15 @@ void RefreshModels() {
 			int iEntityRef = EntIndexToEntRef(iEntity);
 			iRecording.NodeModel = iEntityRef;
 
-			float fAng[3] = {0.0, ...};
-			iClientInfo.GetStartAng(fAng);
-			fAng[0] = 0.0;
-			fAng[1] = float(RoundFloat(fAng[1] + 90) % 360);
+			float fAngOffset[3];
+			fAngOffset[0] = 0.0;
+			fAngOffset[1] = float(RoundFloat(fAng[1] + 90) % 360);
 			
-			TeleportEntity(iEntity, fPos, fAng, NULL_VECTOR);
+			float fPosOffset[3];
+			fPosOffset = fPos;
+			fPosOffset[2] += 20.0;
+
+			TeleportEntity(iEntity, fPosOffset, fAngOffset, NULL_VECTOR);
 			
 			SDKHook(iEntity, SDKHook_StartTouch, Hook_StartTouchInfo);
 			SDKHook(iEntity, SDKHook_EndTouch, Hook_EndTouchInfo);
@@ -5122,24 +5149,20 @@ void RefreshModels() {
 			int iEntityRef = EntIndexToEntRef(iEntity);
 			iRecording.WeaponModel = iEntityRef;
 			
-			iClientInfo.GetStartPos(fPos);
-			fPos[2] += 9.0;
+			float fPosOffset[3];
+			fPosOffset = fPos;
+			fPosOffset[2] += 9.0;
 			
-			float fAng[3];
-			iClientInfo.GetStartAng(fAng);
-			fAng[0] = 0.0;
-			fAng[1] = 90.0 + float((RoundFloat(fAng[1]) - 90) % 360);
-			TeleportEntity(iEntity, fPos, fAng, NULL_VECTOR);
+			float fAngOffset[3];
+			fAngOffset[0] = 0.0;
+			fAngOffset[1] = 90.0 + float((RoundFloat(fAng[1]) - 90) % 360);
+			TeleportEntity(iEntity, fPosOffset, fAngOffset, NULL_VECTOR);
 			
 			SDKHook(iEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);				
 		}
 	}
 
-	if (g_bOctreeAvailable && g_iSpatialIdx) {
-		delete hRecordings;
-	}
-
-	for (int i=0; i<g_hLastVisibleRecordings.Length; i++) {
+	for (int i=0; i<iLastVisibleRecordingsLength; i++) {
 		Recording iRecording = g_hLastVisibleRecordings.Get(i);
 		if (g_hVisibleRecordings.FindValue(iRecording) == -1) {
 			RemoveModels(iRecording);

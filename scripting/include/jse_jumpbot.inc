@@ -67,6 +67,7 @@ public void __pl_jse_jumpbot_SetNTVOptional() {
 	MarkNativeAsOptional("Recording.WeaponModel.set");
 	MarkNativeAsOptional("Recording.GetVisibility");
 	MarkNativeAsOptional("Recording.SetVisibility");
+	MarkNativeAsOptional("Recording.ResetVisibility");
 	MarkNativeAsOptional("Recording.Instance");
 	MarkNativeAsOptional("Recording.Destroy");
 }
@@ -169,6 +170,8 @@ methodmap Recording {
 
 	public native bool GetVisibility(int iClient);
 	public native bool SetVisibility(int iClient, bool bVisible);
+
+	public native void ResetVisibility();
 
 	/**
 	 * Creates a new Recording instance
