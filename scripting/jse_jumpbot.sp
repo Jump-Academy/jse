@@ -4593,7 +4593,7 @@ void CreateSpatialIndex() {
 		Octree.Destroy(g_iSpatialIdx);
 	}
 
-	g_iSpatialIdx = Octree.Instance(fCenter, fMaxHalfWidth, 50);
+	g_iSpatialIdx = Octree.Instance(fCenter, fMaxHalfWidth, 20);
 
 	// Insert all recording start positions into octree
 
