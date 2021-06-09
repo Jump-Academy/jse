@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.3"
+#define PLUGIN_VERSION "0.1.4"
 
 #include <sourcemod>
 #include <sdktools>
@@ -101,7 +101,7 @@ public Action Hook_RoundStart(Event hEvent, const char[] sName, bool bDontBroadc
 	ResetAllClients();
 }
 
-public void OnNewCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint) {
+public void OnNewCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint, bool bUnlock) {
 	if (!g_bJSECoreLoaded && bControlPoint || iJumpNumber > 1) {
 		g_iScore[iClient]++;
 		AddScore(iClient, 1);

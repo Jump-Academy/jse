@@ -5,11 +5,11 @@ Database g_hDatabase;
 public void DB_Callback_Connect(Handle hOwner, Handle hHandle, char[] sError, any aData) {
 	if (hHandle == null) {
 		LogError("Cannot connect to database: %s", sError);
-		
+
 		CreateTimer(30.0, Timer_Reconnect);
 		return;
 	}
-	
+
 	g_hDatabase = view_as<Database>(hHandle);
 	g_hDatabase.SetCharset("utf8mb4");
 
@@ -287,7 +287,7 @@ public void DB_Callback_GetProgress(Database hDatabase, DBResultSet hResultSet, 
 		int iTimestamp = hResultSet.FetchInt(7);
 
 		eCheckpoint.Init(iCourseNumber, iJumpNumber, bControlPoint, view_as<TFTeam>(iTeam), view_as<TFClassType>(iClass));
-		eCheckpoint.iTimestamp = iTimestamp;
+		eCheckpoint.iUnlockTime = iTimestamp;
 
 		hResult.PushArray(eCheckpoint);
 
@@ -337,7 +337,7 @@ public void DB_Callback_LoadProgress(Database hDatabase, DBResultSet hResultSet,
 		int iTimestamp = hResultSet.FetchInt(5);
 
 		eCheckpoint.Init(iCourseNumber, iJumpNumber, bControlPoint, view_as<TFTeam>(iTeam), view_as<TFClassType>(iClass));
-		eCheckpoint.iTimestamp = iTimestamp;
+		eCheckpoint.iUnlockTime = iTimestamp;
 
 		hProgress.PushArray(eCheckpoint);
 	}
@@ -701,7 +701,7 @@ int DB_BackupProgress_Client(Transaction hTxn, int iClient) {
 	for (int i=0; i<hProgress.Length; i++) {
 		hProgress.GetArray(i, eCheckpoint);
 
-		if (eCheckpoint.iTimestamp <= iLastBackupTime) {
+		if (eCheckpoint.iUnlockTime <= iLastBackupTime) {
 			continue;
 		}
 
@@ -780,6 +780,6 @@ void DB_DeleteProgress(int iClient, TFTeam iTeam, TFClassType iClass, char[] sMa
 
 public Action Timer_Reconnect(Handle hTimer) {
 	DB_Connect();
-	
+
 	return Plugin_Handled;
 }

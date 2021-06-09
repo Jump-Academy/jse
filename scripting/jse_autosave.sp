@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.4"
+#define PLUGIN_VERSION "0.1.5"
 
 #include <sourcemod>
 #include <clientprefs>
@@ -136,7 +136,7 @@ public void OnCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber,
 				eCheckpoint.SetJumpNumber(iJumpNumber);
 			}
 
-			eCheckpoint.iTimestamp = GetTime();
+			eCheckpoint.iArrivalTime = GetTime();
 
 			hCheckpoint.SetArray(i, eCheckpoint);
 			return;
@@ -144,7 +144,7 @@ public void OnCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber,
 	}
 
 	eCheckpoint.Init(iCourseNumber, iJumpNumber, bControlPoint, iTeam, iClass);
-	eCheckpoint.iTimestamp = GetTime();
+	eCheckpoint.iArrivalTime = GetTime();
 
 	hCheckpoint.PushArray(eCheckpoint);
 }
@@ -364,10 +364,10 @@ void SendLastSavePanel(int iClient) {
 	}
 
 	int iLatestIdx = 0;
-	int iLastTimestamp = hCheckpoint.Get(0, Checkpoint::iTimestamp);
+	int iLastTimestamp = hCheckpoint.Get(0, Checkpoint::iArrivalTime);
 
 	for (int i=1; i<hCheckpoint.Length; i++) {
-		int iTimestamp = hCheckpoint.Get(i, Checkpoint::iTimestamp);
+		int iTimestamp = hCheckpoint.Get(i, Checkpoint::iArrivalTime);
 		if (iTimestamp > iLastTimestamp) {
 			iLatestIdx = i;
 			iLastTimestamp = iTimestamp;
@@ -384,7 +384,7 @@ void SendLastSavePanel(int iClient) {
 
 	hPanel.DrawText(" ");
 
-	DrawCheckpointInfo(hPanel, eCheckpoint.GetCourseNumber(), eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), eCheckpoint.iTimestamp);
+	DrawCheckpointInfo(hPanel, eCheckpoint.GetCourseNumber(), eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), eCheckpoint.iArrivalTime);
 
 	hPanel.DrawText(" ");
 
@@ -424,10 +424,10 @@ void SendCourseListPanel(int iClient) {
 	SortADTArray(hCheckpoint, Sort_Ascending, Sort_Integer);
 
 	int iLatestIdx = 0;
-	int iLastTimestamp = hCheckpoint.Get(0, Checkpoint::iTimestamp);
+	int iLastTimestamp = hCheckpoint.Get(0, Checkpoint::iArrivalTime);
 
 	for (int i=1; i<hCheckpoint.Length; i++) {
-		int iTimestamp = hCheckpoint.Get(i, Checkpoint::iTimestamp);
+		int iTimestamp = hCheckpoint.Get(i, Checkpoint::iArrivalTime);
 		if (iTimestamp > iLastTimestamp) {
 			iLatestIdx = i;
 			iLastTimestamp = iTimestamp;
@@ -484,7 +484,7 @@ void SendConfirmationPanel(int iClient, ArrayList hCheckpoint, int iIndex) {
 
 	hPanel.DrawText(" ");
 
-	DrawCheckpointInfo(hPanel, eCheckpoint.GetCourseNumber(), eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), eCheckpoint.iTimestamp);
+	DrawCheckpointInfo(hPanel, eCheckpoint.GetCourseNumber(), eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), eCheckpoint.iArrivalTime);
 
 	hPanel.DrawText(" ");
 

@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"0.3.7"
+#define PLUGIN_VERSION	"0.3.8"
 
 #include <tf2>
 #include <tf2_stocks>
@@ -303,9 +303,9 @@ public Action cmdGoto(int iClient, int iArgC) {
 					int iCourseNumber;
 					int iJumpNumber;
 					bool bControlPoint;
-					int iTimestamp;
+					int iLastUpdateTime;
 
-					if (GetPlayerLastCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint, iTimestamp) && GetTime()-iTimestamp <= CHECKPOINT_TIME_CUTOFF) {
+					if (GetPlayerLastCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint, _, _, iLastUpdateTime) && GetTime()-iLastUpdateTime <= CHECKPOINT_TIME_CUTOFF) {
 						Course iCourse = ResolveCourseNumber(iCourseNumber);
 
 						if (bCanTeleToAllJumps || CheckProgress(iClient, iCourseNumber, iJumpNumber, bControlPoint)) {
@@ -802,9 +802,9 @@ public int MenuHandler_GotoPlayer(Menu hMenu, MenuAction iAction, int iClient, i
 					int iCourseNumber;
 					int iJumpNumber;
 					bool bControlPoint;
-					int iTimestamp;
+					int iLastUpdateTime;
 
-					if (GetPlayerLastCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint, iTimestamp) && GetTime()-iTimestamp <= CHECKPOINT_TIME_CUTOFF) {
+					if (GetPlayerLastCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint, _, _, iLastUpdateTime) && GetTime()-iLastUpdateTime <= CHECKPOINT_TIME_CUTOFF) {
 						Course iCourse = ResolveCourseNumber(iCourseNumber);
 
 						if (bCanTeleToAllJumps || CheckProgress(iClient, iCourseNumber, iJumpNumber, bControlPoint)) {

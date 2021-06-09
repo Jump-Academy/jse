@@ -158,7 +158,9 @@ methodmap Course {
 
 enum struct Checkpoint {
 	int iHash;
-	int iTimestamp;
+	int iUnlockTime;
+	int iArrivalTime;
+	int iLastUpdateTime;
 
 	void Init(int iCourseNumber, int iJumpNumber, bool bControlPoint, TFTeam iTeam, TFClassType iClass, int iPrimary=0, int iSecondary=0, int iMelee=0) {
 		iCourseNumber &= 0x3F;
@@ -248,7 +250,9 @@ enum struct Checkpoint {
 
 	void Clear() {
 		this.iHash = 0;
-		this.iTimestamp = 0;
+		this.iUnlockTime = 0;
+		this.iArrivalTime = 0;
+		this.iLastUpdateTime = 0;
 	}
 }
 
@@ -262,7 +266,7 @@ forward void OnTrackerLoaded(ArrayList hCourses);
 forward Action OnProgressLoad(int iClient);
 forward void OnProgressLoaded(int iClient);
 forward void OnCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint);
-forward void OnNewCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint);
+forward void OnNewCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint, bool bUnlock);
 
 native bool IsTrackerLoaded();
 native Database GetTrackerDatabase();
@@ -270,8 +274,8 @@ native int GetTrackerMapID();
 native ArrayList GetTrackerCourses();
 
 native bool GetPlayerNearestCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint);
-native bool GetPlayerNewestCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint, int &iTimestamp=0, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown);
-native bool GetPlayerLastCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint, int &iTimestamp=0, TFTeam &iTeam=TFTeam_Unassigned, TFClassType &iClass=TFClass_Unknown);
+native bool GetPlayerNewestCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint, int &iLastUpdateTime=0, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown);
+native bool GetPlayerLastCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint, int &iUnlockTime=0, int &iArrivalTimeTime=0, int &iLastUpdateTime=0, TFTeam &iTeam=TFTeam_Unassigned, TFClassType &iClass=TFClass_Unknown);
 
 native int GetPlayerProgress(int iClient, ArrayList hResult, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown, char[] sMapName=NULL_STRING, ProgressLookup pCallback=view_as<ProgressLookup>(0), any aData=0);
 native void ResetPlayerProgress(int iClient, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown, bool bPersist=false, char[] sMapName=NULL_STRING);

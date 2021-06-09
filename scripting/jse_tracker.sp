@@ -4,7 +4,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.4.0"
+#define PLUGIN_VERSION "0.4.1"
 
 #define API_URL "https://api.jumpacademy.tf/mapinfo_json"
 
@@ -122,7 +122,7 @@ public void OnPluginStart() {
 	g_hProgressLoadForward = new GlobalForward("OnProgressLoad", ET_Hook, Param_Cell);
 	g_hProgressLoadedForward = new GlobalForward("OnProgressLoaded", ET_Ignore, Param_Cell);
 	g_hCheckpointReachedForward = new GlobalForward("OnCheckpointReached", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
-	g_hNewCheckpointReachedForward = new GlobalForward("OnNewCheckpointReached", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+	g_hNewCheckpointReachedForward = new GlobalForward("OnNewCheckpointReached", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 
 	AutoExecConfig(true, "jse_tracker");
 }
@@ -366,7 +366,7 @@ public void Callback_ProgressLookup(int iClient, ArrayList hResult, int iResults
 		int iLastJump;
 		if (hMap.GetValue(sKey, iLastJump)) {
 			// iLastJump = 0 if checkpoint was a control point
-			if (iLastJump && iJumpNumber > iLastJump) {
+			if (iLastJump && iJumpNumber > iLastJump || !iJumpNumber) {
 				hMap.SetValue(sKey, iJumpNumber);
 			}
 		} else {
@@ -375,8 +375,6 @@ public void Callback_ProgressLookup(int iClient, ArrayList hResult, int iResults
 	}
 
 	delete hResult;
-
-	int iBufferCount = 1;
 
 	for (int i=0; i<sizeof(hProgressMap); i++) {
 		for (int j=0; j<sizeof(hProgressMap[]); j++) {
@@ -409,7 +407,7 @@ public void Callback_ProgressLookup(int iClient, ArrayList hResult, int iResults
 				char sClassName[10];
 				TF2_GetClassName(view_as<TFClassType>(j), sClassName, sizeof(sClassName));
 
-				Format(sBuffer, sizeof(sBuffer), "%s{white}- %N (%s, %s):\n", sBuffer, iClient, sTeamName, sClassName);
+				FormatEx(sBuffer, sizeof(sBuffer), "{white}- %N (%s, %s):\n", iClient, sTeamName, sClassName);
 
 				if (iLastJump) {
 					Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\n", sBuffer, sCourseName, iLastJump, iJumpsTotal);
@@ -417,16 +415,7 @@ public void Callback_ProgressLookup(int iClient, ArrayList hResult, int iResults
 					Format(sBuffer, sizeof(sBuffer), "%s\t{white}%20s\t{lightgray}%2d/%2d\t\t{lime}Completed\n", sBuffer, sCourseName, iJumpsTotal, iJumpsTotal);
 				}
 
-				if (++iBufferCount >= 3) {
-					int iLength = strlen(sBuffer);
-					sBuffer[iLength-1] = '\0'; // Remove newline
-
-					CReplyToCommand(iCaller, sBuffer);
-
-					sBuffer[0] = '\0';
-					iBufferCount = 0;
-				}
-
+				CReplyToCommand(iCaller, sBuffer);
 			}
 
 			delete hSnapshot;
@@ -435,10 +424,7 @@ public void Callback_ProgressLookup(int iClient, ArrayList hResult, int iResults
 	}
 
 	if (!iResults) {
-		Format(sBuffer, sizeof(sBuffer), "%s\n{white}- %N {lightgray}(No progress recorded)", sBuffer, iClient);
-	}
-
-	if (sBuffer[0]) {
+		FormatEx(sBuffer, sizeof(sBuffer), "\n{white}- %N {lightgray}(No progress recorded)", iClient);
 		CReplyToCommand(iCaller, sBuffer);
 	}
 }
@@ -465,10 +451,9 @@ public int Native_GetPlayerNearestCheckpoint(Handle hPlugin, int iArgC) {
 	int iClient = GetNativeCell(1);
 
 	Checkpoint eCheckpoint;
-	eCheckpoint.iHash = g_eNearestCheckpoint[iClient].iHash;
-	eCheckpoint.iTimestamp = g_eNearestCheckpoint[iClient].iTimestamp;
+	eCheckpoint = g_eNearestCheckpoint[iClient];
 
-	if (eCheckpoint.iTimestamp) {
+	if (eCheckpoint.iLastUpdateTime) {
 		SetNativeCellRef(2, eCheckpoint.GetCourseNumber());
 		SetNativeCellRef(3, eCheckpoint.GetJumpNumber());
 		SetNativeCellRef(4, eCheckpoint.IsControlPoint());
@@ -504,16 +489,16 @@ public int Native_GetPlayerNewestCheckpoint(Handle hPlugin, int iArgC) {
 			continue;
 		}
 
-		if (eCheckpoint.iTimestamp > eCheckpointIter.iTimestamp) {
+		if (eCheckpoint.iLastUpdateTime > eCheckpointIter.iLastUpdateTime) {
 			eCheckpoint = eCheckpointIter;
 		}
 	}
 
-	if (eCheckpoint.iTimestamp) {
+	if (eCheckpoint.iLastUpdateTime) {
 		SetNativeCellRef(2, eCheckpoint.GetCourseNumber());
 		SetNativeCellRef(3, eCheckpoint.GetJumpNumber());
 		SetNativeCellRef(4, eCheckpoint.IsControlPoint());
-		SetNativeCellRef(5, eCheckpoint.iTimestamp);
+		SetNativeCellRef(5, eCheckpoint.iLastUpdateTime);
 
 		return true;
 	}
@@ -530,16 +515,17 @@ public int Native_GetPlayerLastCheckpoint(Handle hPlugin, int iArgC) {
 	int iClient = GetNativeCell(1);
 
 	Checkpoint eCheckpoint;
-	eCheckpoint.iHash = g_eNearestCheckpointLanded[iClient].iHash;
-	eCheckpoint.iTimestamp = g_eNearestCheckpointLanded[iClient].iTimestamp;
+	eCheckpoint = g_eNearestCheckpointLanded[iClient];
 
-	if (eCheckpoint.iTimestamp) {
+	if (eCheckpoint.iLastUpdateTime) {
 		SetNativeCellRef(2, eCheckpoint.GetCourseNumber());
 		SetNativeCellRef(3, eCheckpoint.GetJumpNumber());
 		SetNativeCellRef(4, eCheckpoint.IsControlPoint());
-		SetNativeCellRef(5, eCheckpoint.iTimestamp);
-		SetNativeCellRef(6, eCheckpoint.GetTeam());
-		SetNativeCellRef(7, eCheckpoint.GetClass());
+		SetNativeCellRef(5, eCheckpoint.iUnlockTime);
+		SetNativeCellRef(6, eCheckpoint.iArrivalTime);
+		SetNativeCellRef(7, eCheckpoint.iLastUpdateTime);
+		SetNativeCellRef(8, eCheckpoint.GetTeam());
+		SetNativeCellRef(9, eCheckpoint.GetClass());
 
 		return true;
 	}
@@ -548,8 +534,10 @@ public int Native_GetPlayerLastCheckpoint(Handle hPlugin, int iArgC) {
 	SetNativeCellRef(3, 0);
 	SetNativeCellRef(4, false);
 	SetNativeCellRef(5, 0);
-	SetNativeCellRef(6, TFTeam_Unassigned);
-	SetNativeCellRef(7, TFClass_Unknown);
+	SetNativeCellRef(6, 0);
+	SetNativeCellRef(7, 0);
+	SetNativeCellRef(8, TFTeam_Unassigned);
+	SetNativeCellRef(9, TFClass_Unknown);
 	
 	return false;
 }
@@ -762,6 +750,9 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 	Checkpoint eCheckpoint;
 	CheckpointCache eCheckpointCache;
 
+	static iActiveClients[MAXPLAYERS+1];
+	int iActiveClientCount;
+
 	for (int i=1; i<=MaxClients; i++) {
 		if (IsClientInGame(i) && IsPlayerAlive(i)) {
 			g_eNearestCheckpoint[i].Clear();
@@ -769,6 +760,11 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 			if (fGameTime-g_fLastTeleport[i] < g_fTeleSettleTime) {
 				continue;
 			}
+
+			bool bActive;
+
+			TFTeam iTeam = TF2_GetClientTeam(i);
+			TFClassType iClass = TF2_GetPlayerClass(i);
 
 			float fGroundPos[3];
 			GetClientGroundPosition(i, fGroundPos);
@@ -785,66 +781,79 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 							eCheckpointCache.iCourseNumber,
 							0,
 							true,
-							TF2_GetClientTeam(i),
-							TF2_GetPlayerClass(i)
+							iTeam,
+							iClass
 						);
 					} else {
 						g_eNearestCheckpoint[i].Init(
 							eCheckpointCache.iCourseNumber,
 							eCheckpointCache.iJumpNumber,
 							false,
-							TF2_GetClientTeam(i),
-							TF2_GetPlayerClass(i)
+							iTeam,
+							iClass
 						);
 					}
 
-					g_eNearestCheckpoint[i].iTimestamp = iTime;
+					g_eNearestCheckpoint[i].iLastUpdateTime = iTime;
 					iActiveCourse[i] = eCheckpointCache.iCourse;
 					fMinDist = fDist;
+
+					bActive = true;
 				}
+			}
+
+			if (bActive) {
+				iActiveClients[iActiveClientCount++] = i;
 			}
 		}
 	}
 
-	eCheckpoint.iTimestamp = iTime;
+	eCheckpoint.iLastUpdateTime = eCheckpoint.iUnlockTime = eCheckpoint.iArrivalTime = iTime;
 
-	for (int i=1; i<=MaxClients; i++) {
-		if (!IsClientInGame(i) || !IsPlayerAlive(i) || !g_eNearestCheckpoint[i].iTimestamp) {
+	for (int i=0; i<iActiveClientCount; i++) {
+		int iClient = iActiveClients[i];
+
+		if (g_eNearestCheckpoint[iClient].iHash == g_eNearestCheckpointLanded[iClient].iHash) {
+			g_eNearestCheckpointLanded[iClient].iLastUpdateTime = iTime;
 			continue;
 		}
 
-		if (g_eNearestCheckpoint[i].iHash == g_eNearestCheckpointLanded[i].iHash) {
-			g_eNearestCheckpointLanded[i].iTimestamp = iTime;
-			continue;
-		}
-
-		eCheckpoint.iHash = g_eNearestCheckpoint[i].iHash;
-
-		TFTeam iTeam = TF2_GetClientTeam(i);
-		TFClassType iClass = TF2_GetPlayerClass(i);
+		eCheckpoint.iHash = g_eNearestCheckpoint[iClient].iHash;
 
 		int iHash = eCheckpoint.iHash;
 		int iCourseNumber = eCheckpoint.GetCourseNumber();
 		int iJumpNumber = eCheckpoint.GetJumpNumber();
 		bool bControlPoint = eCheckpoint.IsControlPoint();
 
-		if (GetEntityFlags(i) & FL_ONGROUND) {
+		TFTeam iTeam = eCheckpoint.GetTeam();
+		TFClassType iClass = eCheckpoint.GetClass();
+
+		bool bGrounded = view_as<bool>(GetEntityFlags(iClient) & FL_ONGROUND);
+
+		if (bGrounded) {
 			Call_StartForward(g_hCheckpointReachedForward);
-			Call_PushCell(i);
+			Call_PushCell(iClient);
 			Call_PushCell(iCourseNumber);
 			Call_PushCell(iJumpNumber);
 			Call_PushCell(bControlPoint);
 			Call_Finish();
 
-			g_eNearestCheckpointLanded[i].iHash = iHash;
-			g_eNearestCheckpointLanded[i].iTimestamp = iTime;
+			g_eNearestCheckpointLanded[iClient].iHash = iHash;
+			g_eNearestCheckpointLanded[iClient].iArrivalTime = iTime;
+			g_eNearestCheckpointLanded[iClient].iLastUpdateTime = iTime;
 		}
 
-		if (g_hProgress[i].FindValue(iHash, Checkpoint::iHash) != -1) {
+		ArrayList hProgress = g_hProgress[iClient];
+
+		int iIdx = hProgress.FindValue(iHash, Checkpoint::iHash);
+		bool bUnlock = iIdx == -1;
+
+		if (!bUnlock && hProgress.Get(iIdx, Checkpoint::iArrivalTime)) {
+			hProgress.Set(iIdx, iTime, Checkpoint::iLastUpdateTime);
 			continue;
 		}
 
-		ArrayList hJumps = iActiveCourse[i].hJumps;
+		ArrayList hJumps = iActiveCourse[iClient].hJumps;
 		int iPreviousJumps = bControlPoint ? hJumps.Length : iJumpNumber - 1;
 
 		for (int j=1; j<=iPreviousJumps; j++) {
@@ -856,36 +865,51 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 				iClass
 			);
 
-			if (g_hProgress[i].FindValue(eCheckpoint.iHash, Checkpoint::iHash) == -1) {
-				g_hProgress[i].PushArray(eCheckpoint);
+			int iIdxItr = hProgress.FindValue(eCheckpoint.iHash, Checkpoint::iHash);
+			bool bUnlockItr = iIdxItr == -1;
 
-				//SortADTArray(g_hProgress[i], Sort_Ascending, Sort_Integer);
+			if (bUnlockItr) {
+				hProgress.PushArray(eCheckpoint);
 
-				Call_StartForward(g_hNewCheckpointReachedForward);
-				Call_PushCell(i);
-				Call_PushCell(iCourseNumber);
-				Call_PushCell(j);
-				Call_PushCell(false);
-				Call_Finish();
+				//SortADTArray(g_hProgress[iClient], Sort_Ascending, Sort_Integer);
+			} else if (hProgress.Get(iIdxItr, Checkpoint::iArrivalTime)) {
+				continue;
+			} else {
+				hProgress.Set(iIdxItr, iTime, Checkpoint::iArrivalTime);
+				hProgress.Set(iIdxItr, iTime, Checkpoint::iLastUpdateTime);
 			}
-		}
-
-		if (GetEntityFlags(i) & FL_ONGROUND) {
-			eCheckpoint.iHash = iHash;
-
-			g_hProgress[i].PushArray(eCheckpoint);
-
-			//SortADTArray(g_hProgress[i], Sort_Ascending, Sort_Integer);
 
 			Call_StartForward(g_hNewCheckpointReachedForward);
-			Call_PushCell(i);
+			Call_PushCell(iClient);
 			Call_PushCell(iCourseNumber);
-			Call_PushCell(iJumpNumber);
-			Call_PushCell(bControlPoint);
+			Call_PushCell(j);
+			Call_PushCell(false);
+			Call_PushCell(bUnlockItr);
 			Call_Finish();
 		}
 
-		DB_BackupProgress(i);
+		if (bGrounded) {
+			if (bUnlock) {
+				eCheckpoint.iHash = iHash;
+
+				hProgress.PushArray(eCheckpoint);
+			} else {
+				hProgress.Set(iIdx, iTime, Checkpoint::iArrivalTime);
+				hProgress.Set(iIdx, iTime, Checkpoint::iLastUpdateTime);
+			}
+
+			//SortADTArray(g_hProgress[iClient], Sort_Ascending, Sort_Integer);
+
+			Call_StartForward(g_hNewCheckpointReachedForward);
+			Call_PushCell(iClient);
+			Call_PushCell(iCourseNumber);
+			Call_PushCell(iJumpNumber);
+			Call_PushCell(bControlPoint);
+			Call_PushCell(bUnlock);
+			Call_Finish();
+		}
+
+		DB_BackupProgress(iClient);
 	}
 
 	return Plugin_Continue;
@@ -920,9 +944,19 @@ void ResetClient(int iClient, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass
 			g_eNearestCheckpoint[iClient].Clear();
 			g_eNearestCheckpointLanded[iClient].Clear();
 
-			if (g_hProgress[iClient] != null && g_hProgress[iClient].Length) {
+			ArrayList hProgress = g_hProgress[iClient];
+
+			if (hProgress != null && hProgress.Length) {
 				bReset = true;
-				g_hProgress[iClient].Clear();
+
+				if (bPersist) {
+					hProgress.Clear();
+				} else {
+					for (int i=0; i<hProgress.Length; i++) {
+						hProgress.Set(i, 0, Checkpoint::iArrivalTime);
+						hProgress.Set(i, 0, Checkpoint::iLastUpdateTime);
+					}
+				}
 			}
 		} else if (iTeam) {
 			if (g_eNearestCheckpoint[iClient].GetTeam() == iTeam && (!iClass || g_eNearestCheckpoint[iClient].GetClass() == iClass)) {
@@ -941,7 +975,13 @@ void ResetClient(int iClient, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass
 
 				if (eCheckpoint.GetTeam() == iTeam && (!iClass || eCheckpoint.GetClass() == iClass)) {
 					bReset = true;
-					hProgress.Erase(i--);
+
+					if (bPersist) {
+						hProgress.Erase(i--);
+					} else {
+						hProgress.Set(i, 0, Checkpoint::iArrivalTime);
+						hProgress.Set(i, 0, Checkpoint::iLastUpdateTime);
+					}
 				}
 			}
 		} else {
@@ -961,7 +1001,13 @@ void ResetClient(int iClient, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass
 
 				if (eCheckpoint.GetClass() == iClass) {
 					bReset = true;
-					hProgress.Erase(i--);
+
+					if (bPersist) {
+						hProgress.Erase(i--);
+					} else {
+						hProgress.Set(i, 0, Checkpoint::iArrivalTime);
+						hProgress.Set(i, 0, Checkpoint::iLastUpdateTime);
+					}
 				}
 			}
 		}
@@ -1086,7 +1132,7 @@ public Action cmdWhereAmI(int iClient, int iArgC) {
 		return Plugin_Handled;
 	}
 
-	if (GetTime()-g_eNearestCheckpointLanded[iClient].iTimestamp <= CHECKPOINT_TIME_CUTOFF) {
+	if (GetTime()-g_eNearestCheckpointLanded[iClient].iLastUpdateTime <= CHECKPOINT_TIME_CUTOFF) {
 		Checkpoint eCheckpoint;
 		eCheckpoint.iHash = g_eNearestCheckpointLanded[iClient].iHash;
 
@@ -1132,7 +1178,7 @@ public Action cmdWhereIs(int iClient, int iArgC) {
 	if (iTargetCount == 1) {
 		int iTarget = iTargetList[0];
 
-		if (GetTime()-g_eNearestCheckpointLanded[iTarget].iTimestamp <= CHECKPOINT_TIME_CUTOFF) {
+		if (GetTime()-g_eNearestCheckpointLanded[iTarget].iLastUpdateTime <= CHECKPOINT_TIME_CUTOFF) {
 			Checkpoint eCheckpoint;
 			eCheckpoint.iHash = g_eNearestCheckpointLanded[iTarget].iHash;
 
@@ -1161,7 +1207,7 @@ public Action cmdWhereIs(int iClient, int iArgC) {
 	
 		if (TF2_GetClientTeam(iTarget) <= TFTeam_Spectator) {
 			CReplyToCommand(iClient, "\t{limegreen}%N {white}has not joined a team.", iTarget);
-		} else if (iTime-g_eNearestCheckpointLanded[iTarget].iTimestamp <= CHECKPOINT_TIME_CUTOFF) {
+		} else if (iTime-g_eNearestCheckpointLanded[iTarget].iLastUpdateTime <= CHECKPOINT_TIME_CUTOFF) {
 			Checkpoint eCheckpoint;
 			eCheckpoint.iHash = g_eNearestCheckpointLanded[iTarget].iHash;
 

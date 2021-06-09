@@ -44,7 +44,7 @@ public void DB_Callback_LoadAutosaves(Database hDatabase, DBResultSet hResultSet
 
 		Checkpoint eCheckpoint;
 		eCheckpoint.Init(iCourseNumber, iJumpNumber, bControlPoint, view_as<TFTeam>(iTeam), view_as<TFClassType>(iClass));
-		eCheckpoint.iTimestamp = iTimestamp;
+		eCheckpoint.iArrivalTime = iTimestamp;
 
 		ArrayList hAutosave = g_hAutosave[iClient][iTeam-view_as<int>(TFTeam_Red)][iClass-1];
 		if (!hAutosave) {
@@ -195,7 +195,7 @@ int DB_BackupAutosaves_Client(Database hDatabase, Transaction hTxn, int iClient)
 			for (int k=0; k<hCheckpoint.Length; k++) {
 				hCheckpoint.GetArray(k, eCheckpoint);
 
-				if (eCheckpoint.iTimestamp <= g_iLastBackupTime) {
+				if (eCheckpoint.iArrivalTime <= g_iLastBackupTime) {
 					continue;
 				}
 
