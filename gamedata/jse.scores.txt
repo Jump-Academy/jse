@@ -6,8 +6,8 @@
 		{
 			"CTFPlayer::ResetScores"
 			{
-				"windows"	"440"
-				"linux"		"441"
+				"windows"	"441"
+				"linux"		"442"
 			}
 		}
 	}

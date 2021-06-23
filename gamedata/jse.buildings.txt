@@ -4,16 +4,16 @@
 	{
 		"Offsets"
 		{
-      "CObjectSentrygun::FinishedBuilding"
+			"CBaseObject::FinishedBuilding"
 			{
-				"windows"	"336"
-				"linux"		"338"
+				"windows"	"337"
+				"linux"		"339"
 			}
 			
-			"CObjectSentrygun::FinishUpgrading"
+			"CBaseObject::FinishUpgrading"
 			{
-				"windows"	"376"
-				"linux"		"378"
+				"windows"	"377"
+				"linux"		"379"
 			}
 		}
 	}
