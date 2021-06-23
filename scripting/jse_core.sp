@@ -4,7 +4,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.3.4"
+#define PLUGIN_VERSION "0.3.5"
 
 #define DATA_FOLDER "data/jse"
 
@@ -198,11 +198,11 @@ public void OnPluginStart() {
 		Handle hGameConf = LoadGameConfigFile("jse.buildings");
 		if(hGameConf != INVALID_HANDLE ) {
 			StartPrepSDKCall(SDKCall_Entity);
-			PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CObjectSentrygun::FinishUpgrading");
+			PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CBaseObject::FinishUpgrading");
 			g_hSDKFinishUpgrading = EndPrepSDKCall();
 
 			StartPrepSDKCall(SDKCall_Entity);
-			PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CObjectSentrygun::FinishedBuilding");
+			PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CBaseObject::FinishedBuilding");
 			g_hSDKFinishBuilding = EndPrepSDKCall();
 
 			CloseHandle(hGameConf);
