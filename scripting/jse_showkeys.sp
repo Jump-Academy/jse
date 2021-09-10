@@ -359,23 +359,31 @@ public Action Timer_Unfreeze(Handle hTimer, any aData) {
 // Natives
 public int Native_ForceShowKeys(Handle hPlugin, int iArgC) {
 	int iClient = GetNativeCell(1);
-	g_iTarget[iClient] = GetNativeCell(2);
-	g_bEnabled[iClient] = true;
+	if (iClient >= 1 && iClient <= MaxClients) {
+		g_iTarget[iClient] = GetNativeCell(2);
+		g_bEnabled[iClient] = true;
+	}
 }
 
 public int Native_ResetShowKeys(Handle hPlugin, int iArgC) {
 	int iClient = GetNativeCell(1);
+	if (iClient >= 1 && iClient <= MaxClients) {
+		if (!getCookieBool(iClient, g_hCookieEnabled, g_bEnabled[iClient])) {
+			g_bEnabled[iClient] = false;
+		}
 	
-	if (!getCookieBool(iClient, g_hCookieEnabled, g_bEnabled[iClient])) {
-		g_bEnabled[iClient] = false;
+		g_iTarget[iClient] = 0;
 	}
-	
-	g_iTarget[iClient] = 0;
 }
 
 // Commands
 
 public Action cmdShowKeys(int iClient, int iArgC) {
+	if (!iClient) {
+		ReplyToCommand(iClient, "[jse] You cannot run this command from server console.");
+		return Plugin_Handled;
+	}
+	
 	if (iArgC == 0) {
 		g_bEnabled[iClient] = !g_bEnabled[iClient];
 		CPrintToChat(iClient, "{dodgerblue}[jse] {white}Show keys %s.", g_bEnabled[iClient] ? "enabled" : "disabled");
@@ -388,7 +396,7 @@ public Action cmdShowKeys(int iClient, int iArgC) {
 		if (iTarget != -1) {
 			g_iTarget[iClient] = iTarget;
 			g_bEnabled[iClient] = true;
-			CPrintToChat(iClient, "{dodgerblue}[jse] {white}Showing keys for %N.", iTarget);
+			CPrintToChat(iClient, "{dodgerblue}[jse] {white}Showing keys for {limegreen}%N{white}.", iTarget);
 		} else {
 			g_bEnabled[iClient] = false;
 		}
@@ -404,6 +412,11 @@ public Action cmdShowKeys(int iClient, int iArgC) {
 }
 
 public Action cmdShowKeysCoords(int iClient, int iArgC) {
+	if (!iClient) {
+		ReplyToCommand(iClient, "[jse] You cannot run this command from server console.");
+		return Plugin_Handled;
+	}
+	
 	switch (g_iMode[iClient]) {
 		case EDIT_COORDS: {
 			g_iMode[iClient] = DISPLAY;
@@ -419,6 +432,11 @@ public Action cmdShowKeysCoords(int iClient, int iArgC) {
 }
 
 public Action cmdShowKeysColors(int iClient, int iArgC) {
+	if (!iClient) {
+		ReplyToCommand(iClient, "[jse] You cannot run this command from server console.");
+		return Plugin_Handled;
+	}
+	
 	switch (g_iMode[iClient]) {
 		case EDIT_COLORS: {
 			g_iMode[iClient] = DISPLAY;
@@ -436,6 +454,11 @@ public Action cmdShowKeysColors(int iClient, int iArgC) {
 }
 
 public Action cmdShowKeysOptions(int iClient, int iArgC) {
+	if (!iClient) {
+		ReplyToCommand(iClient, "[jse] You cannot run this command from server console.");
+		return Plugin_Handled;
+	}
+	
 	sendOptionsPanel(iClient);
 	return Plugin_Handled;
 }
