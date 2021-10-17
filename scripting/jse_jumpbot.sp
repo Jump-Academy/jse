@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"1.0.0-rc4"
+#define PLUGIN_VERSION	"1.0.0-rc5"
 
 #define UPDATE_URL		"http://jumpacademy.tf/plugins/jse/jumpbot/updatefile.txt"
 #define API_HOST		"api.jumpacademy.tf"
@@ -12,6 +12,7 @@ enum struct ClientState {
 	float fPos[3];
 	float fAng[3];
 	int iButtons;
+	int iLastUpdate;
 }
 
 enum struct RecEnt {
@@ -75,7 +76,7 @@ enum struct SpawnFreeze {
 #define MAX_NEARBY_SEARCH_DISTANCE	1000.0
 #define MAX_TARGET_FOLLOW_DISTANCE	4000.0
 
-#define MAX_REC_ENT_DESYNCS		3
+#define MAX_REC_DESYNCS		3
 
 #define WARMUP_FRAMES_DEFAULT	66
 #define RESPAWN_FREEZE_FRAMES	66 // 1 second
@@ -136,6 +137,7 @@ enum RecBlockType {
 }
 
 ConVar g_hBotName;
+ConVar g_hBotNameAuthors;
 ConVar g_hDebug;
 ConVar g_hOutline;
 
@@ -277,6 +279,7 @@ public void OnPluginStart() {
 	AutoExecConfig_SetFile("jse_jumpbot");
 	
 	g_hBotName 				= AutoExecConfig_CreateConVar("jse_jb_name", 			"JumpBOT", 			"JumpBOT default name", 																FCVAR_NONE												);
+	g_hBotNameAuthors		= AutoExecConfig_CreateConVar("jse_jb_name_authors",	"0",	 			"Rename bot as the recorder during playback", 																FCVAR_NONE,							true, 0.0, true, 1.0);
 	g_hDebug				= AutoExecConfig_CreateConVar("jse_jb_debug", 			"0", 				"Toggle debug mode", 																	FCVAR_DONTRECORD, 					true, 0.0, true, 1.0);
 	
 	g_hOutline	 			= AutoExecConfig_CreateConVar("jse_jb_outline", 		"1", 				"Toggle JumpBOT glow outline", 															FCVAR_NONE, 						true, 0.0, true, 1.0);
@@ -413,6 +416,7 @@ public void OnPluginStart() {
 	// For manual late plugin load
 	if (GetGameTime() > 5.0 && GetClientCount() > 0) {
 		SetupBot();
+		SetupQueue();
 		
 		for (int i = 1; i <= MaxClients; i++) {
 			if (IsClientInGame(i) && !IsFakeClient(i) && AreClientCookiesCached(i)) {
@@ -811,14 +815,18 @@ public void OnGameFrame() {
 
 		g_iRecBufferUsed = g_iRecBufferIdx;
 	} else if (g_iClientInstruction & (INST_WARMUP | INST_WAIT)) {
-		for (int i=0; i<g_hRecordingBots.Length; i++) {
-			int iClient = g_hRecordingBots.Get(i, RecBot::iEnt);
+		ArrayList hClientInfo = g_iRecording.ClientInfo;
 
-			// TODO: Bot count vs. RecClient count mismatch
-			ClientInfo iClientInfo = g_iRecording.ClientInfo.Get(i);
+		for (int i=0; i<hClientInfo.Length; i++) {
+			int iClient = g_hRecordingBots.Get(i, RecBot::iEnt);
+			
+			ClientInfo iClientInfo = hClientInfo.Get(i);
+
 			float fPos[3];
 			iClientInfo.GetStartPos(fPos);
 			Entity_SetAbsOrigin(iClient, fPos);
+			
+			g_eClientState[iClient].iLastUpdate = GetGameTickCount();
 		}
 
 		if (g_iClientInstruction & INST_WARMUP && g_iRecBufferFrame++ > g_iWarmupFrames) {
@@ -827,7 +835,7 @@ public void OnGameFrame() {
 			g_iClientInstruction |= INST_PLAY;
 			g_iRecBufferIdx = 0;
 
-			for (int i=0; i<g_hRecordingBots.Length; i++) {
+			for (int i=0; i<hClientInfo.Length; i++) {
 				int iClient = g_hRecordingBots.Get(i, RecBot::iEnt);
 
 				for (int iSlot = TFWeaponSlot_Primary; iSlot <= TFWeaponSlot_Item2; iSlot++) {
@@ -852,6 +860,8 @@ public void OnGameFrame() {
 		if (g_iRecBufferIdx >= g_hRecBuffer.Length || (g_iRecBufferIdx >= g_iRecBufferUsed)) {
 			ResetBubbleRotation(g_iRecording);
 			ClearRecEntities();
+
+			ArrayList hClientInfo = g_iRecording.ClientInfo;
 			
 			if (g_hPlaybackQueue.Length && g_iClientInstruction & INST_PLAYALL) {
 				g_iRecording = g_hPlaybackQueue.Get(0);
@@ -884,9 +894,7 @@ public void OnGameFrame() {
 				
 				g_iRecBufferIdx = 0;
 
-				// TODO: Bot count vs RecClient count mismatch
-				ArrayList hClientInfo = g_iRecording.ClientInfo;
-				for (int i=0; i<g_hRecordingBots.Length; i++) {
+				for (int i=0; i<hClientInfo.Length; i++) {
 					int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
 					ClientInfo iClientInfo = hClientInfo.Get(i);
 
@@ -907,7 +915,7 @@ public void OnGameFrame() {
 				return;
 			}
 
-			for (int i=0; i<g_hRecordingBots.Length; i++) {
+			for (int i=0; i<hClientInfo.Length; i++) {
 				int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
 
 				g_eClientState[iRecBot].iButtons = 0; // Release all buttons
@@ -1003,6 +1011,7 @@ public void OnGameFrame() {
 							iButtons &= ~(IN_ATTACK | IN_ATTACK2 | IN_ATTACK3);
 						}
 
+						g_eClientState[iEntity].iLastUpdate = GetGameTickCount();
 						g_eClientState[iEntity].fAng = fAng;
 						g_eClientState[iEntity].iButtons = iButtons; // & ~(7 << 26);
 
@@ -1096,7 +1105,7 @@ public void OnGameFrame() {
 									PrintToServer("Entity block for RecEnt[%d] has no assigned entity (%s) (%d)", iRecordingEnt, sClassName, iDesyncs);
 									#endif
 
-									if (iDesyncs >= MAX_REC_ENT_DESYNCS) {
+									if (iDesyncs >= MAX_REC_DESYNCS) {
 										int iOwnerEnt = g_hRecordingBots.Get(iOwner, RecBot::iEnt);
 
 										#if !defined DEBUG
@@ -1204,7 +1213,7 @@ public void OnGameFrame() {
 						PrintToServer("Missing entity block for RecEnt[%d] (%s) (%d)", iRecordingEnt, sClassName, iDesyncs);	
 						#endif
 
-						if (iDesyncs >= MAX_REC_ENT_DESYNCS) {
+						if (iDesyncs >= MAX_REC_DESYNCS) {
 							AcceptEntityInput(iEntity, "Kill");
 							// Kill triggers OnEntityDestroyed immediately and removes from list
 							i--;
@@ -1240,7 +1249,9 @@ public void OnGameFrame() {
 		if (g_iInterFrameLength > 1) {
 			float fAlpha = float(g_iInterFrameIdx) / g_iInterFrameLength;
 
-			for (int i=0; i<g_hRecordingBots.Length; i++) {
+			ArrayList hClientInfo = g_iRecording.ClientInfo;
+
+			for (int i=0; i<hClientInfo.Length; i++) {
 				RecBot eRecBot;
 				g_hRecordingBots.GetArray(i, eRecBot);
 
@@ -1366,7 +1377,10 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 				
 				doFullStop();
 				findTargetFollow();
-				for (int i=0; i<g_hRecordingBots.Length; i++) {
+
+				ArrayList hClientInfo = g_iRecording.ClientInfo;
+
+				for (int i=0; i<hClientInfo.Length; i++) {
 					TF2_RespawnPlayer(g_hRecordingBots.Get(i, RecBot::iEnt));
 				}
 			}
@@ -1374,6 +1388,11 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 		return Plugin_Continue;
 	} else if (g_hRecordingBots.FindValue(iClient) != -1) {
 		fAng = g_eClientState[iClient].fAng;
+
+		if (GetGameTickCount() - g_eClientState[iClient].iLastUpdate >= MAX_REC_DESYNCS) {
+			return Plugin_Changed;
+		}
+
 
 		iButtons = g_eClientState[iClient].iButtons | IN_RELOAD; // Autoreload;
 
@@ -1434,6 +1453,7 @@ public void OnClientPostAdminCheck(int iClient) {
 	
 	if (!IsFakeClient(iClient) && !g_hRecordingBots.Length) {
 		SetupBot();
+		SetupQueue();
 	}
 }
 
@@ -1772,10 +1792,6 @@ public Action cmdPlay(int iClient, int iArgC) {
 
 	Recording iRecording = g_iRecording;
 
-	if (!PrepareBots(iRecording)) {
-		return Plugin_Handled;
-	}
-
 	switch (iArgC) {
 		case 0: {
 			if (!iRecording) {
@@ -1809,6 +1825,10 @@ public Action cmdPlay(int iClient, int iArgC) {
 	}
 	
 	doFullStop();
+
+	if (!PrepareBots(iRecording)) {
+		return Plugin_Handled;
+	}
 
 	g_iRecBufferIdx = 0;
 	g_iRecBufferFrame = 0;
@@ -2497,7 +2517,7 @@ public Action cmdPause(int iClient, int iArgC) {
 	}
 	
 	// TODO: Translate
-	CPrintToChat(iClient, "{dodgerblue}[jb] {white}%s", (g_iClientInstruction & INST_PAUSE) ? "Paused" : "Unpaused");
+	CReplyToCommand(iClient, "{dodgerblue}[jb] {white}%s", (g_iClientInstruction & INST_PAUSE) ? "Paused" : "Unpaused");
 
 	return Plugin_Handled;
 }
@@ -3157,8 +3177,8 @@ public void Respawn(any aData) {
 }
 
 public Action Timer_BotJoinExecute(Handle hTimer, any aData) {
-	int iClient = aData;
-	if (IsClientInGame(iClient)) {
+	int iClient = GetClientFromSerial(aData);
+	if (iClient) {
 		char sCommands[256];
 		g_hBotJoinExecute.GetString(sCommands, sizeof(sCommands));
 		
@@ -3169,9 +3189,9 @@ public Action Timer_BotJoinExecute(Handle hTimer, any aData) {
 			FakeClientCommand(iClient, sBuffers[i]);
 		}
 		
-		ConVar hcvCheats = FindConVar("sv_cheats");
-		if (hcvCheats.BoolValue) {
-			hcvCheats.BoolValue = false;
+		ConVar hCVCheats = FindConVar("sv_cheats");
+		if (hCVCheats.BoolValue) {
+			hCVCheats.BoolValue = false;
 		}
 	}
 	
@@ -3336,6 +3356,7 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		Recording iRecording;
 		g_hBubbleLookup.GetValue(sKey, iRecording);
 		
+		char sDisplay[256];
 		char sAuthorName[32];
 		char sAuthID[24];
 		char sClass[32];
@@ -3348,15 +3369,25 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		ArrayList hClientInfo = iRecording.ClientInfo;
 		if (hClientInfo.Length) {
 			// Primary author
-			ClientInfo iClientInfo = hClientInfo.Get(0);
-			iClientInfo.GetName(sAuthorName, sizeof(sAuthorName));
-			iClientInfo.GetAuthID(sAuthID, sizeof(sAuthID));
+			ClientInfo iClientInfo0 = hClientInfo.Get(0);
+			iClientInfo0.GetName(sAuthorName, sizeof(sAuthorName));
+			iClientInfo0.GetAuthID(sAuthID, sizeof(sAuthID));
 
-			TF2_GetClassName(view_as<TFClassType>(iClientInfo.Class), sClass, sizeof(sClass));
+			FormatEx(sDisplay, sizeof(sDisplay), sAuthorName[0] ? sAuthorName : sAuthID);
+
+			for (int i=1; i<hClientInfo.Length; i++) {
+				ClientInfo iClientInfo = hClientInfo.Get(i);
+				iClientInfo.GetName(sAuthorName, sizeof(sAuthorName));
+				iClientInfo.GetAuthID(sAuthID, sizeof(sAuthID));
+
+				Format(sDisplay, sizeof(sDisplay), "%s, %s", sDisplay, sAuthorName[0] ? sAuthorName : sAuthID);
+			}
+
+			TF2_GetClassName(view_as<TFClassType>(iClientInfo0.Class), sClass, sizeof(sClass));
 			sClass[0] = CharToUpper(sClass[0]);
 			Format(sClass, sizeof(sClass), "%T", sClass, iOther);
 
-			if (iClientInfo.Class == TFClass_Soldier) {
+			if (iClientInfo0.Class == TFClass_Soldier) {
 				int iSlot, iItemDefIdx;
 				iRecording.GetEquipFilter(iSlot, iItemDefIdx);
 
@@ -3379,18 +3410,18 @@ public Action Hook_StartTouchInfo(int iEntity, int iOther) {
 		int iRecID = g_hRecordings.FindValue(iRecording);
 		if (g_iCallKeyMask) {
 			if (iRecording.Repo) {
-				PrintHintText(iOther, "%t (%s)%s\n%t: %s\n%t", "Class Recording", sClass, sTimeTotal, sEquipName, "Author", (sAuthorName[0] ? sAuthorName : sAuthID), "Press Review", g_sCallKeyLabel);
+				PrintHintText(iOther, "%t (%s)%s\n%t: %s\n%t", "Class Recording", sClass, sTimeTotal, sEquipName, "Author", sDisplay, "Press Review", g_sCallKeyLabel);
 			} else {
-				PrintHintText(iOther, "[%d] %t (%s)%s\n%t: %s\n%t", iRecID, "Class Recording", sClass, sTimeTotal, sEquipName, "Author", (sAuthorName[0] ? sAuthorName : sAuthID), "Press Review", g_sCallKeyLabel);
+				PrintHintText(iOther, "[%d] %t (%s)%s\n%t: %s\n%t", iRecID, "Class Recording", sClass, sTimeTotal, sEquipName, "Author", sDisplay, "Press Review", g_sCallKeyLabel);
 			}
 		} else {
 			char sCmd[32];
 			g_hBotCallSignShort.GetString(sCmd, sizeof(sCmd));
 			
 			if (iRecording.Repo) {
-				PrintHintText(iOther, "%t (%s)%s\n%t: %s\n%t", "Class Recording", sClass, sTimeTotal, sEquipName, "Author", (sAuthorName[0] ? sAuthorName : sAuthID), "Type Review", sCmd);
+				PrintHintText(iOther, "%t (%s)%s\n%t: %s\n%t", "Class Recording", sClass, sTimeTotal, sEquipName, "Author", sDisplay, "Type Review", sCmd);
 			} else {
-				PrintHintText(iOther, "[%d] %t (%s)%s\n%t: %s\n%t", iRecID, "Class Recording", sClass, sTimeTotal, sEquipName, "Author", (sAuthorName[0] ? sAuthorName : sAuthID), "Type Review", sCmd);
+				PrintHintText(iOther, "[%d] %t (%s)%s\n%t: %s\n%t", iRecID, "Class Recording", sClass, sTimeTotal, sEquipName, "Author", sDisplay, "Type Review", sCmd);
 			}
 		}
 		StopSound(iOther, SNDCHAN_STATIC, "ui/hint.wav");
@@ -3853,6 +3884,7 @@ void doFullStop() {
 	// Release all buttons
 	for (int i=1; i<=MaxClients; i++) {
 		g_eClientState[i].iButtons = 0;
+		g_eClientState[i].iLastUpdate = 0;
 	}
 
 	if (g_bShowKeysAvailable && Client_IsValid(g_iClientOfInterest) && IsClientInGame(g_iClientOfInterest)) {
@@ -3886,6 +3918,25 @@ void doFullStop() {
 	g_hRecBufferFrames = null;
 	
 	SetPlaybackSpeed(1.0);
+
+	if (g_hBotNameAuthors.BoolValue) {
+		char sBotName[MAX_NAME_LENGTH];
+		g_hBotName.GetString(sBotName, sizeof(sBotName));
+
+		// Rename bots after playback
+		for (int i=0; i<g_hRecordingBots.Length; i++) {
+			char sBotNameUnique[MAX_NAME_LENGTH];
+			if (i == 0) {
+				sBotNameUnique = sBotName;
+			} else {
+				Format(sBotNameUnique, sizeof(sBotNameUnique), "%s-%d", sBotName, i);
+			}
+
+			int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
+			SetEntPropString(iRecBot, Prop_Data, "m_szNetname", sBotNameUnique);
+			SetClientName(iRecBot, sBotNameUnique);
+		}
+	}
 }
 
 void Equip(int iBotID) {
@@ -4338,18 +4389,20 @@ bool LoadRecording(Recording iRecording) {
 	int iPosFrameData;
 	hFile.Seek(0x14, SEEK_SET);
 	hFile.ReadInt32(iPosFrameData);
-	hFile.Seek(iPosFrameData+8, SEEK_SET); // Skip FRAME and first CLIENT header
+	hFile.Seek(iPosFrameData+4, SEEK_SET); // Skip FRAME header
 
 	float fStartPos[3];
 	float fStartAng[3];
 
 	for (int i=0; i<iRecClients; i++) {
+		hFile.Seek(4, SEEK_CUR); // Skip client header
 		hFile.ReadInt32(view_as<int>(fStartPos[0]));
 		hFile.ReadInt32(view_as<int>(fStartPos[1]));
 		hFile.ReadInt32(view_as<int>(fStartPos[2]));
 		hFile.Seek(12, SEEK_CUR); // Skip velocity
 		hFile.ReadInt32(view_as<int>(fStartAng[0]));
 		hFile.ReadInt32(view_as<int>(fStartAng[1]));
+		hFile.Seek(8, SEEK_CUR); // Skip ang[2] and buttons
 
 		ClientInfo iClientInfo = hClientInfo.Get(i);
 		iClientInfo.SetStartPos(fStartPos);
@@ -4966,36 +5019,48 @@ void setRobotModel(int iClient) {
 	SetEntProp(iClient, Prop_Send, "m_bUseClassAnimations", 1);
 }
 
-void SetupBot() {
-	// TODO: Multiple bot setup/spawn
-	if (g_hRecordingBots.Length || g_bShuttingDown) {
-		PrintToServer("SetupBot: Already had %d bots", g_hRecordingBots.Length);
-		return;
+bool SetupBot(int iBots=1) {
+	PrintToServer("SetupBot %d", iBots);
+	if (g_hRecordingBots.Length >= iBots || g_bShuttingDown) {
+		PrintToServer("SetupBot: Already have %d bots", g_hRecordingBots.Length);
+		return true;
 	}
 	
+	PrintToServer("g_hRecordings.Length = %d", g_hRecordings.Length);
+	PrintToServer("SetupBot calling doFullStop");
 	doFullStop();
+
+	PrintToServer("SetupBot spawning bots");
 	
 	char sBotName[MAX_NAME_LENGTH];
 	g_hBotName.GetString(sBotName, sizeof(sBotName));
-	
-	int iRecBot = BotController_CreateBot(sBotName);
 
-	if (!Client_IsValid(iRecBot)) {
-		SetFailState("%t", "Cannot Create Bot");
+	for (int i=g_hRecordingBots.Length; i<iBots; i++) {
+		char sBotNameUnique[MAX_NAME_LENGTH];
+		if (i == 0) {
+			sBotNameUnique = sBotName;
+		} else {
+			Format(sBotNameUnique, sizeof(sBotNameUnique), "%s-%d", sBotName, i);
+		}
+
+		PrintToServer("SetupBot creating bot %d: %s", i, sBotNameUnique);
+		int iRecBot = BotController_CreateBot(sBotNameUnique);
+		if (!Client_IsValid(iRecBot)) {
+			LogError("%t", "Cannot Create Bot");
+			return false;
+		}
+
+		SetupBotImmunity(iRecBot);
+
+		RecBot eRecBot;
+		eRecBot.iEnt = iRecBot;
+		eRecBot.hEquip = new DataPack();
+		g_hRecordingBots.PushArray(eRecBot);
+
+		CreateTimer(5.0, Timer_BotJoinExecute, GetClientSerial(iRecBot), TIMER_FLAG_NO_MAPCHANGE);
 	}
-
-	SetupBotImmunity(iRecBot);
-
-	RecBot eRecBot;
-	eRecBot.iEnt = iRecBot;
-	eRecBot.hEquip = new DataPack();
-	g_hRecordingBots.PushArray(eRecBot);
-
-	CreateTimer(5.0, Timer_BotJoinExecute, iRecBot, TIMER_FLAG_NO_MAPCHANGE);
 	
-	if (g_hQueueTimer == null) {
-		g_hQueueTimer = CreateTimer(1.0, Timer_Queue, 0, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
-	}
+	return true;
 }
 
 void SetupBotImmunity(int iClient) {
@@ -5003,6 +5068,12 @@ void SetupBotImmunity(int iClient) {
 	SetAdminFlag(iAdmin, Admin_Reservation, true);
 	SetAdminImmunityLevel(iAdmin, 90);
 	SetUserAdmin(iClient, iAdmin, true);
+}
+
+void SetupQueue() {
+	if (g_hQueueTimer == null) {
+		g_hQueueTimer = CreateTimer(1.0, Timer_Queue, 0, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+	}
 }
 
 void RefreshModels() {
@@ -5492,14 +5563,26 @@ bool PrepareBots(Recording iRecording) {
 		return false;
 	}
 
-	if (!g_hRecordingBots.Length) {
-		SetupBot();
+	ArrayList hClientInfo = iRecording.ClientInfo;
+
+	if (!SetupBot(hClientInfo.Length)) {
 		return false;
 	}
 
-	// TODO: Bot count mismatch
+	if (g_hBotNameAuthors.BoolValue) {
+		for (int i=0; i<hClientInfo.Length; i++) {
+			ClientInfo iClientInfo = hClientInfo.Get(i);
+			
+			char sAuthorName[32];
+			iClientInfo.GetName(sAuthorName, sizeof(sAuthorName));
 
-	ArrayList hClientInfo = iRecording.ClientInfo;
+			int iRecBot = g_hRecordingBots.Get(i, RecBot::iEnt);
+
+			SetEntPropString(iRecBot, Prop_Data, "m_szNetname", sAuthorName);
+			SetClientName(iRecBot, sAuthorName);
+		}
+	}
+
 	for (int i=0; i<hClientInfo.Length; i++) {
 		RecBot eRecBot;
 		g_hRecordingBots.GetArray(i, eRecBot);
@@ -5526,6 +5609,7 @@ bool PrepareBots(Recording iRecording) {
 
 		g_hRecordingBots.SetArray(i, eRecBot);
 
+		g_eClientState[iRecBot].iLastUpdate = GetGameTickCount();
 		g_eClientState[iRecBot].fAng = fAng;
 
 		TFClassType iRecClass = iClientInfo.Class;
