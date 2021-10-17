@@ -5020,18 +5020,12 @@ void setRobotModel(int iClient) {
 }
 
 bool SetupBot(int iBots=1) {
-	PrintToServer("SetupBot %d", iBots);
 	if (g_hRecordingBots.Length >= iBots || g_bShuttingDown) {
-		PrintToServer("SetupBot: Already have %d bots", g_hRecordingBots.Length);
 		return true;
 	}
-	
-	PrintToServer("g_hRecordings.Length = %d", g_hRecordings.Length);
-	PrintToServer("SetupBot calling doFullStop");
+
 	doFullStop();
 
-	PrintToServer("SetupBot spawning bots");
-	
 	char sBotName[MAX_NAME_LENGTH];
 	g_hBotName.GetString(sBotName, sizeof(sBotName));
 
@@ -5043,7 +5037,6 @@ bool SetupBot(int iBots=1) {
 			Format(sBotNameUnique, sizeof(sBotNameUnique), "%s-%d", sBotName, i);
 		}
 
-		PrintToServer("SetupBot creating bot %d: %s", i, sBotNameUnique);
 		int iRecBot = BotController_CreateBot(sBotNameUnique);
 		if (!Client_IsValid(iRecBot)) {
 			LogError("%t", "Cannot Create Bot");
