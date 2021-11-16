@@ -6,8 +6,8 @@
 		{
 			"CTFWeaponBase::GetMaxClip1"
 			{
-				"windows"	"318"
-				"linux"		"324"
+				"windows"	"321"
+				"linux"		"327"
 			}
 		}
 	}
