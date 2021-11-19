@@ -949,12 +949,13 @@ public void OnGameFrame() {
 
 		// Rotate bubble
 		if (g_iRecording) {
-			int iBubble = g_iRecording.NodeModel;
+			int iBubble = EntRefToEntIndex(g_iRecording.NodeModel);
 			if (IsValidEntity(iBubble)) {
+				// Avoid using TeleportEntity due to animation jitter due to entity parenting
 				float fBubbleAng[3];
-				Entity_GetAbsAngles(iBubble, fBubbleAng);
+				GetEntPropVector(iBubble, Prop_Send, "m_angRotation", fBubbleAng);
 				fBubbleAng[1] -= 10.0;
-				Entity_SetAbsAngles(iBubble, fBubbleAng);
+				SetEntPropVector(iBubble, Prop_Send, "m_angRotation", fBubbleAng);
 			}
 		}
 
@@ -3596,7 +3597,7 @@ public Action Hook_Entity_SetTransmit(int iEntity, int iClient) {
 	if (g_bCoreAvailable && GetBlockEquip(iClient)) {
 		return Plugin_Handled;
 	}
-	
+
 	char sKey[32];
 	Entity_GetName(iEntity, sKey, sizeof(sKey));
 
@@ -3608,7 +3609,7 @@ public Action Hook_Entity_SetTransmit(int iEntity, int iClient) {
 	if (IsRecordingVisible(iRecording, iClient)) {
 		return Plugin_Continue;
 	}
-	
+
 	return Plugin_Handled;
 }
 
@@ -4778,14 +4779,20 @@ bool LoadState(Recording iRecording) {
 
 void ResetBubbleRotation(Recording iRecording) {
 	if (iRecording) {
-		int iBubble = iRecording.NodeModel;
+		int iBubble = EntRefToEntIndex(iRecording.NodeModel);
 		if (IsValidEntity(iBubble)) {
 			// Primary author
 			ClientInfo iClientInfo = iRecording.ClientInfo.Get(0);
 			float fBubbleAng[3] = {0.0, ...};
 			iClientInfo.GetStartAng(fBubbleAng);
 			fBubbleAng[0] = 0.0;
-			fBubbleAng[1] = float((RoundFloat(fBubbleAng[1]) + 90) % 360);
+
+			if (IsValidEntity(EntRefToEntIndex(iRecording.WeaponModel))) {
+				fBubbleAng[1] = float((RoundFloat(fBubbleAng[1]) - 90) % 360);
+			} else {
+				fBubbleAng[1] = float((RoundFloat(fBubbleAng[1]) + 90) % 360);
+			}
+
 			Entity_SetAbsAngles(iBubble, fBubbleAng);
 		}
 	}
@@ -5080,10 +5087,12 @@ void RefreshModels() {
 	g_hVisibleRecordings.Clear();
 
 	int iLastVisibleRecordingsLength = g_hLastVisibleRecordings.Length;
-	for (int i=0; i<iLastVisibleRecordingsLength; i++) {
-		Recording iRecording = g_hLastVisibleRecordings.Get(i);
-		iRecording.ResetVisibility();
-	}
+// 	for (int i=0; i<iLastVisibleRecordingsLength; i++) {
+// 		Recording iRecording = g_hLastVisibleRecordings.Get(i);
+// 		iRecording.ResetVisibility();
+// 	}
+
+	ArrayList hRemodelRecordings = new ArrayList();
 
 	if (g_bOctreeAvailable && g_iSpatialIdx) {
 		ArrayList hRecordings = new ArrayList();
@@ -5097,8 +5106,19 @@ void RefreshModels() {
 
 				for (int j=0; j<iRecordingsTotal; j++) {
 					Recording iRecording = hRecordings.Get(j);
-					if (IsRecordingVisible(iRecording, i, true) && g_hVisibleRecordings.FindValue(iRecording) == -1) {
-						g_hVisibleRecordings.Push(iRecording);
+					bool bPreviouslyVisible = IsRecordingVisible(iRecording, i);
+
+					if (IsRecordingVisible(iRecording, i, true)) {
+						if (g_hVisibleRecordings.FindValue(iRecording) == -1) {
+							g_hVisibleRecordings.Push(iRecording);
+						}
+					} else if (bPreviouslyVisible && hRemodelRecordings.FindValue(iRecording) == -1) {
+						// Delete models as a workaround to force game client to respect parent entity transmission hierarchy once recreated so both can be hidden again.
+						// FIXME: This will glitch models for a currently playing recording.
+						//        Use a recording's custom start location/angle when implemented to seamlessly continue spin during playback.
+
+						RemoveModels(iRecording);
+						hRemodelRecordings.Push(iRecording);
 					}
 				}
 
@@ -5125,7 +5145,13 @@ void RefreshModels() {
 			bool bVisible = false;
 			int iClientsNearby = GetClientsInRange(fPos, RangeType_Visibility, iClients, sizeof(iClients));
 			for (int j=0; j<iClientsNearby; j++) {
+				bool bPreviouslyVisible = IsRecordingVisible(iRecording, iClients[j]);
 				bool bVisibility = IsRecordingVisible(iRecording, iClients[j], true);
+
+				if (!bVisibility && bPreviouslyVisible && hRemodelRecordings.FindValue(iRecording) == -1) {
+					RemoveModels(iRecording);
+					hRemodelRecordings.Push(iRecording);
+				}
 
 				if (!bVisible) {
 					GetClientEyePosition(iClients[j], fPosClient);
@@ -5138,6 +5164,8 @@ void RefreshModels() {
 			}
 		}
 	}
+
+	delete hRemodelRecordings;
 
 	int iVisibleRecordingsLength = g_hVisibleRecordings.Length;
 
@@ -5156,73 +5184,96 @@ void RefreshModels() {
 		iClientInfo.GetStartPos(fPos);
 		iClientInfo.GetStartAng(fAng);
 
-		int iEntity = CreateEntityByName("prop_dynamic");
-		if (IsValidEntity(iEntity)) {
-			char sKey[32];
-			FormatEx(sKey, sizeof(sKey), "_jumpbot_rec_node:%d", i);
-			g_hBubbleLookup.SetValue(sKey, iRecording);
+		int iWeaponEntity = INVALID_ENT_REFERENCE;
+		TFClassType iClass = iClientInfo.Class;
 
-			SetEntityModel(iEntity, HINT_MODEL_MARKER);
-			SetEntPropFloat(iEntity, Prop_Data, "m_flModelScale", 0.5);
-			SetEntProp(iEntity, Prop_Data, "m_CollisionGroup", COLLISION_GROUP_PLAYER);
-			SetEntProp(iEntity, Prop_Data, "m_usSolidFlags", FSOLID_NOT_SOLID | FSOLID_TRIGGER);
-			DispatchKeyValue(iEntity, "targetname", sKey);
-			DispatchSpawn(iEntity);
-			SetEntityRenderMode(iEntity, RENDER_TRANSALPHA);
-			
-			if (!iRecording.Repo) {
-				SetEntityRenderColor(iEntity, g_iLocalRecColor[0], g_iLocalRecColor[1], g_iLocalRecColor[2], 255);
+		static char sWeaponModel[64];
+		switch (iClass) {
+			case TFClass_Soldier: {
+				sWeaponModel = HINT_MODEL_ROCKET;
 			}
-			
-			int iEntityRef = EntIndexToEntRef(iEntity);
-			iRecording.NodeModel = iEntityRef;
-
-			float fAngOffset[3];
-			fAngOffset[0] = 0.0;
-			fAngOffset[1] = float(RoundFloat(fAng[1] + 90) % 360);
-			
-			float fPosOffset[3];
-			fPosOffset = fPos;
-			fPosOffset[2] += 20.0;
-
-			TeleportEntity(iEntity, fPosOffset, fAngOffset, NULL_VECTOR);
-			
-			SDKHook(iEntity, SDKHook_StartTouch, Hook_StartTouchInfo);
-			SDKHook(iEntity, SDKHook_EndTouch, Hook_EndTouchInfo);
-			SDKHook(iEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);
+			case TFClass_DemoMan: {
+				sWeaponModel = HINT_MODEL_STICKY;
+			}
+			default: {
+				sWeaponModel[0] = '\0';
+			}
 		}
 
-		TFClassType iClass = iClientInfo.Class;
-		if ((iClass == TFClass_Soldier || iClass == TFClass_DemoMan) && (iEntity = CreateEntityByName("prop_dynamic")) != INVALID_ENT_REFERENCE) {
+		if (sWeaponModel[0] && (iWeaponEntity = CreateEntityByName("prop_dynamic")) != INVALID_ENT_REFERENCE) {
 			char sKey[32];
 			FormatEx(sKey, sizeof(sKey), "_jumpbot_rec_weapon:%d", i);
 			g_hBubbleLookup.SetValue(sKey, iRecording);
 
-			if (iClass == TFClass_Soldier) {
-				SetEntityModel(iEntity, HINT_MODEL_ROCKET);
-			} else {
-				SetEntityModel(iEntity, HINT_MODEL_STICKY);
-			}
-			
-			SetEntPropFloat(iEntity, Prop_Data, "m_flModelScale", 0.75);
-			DispatchKeyValue(iEntity, "Solid", "0");
-			DispatchKeyValue(iEntity, "targetname", sKey);
-			DispatchSpawn(iEntity);
-			SetEntityRenderMode(iEntity, RENDER_TRANSALPHA);
-			
-			int iEntityRef = EntIndexToEntRef(iEntity);
-			iRecording.WeaponModel = iEntityRef;
-			
+			SetEntityModel(iWeaponEntity, sWeaponModel);
+
+			SetEntPropFloat(iWeaponEntity, Prop_Data, "m_flModelScale", 0.75);
+			DispatchKeyValue(iWeaponEntity, "Solid", "0");
+			DispatchKeyValue(iWeaponEntity, "targetname", sKey);
+			DispatchSpawn(iWeaponEntity);
+			SetEntityRenderMode(iWeaponEntity, RENDER_TRANSALPHA);
+
+			iRecording.WeaponModel = EntIndexToEntRef(iWeaponEntity);
+
 			float fPosOffset[3];
 			fPosOffset = fPos;
 			fPosOffset[2] += 9.0;
-			
+
 			float fAngOffset[3];
 			fAngOffset[0] = 0.0;
 			fAngOffset[1] = 90.0 + float((RoundFloat(fAng[1]) - 90) % 360);
-			TeleportEntity(iEntity, fPosOffset, fAngOffset, NULL_VECTOR);
-			
-			SDKHook(iEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);				
+
+			TeleportEntity(iWeaponEntity, fPosOffset, fAngOffset, NULL_VECTOR);
+
+			SDKHook(iWeaponEntity, SDKHook_StartTouch, Hook_StartTouchInfo);
+			SDKHook(iWeaponEntity, SDKHook_EndTouch, Hook_EndTouchInfo);
+			SDKHook(iWeaponEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);
+		}
+
+		int iNodeEntity = CreateEntityByName("prop_dynamic");
+		if (IsValidEntity(iNodeEntity)) {
+			char sKey[32];
+			FormatEx(sKey, sizeof(sKey), "_jumpbot_rec_node:%d", i);
+
+			SetEntityModel(iNodeEntity, HINT_MODEL_MARKER);
+			SetEntPropFloat(iNodeEntity, Prop_Data, "m_flModelScale", 0.5);
+			SetEntProp(iNodeEntity, Prop_Data, "m_CollisionGroup", COLLISION_GROUP_PLAYER);
+			SetEntProp(iNodeEntity, Prop_Data, "m_usSolidFlags", FSOLID_NOT_SOLID | FSOLID_TRIGGER);
+			DispatchKeyValue(iNodeEntity, "targetname", sKey);
+			DispatchSpawn(iNodeEntity);
+			SetEntityRenderMode(iNodeEntity, RENDER_TRANSALPHA);
+
+			if (!iRecording.Repo) {
+				SetEntityRenderColor(iNodeEntity, g_iLocalRecColor[0], g_iLocalRecColor[1], g_iLocalRecColor[2], 255);
+			}
+
+			iRecording.NodeModel = EntIndexToEntRef(iNodeEntity);
+
+			float fAngOffset[3], fPosOffset[3];
+			g_hBubbleLookup.SetValue(sKey, iRecording);
+
+			if (iWeaponEntity == INVALID_ENT_REFERENCE) {
+				fPosOffset = fPos;
+				fPosOffset[2] += 20.0;
+
+				fAngOffset[1] = float(RoundFloat(fAng[1] + 90) % 360);
+
+				SDKHook(iNodeEntity, SDKHook_StartTouch, Hook_StartTouchInfo);
+				SDKHook(iNodeEntity, SDKHook_EndTouch, Hook_EndTouchInfo);
+				SDKHook(iNodeEntity, SDKHook_SetTransmit, Hook_Entity_SetTransmit);
+			} else {
+				Entity_SetParent(iNodeEntity, iWeaponEntity);
+
+				fPosOffset[2] = 11.0;
+
+				fAngOffset[1] = float(RoundFloat(fAng[1] - 90) % 360);
+			}
+
+			TeleportEntity(iNodeEntity, fPosOffset, fAngOffset, NULL_VECTOR);
+		}
+
+		if (g_iRecording == iRecording && g_iClientInstruction & (INST_RECD | INST_PLAY)) {
+			SetBubbleAlpha(iRecording, 50);
 		}
 	}
 
@@ -5248,12 +5299,13 @@ void RemoveModels(Recording iRecording) {
 		int iEntity = EntRefToEntIndex(iEntityRef);
 		if (iEntity > 0 && IsValidEntity(iEntity)) {
 			AcceptEntityInput(iEntity, "Kill");
-			iRecording.NodeModel = INVALID_ENT_REFERENCE;
 
 			char sKey[32];
 			Entity_GetName(iEntity, sKey, sizeof(sKey));
 			g_hBubbleLookup.Remove(sKey);
 		}
+
+		iRecording.NodeModel = INVALID_ENT_REFERENCE;
 	}
 	
 	iEntityRef = iRecording.WeaponModel;
@@ -5261,12 +5313,13 @@ void RemoveModels(Recording iRecording) {
 		int iEntity = EntRefToEntIndex(iEntityRef);
 		if (iEntity > 0 && IsValidEntity(iEntity)) {
 			AcceptEntityInput(iEntity, "Kill");
-			iRecording.WeaponModel = INVALID_ENT_REFERENCE;
 
 			char sKey[32];
 			Entity_GetName(iEntity, sKey, sizeof(sKey));
 			g_hBubbleLookup.Remove(sKey);
 		}
+
+		iRecording.WeaponModel = INVALID_ENT_REFERENCE;
 	}
 }
 
