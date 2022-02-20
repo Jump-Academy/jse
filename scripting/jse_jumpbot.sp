@@ -138,6 +138,7 @@ enum RecBlockType {
 
 ConVar g_hBotName;
 ConVar g_hBotNameAuthors;
+ConVar g_hBotImmunity;
 ConVar g_hDebug;
 ConVar g_hOutline;
 
@@ -280,6 +281,7 @@ public void OnPluginStart() {
 	
 	g_hBotName 				= AutoExecConfig_CreateConVar("jse_jb_name", 			"JumpBOT", 			"JumpBOT default name", 																FCVAR_NONE												);
 	g_hBotNameAuthors		= AutoExecConfig_CreateConVar("jse_jb_name_authors",	"0",	 			"Rename bot as the recorder during playback", 																FCVAR_NONE,							true, 0.0, true, 1.0);
+	g_hBotImmunity			= AutoExecConfig_CreateConVar("jse_jb_immunity", 		"90",	 			"Bot immunity level", 																FCVAR_NONE												);
 	g_hDebug				= AutoExecConfig_CreateConVar("jse_jb_debug", 			"0", 				"Toggle debug mode", 																	FCVAR_DONTRECORD, 					true, 0.0, true, 1.0);
 	
 	g_hOutline	 			= AutoExecConfig_CreateConVar("jse_jb_outline", 		"1", 				"Toggle JumpBOT glow outline", 															FCVAR_NONE, 						true, 0.0, true, 1.0);
@@ -5066,7 +5068,7 @@ bool SetupBot(int iBots=1) {
 void SetupBotImmunity(int iClient) {
 	AdminId iAdmin = CreateAdmin("Bot");
 	SetAdminFlag(iAdmin, Admin_Reservation, true);
-	SetAdminImmunityLevel(iAdmin, 90);
+	SetAdminImmunityLevel(iAdmin, g_hBotImmunity.IntValue);
 	SetUserAdmin(iClient, iAdmin, true);
 }
 
