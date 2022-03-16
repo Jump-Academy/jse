@@ -265,6 +265,8 @@ Handle g_hSDKGetMaxClip1;
 
 GlobalForward g_hClientRestoreForward;
 
+int g_iButtons[MAXPLAYERS + 1];
+
 public Plugin myinfo = {
 	name = "Jump Server Essentials - JumpBot",
 	author = PLUGIN_AUTHOR,
@@ -1325,6 +1327,8 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 		TeleportEntity(iClient, g_eSpawnFreeze[iClient].fPos, fAng, NULL_VECTOR);
 		g_eSpawnFreeze[iClient].iFrames--;
 
+		g_iButtons[iClient] = iButtons;
+		
 		return Plugin_Changed;
 	}
 	
@@ -1368,7 +1372,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 				StopSound(iClient, SNDCHAN_STATIC, "ui/hint.wav");
 			}
 			
-			if (iButtons & g_iCallKeyMask && g_iRecBufferFrame >= 66) {
+			if (iButtons & g_iCallKeyMask && (g_iButtons[iClient] & g_iCallKeyMask) == 0 && g_iRecBufferFrame >= 66) {
 				if (Client_IsValid(g_iClientOfInterest) && IsClientInGame(g_iClientOfInterest)) {
 					PrintHintText(g_iClientOfInterest, " ");
 					StopSound(g_iClientOfInterest, SNDCHAN_STATIC, "ui/hint.wav");
@@ -1388,11 +1392,16 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 				}
 			}
 		}
+		
+		g_iButtons[iClient] = iButtons;
+		
 		return Plugin_Continue;
 	} else if (g_hRecordingBots.FindValue(iClient) != -1) {
 		fAng = g_eClientState[iClient].fAng;
 
 		if (GetGameTickCount() - g_eClientState[iClient].iLastUpdate >= MAX_REC_DESYNCS) {
+			g_iButtons[iClient] = iButtons;
+			
 			return Plugin_Changed;
 		}
 
@@ -1420,11 +1429,15 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 			fVel[1] = 400.0;
 		}
 
+		g_iButtons[iClient] = iButtons;
+		
 		return Plugin_Changed;
-	} else if (iButtons & g_iCallKeyMask && (GetTime()-g_eLastBubbleTime[iClient].iTime) < 10) {
+	} else if (iButtons & g_iCallKeyMask && (g_iButtons[iClient] & g_iCallKeyMask) == 0 && (GetTime()-g_eLastBubbleTime[iClient].iTime) < 10) {
 		g_eLastBubbleTime[iClient].iTime = GetTime();
 		FakeClientCommand(iClient, "showme");
 	}
+	
+	g_iButtons[iClient] = iButtons;
 	
 	return Plugin_Continue;
 }
