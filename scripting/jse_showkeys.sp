@@ -72,6 +72,9 @@ public void OnPluginStart() {
 	RegConsoleCmd("sm_showkeys_colors", cmdShowKeysColors, "Change show keys HUD colors");
 	RegConsoleCmd("sm_skeys_colors", cmdShowKeysColors, "Change show keys HUD colors");
 
+	RegAdminCmd("sm_forceshowkeys", cmdForceShowKeys, ADMFLAG_GENERIC, "Force toggle showing keypresses on HUD");
+	RegAdminCmd("sm_fskeys", cmdForceShowKeys, ADMFLAG_GENERIC, "Force toggle showing keypresses on HUD");
+
 	HookEvent("player_spawn", Event_PlayerSpawn);
 
 	// Cookies
@@ -458,6 +461,34 @@ public Action cmdShowKeysOptions(int iClient, int iArgC) {
 	}
 
 	SendOptionsPanel(iClient);
+	return Plugin_Handled;
+}
+
+public Action cmdForceShowKeys(int iClient, int iArgC) {
+	if (iArgC != 2) {
+		ReplyToCommand(iClient, "[jse] Usage: sm_forceshowkeys <target> <0/1>");
+		return Plugin_Handled;
+	}
+
+	char sArg1[32];
+	GetCmdArg(1, sArg1, sizeof(sArg1));
+
+	char sArg2[32];
+	GetCmdArg(2, sArg2, sizeof(sArg2));
+
+	bool bEnabled = StringToInt(sArg2) != 0;
+
+	int iTarget = FindTarget(iClient, sArg1, false, false);
+	if (iTarget != -1) {
+		g_iTarget[iTarget] = 0;
+		g_bEnabled[iTarget] = bEnabled;
+
+		CPrintToChat(iTarget, "{dodgerblue}[jse] {white}Show keys %s.", bEnabled ? "enabled" : "disabled");
+		CPrintToChat(iClient, "{dodgerblue}[jse] {white}Show keys %s for {limegreen}%N{white}.", bEnabled ? "enabled" : "disabled", iTarget);
+
+		SetClientCookie(iTarget, g_hCookieEnabled, bEnabled ? "1" : "0");
+	}
+
 	return Plugin_Handled;
 }
 
