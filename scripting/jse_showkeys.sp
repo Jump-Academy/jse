@@ -466,7 +466,7 @@ public Action cmdShowKeysOptions(int iClient, int iArgC) {
 
 public Action cmdForceShowKeys(int iClient, int iArgC) {
 	if (iArgC != 2) {
-		ReplyToCommand(iClient, "[jse] Usage: sm_forceshowkeys <target> <0/1>");
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Usage: sm_forceshowkeys <target> <0/1>");
 		return Plugin_Handled;
 	}
 
@@ -482,9 +482,9 @@ public Action cmdForceShowKeys(int iClient, int iArgC) {
 	if (iTarget != -1) {
 		g_iTarget[iTarget] = 0;
 		g_bEnabled[iTarget] = bEnabled;
-
+		
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Show keys %s for {limegreen}%N{white}.", bEnabled ? "enabled" : "disabled", iTarget);
 		CPrintToChat(iTarget, "{dodgerblue}[jse] {white}Show keys %s.", bEnabled ? "enabled" : "disabled");
-		CPrintToChat(iClient, "{dodgerblue}[jse] {white}Show keys %s for {limegreen}%N{white}.", bEnabled ? "enabled" : "disabled", iTarget);
 
 		SetClientCookie(iTarget, g_hCookieEnabled, bEnabled ? "1" : "0");
 	}
