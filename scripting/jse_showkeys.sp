@@ -483,13 +483,9 @@ public Action cmdForceShowKeys(int iClient, int iArgC) {
 		g_iTarget[iTarget] = 0;
 		g_bEnabled[iTarget] = bEnabled;
 		
-		if (!iClient) {
-			ReplyToCommand(iClient, "[jse] Show keys %s for %N.", bEnabled ? "enabled" : "disabled", iTarget);
-		} else {
-			CPrintToChat(iClient, "{dodgerblue}[jse] {white}Show keys %s for {limegreen}%N{white}.", bEnabled ? "enabled" : "disabled", iTarget);
-		}
-
+		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Show keys %s for {limegreen}%N{white}.", bEnabled ? "enabled" : "disabled", iTarget);
 		CPrintToChat(iTarget, "{dodgerblue}[jse] {white}Show keys %s.", bEnabled ? "enabled" : "disabled");
+
 		SetClientCookie(iTarget, g_hCookieEnabled, bEnabled ? "1" : "0");
 	}
 
