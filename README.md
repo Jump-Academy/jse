@@ -10,6 +10,7 @@ JSE is a set of modular plugins for enabling standard features present in most T
 * Foresight
 * JumpBOT
 * Marker
+* Map Info
 * Scoreboard
 * Show Keys
 * Teleport
