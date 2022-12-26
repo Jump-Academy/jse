@@ -3,7 +3,7 @@
 // #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.2.0"
+#define PLUGIN_VERSION "0.2.1"
 
 #include <sourcemod>
 #include <clientprefs>
@@ -469,7 +469,6 @@ public Action cmdMapInfo(int iClient, int iArgC) {
 			InitLookupStack(iClient, g_hCurrentMapInfoList);
 			ShowMapInfoPanel(iClient, 0, false);
 		}
-
 	} else {
 		int iArgStart = 1;
 
@@ -543,6 +542,7 @@ public Action cmdMapInfo(int iClient, int iArgC) {
 					}
 				}
 			}
+
 			if (StrContains(sSearchTerm, "d=", false) == 0) {
 				if (String_IsNumeric(sSearchTerm[2])) {
 					int iTier = StringToInt(sSearchTerm[2]);
@@ -670,6 +670,20 @@ void PrintMapInfo(JSONObject hMapInfo, bool bExtended, char[] sBuffer, int iBuff
 		}
 
 		delete hTier;
+	}
+
+	if (hMapInfo.HasKey("type")) {
+		char sLayout[16];
+		switch (hMapInfo.GetInt("type")) {
+			case 1:
+				sLayout = "Connectors";
+			case 2:
+				sLayout = "Doors";
+		}
+
+		if (sLayout[0]) {
+			Format(sBuffer, iBufferLength, "%s\n   Layout: %s", sBuffer, sLayout);
+		}
 	}
 
 	if (hMapInfo.HasKey("courses")) {
@@ -910,14 +924,31 @@ void ShowMapInfoPanel(int iClient, int iTime=0, bool bShowControls=true) {
 
 	hPanel.DrawText(" ");
 
+	// Layout type between jumps
+	if (hMapInfo.HasKey("type")) {
+		char sLayout[16];
+		switch (hMapInfo.GetInt("type")) {
+			case 1:
+				sLayout = "Connectors";
+			case 2:
+				sLayout = "Doors";
+		}
+
+		if (sLayout[0]) {
+			FormatEx(sBuffer, sizeof(sBuffer), "  Layout:  %s", sLayout);
+			hPanel.DrawText(sBuffer);
+		}
+	}  else {
+		hPanel.DrawText(" ");
+	}
+
 	if (iCourses && iJumps) {
-		FormatEx(sBuffer, sizeof(sBuffer), "Courses:  %d\n  Jumps:  %d", iCourses, iJumps);
+		FormatEx(sBuffer, sizeof(sBuffer), "Courses:  %d\n   Jumps:  %d", iCourses, iJumps);
 		if (iBonus > 0) {
 			Format(sBuffer, sizeof(sBuffer), "%s (+%d)", sBuffer, iBonus);
 		}
 		hPanel.DrawText(sBuffer);
 	} else {
-		hPanel.DrawText(" ");
 		hPanel.DrawText(" ");
 	}
 
@@ -1183,7 +1214,6 @@ public int MenuHandler_MapInfo(Menu hMenu, MenuAction iAction, int iClient, int 
 
 	InfoLookup eInfoLookup;
 	g_hLookupStack[iClient].GetArray(g_hLookupStack[iClient].Length-1, eInfoLookup);
-
 
 	switch (iAction) {
 		case MenuAction_Select: {
