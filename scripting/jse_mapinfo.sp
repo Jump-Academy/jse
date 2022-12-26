@@ -1049,18 +1049,76 @@ void ShowMapInfoListMenu(int iClient) {
 	g_hLookupStack[iClient].GetArray(g_hLookupStack[iClient].Length-1, eInfoLookup);
 
 	Menu hMenu = new Menu(MenuHandler_MapList);
-	hMenu.SetTitle("==== Maps ====");
+	hMenu.SetTitle("========= Maps =========\n    S D Cls   Name");
 
-	char sMapIdx[8];
-	char sMapName[32];
+	char sBuffer[64];
+
 	for (int i=0; i<eInfoLookup.hMapInfoList.Length; i++) {
+		char sMapIdx[8];
 		IntToString(i, sMapIdx, sizeof(sMapIdx));
 
 		JSONObject hMapInfo = view_as<JSONObject>(eInfoLookup.hMapInfoList.Get(i));
+
+		char sMapName[32];
 		hMapInfo.GetString("filename", sMapName, sizeof(sMapName));
+
+		char sMapClass[8];
+		if (hMapInfo.HasKey("class")) {
+			switch (hMapInfo.GetInt("class")) {
+				case 3:
+					sMapClass = "S";
+				case 4:
+					sMapClass = "D";
+				default:
+					sMapClass = "\u2013";
+			}
+		} else {
+			sMapClass = "\u2013";
+		}
+
+		char sMapTiers[8];
+		if (hMapInfo.HasKey("tier")) {
+			JSONObject hTier = view_as<JSONObject>(hMapInfo.Get("tier"));
+
+			if (hTier.HasKey("3")) {
+				int iTier = hTier.GetInt("3");
+				if (iTier > MAX_REGULAR_TIER && !g_bExtendedTiers[iClient]) {
+					iTier = MAX_REGULAR_TIER;
+				}
+
+				if (iTier > 9) {
+					sMapTiers = "X";
+				} else {
+					FormatEx(sMapTiers, sizeof(sMapTiers), "%d", iTier);
+				}
+			} else {
+				sMapTiers = "\u2013";
+			}
+
+			if (hTier.HasKey("4")) {
+				int iTier = hTier.GetInt("4");
+				if (iTier > MAX_REGULAR_TIER && !g_bExtendedTiers[iClient]) {
+					iTier = MAX_REGULAR_TIER;
+				}
+
+				if (iTier > 9) {
+					Format(sMapTiers, sizeof(sMapTiers), "%s X", sMapTiers);
+				} else {
+					Format(sMapTiers, sizeof(sMapTiers), "%s %d", sMapTiers, iTier);
+				}
+			} else {
+				Format(sMapTiers, sizeof(sMapTiers), "%s \u2013", sMapTiers);
+			}
+
+			delete hTier;
+		} else {
+			sMapTiers = "\u2013 \u2013";
+		}
+
 		delete hMapInfo;
 
-		hMenu.AddItem(sMapIdx, sMapName);
+		FormatEx(sBuffer, sizeof(sBuffer), "%3s   %s    %s", sMapTiers, sMapClass, sMapName);
+		hMenu.AddItem(sMapIdx, sBuffer);
 	}
 
 	hMenu.ExitBackButton = g_hLookupStack[iClient].Length > 1;
