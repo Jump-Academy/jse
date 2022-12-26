@@ -3,7 +3,7 @@
 // #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.2.0"
+#define PLUGIN_VERSION "0.2.1"
 
 #include <sourcemod>
 #include <clientprefs>
@@ -469,7 +469,6 @@ public Action cmdMapInfo(int iClient, int iArgC) {
 			InitLookupStack(iClient, g_hCurrentMapInfoList);
 			ShowMapInfoPanel(iClient, 0, false);
 		}
-
 	} else {
 		int iArgStart = 1;
 
@@ -543,6 +542,7 @@ public Action cmdMapInfo(int iClient, int iArgC) {
 					}
 				}
 			}
+
 			if (StrContains(sSearchTerm, "d=", false) == 0) {
 				if (String_IsNumeric(sSearchTerm[2])) {
 					int iTier = StringToInt(sSearchTerm[2]);
@@ -670,6 +670,20 @@ void PrintMapInfo(JSONObject hMapInfo, bool bExtended, char[] sBuffer, int iBuff
 		}
 
 		delete hTier;
+	}
+
+	if (hMapInfo.HasKey("type")) {
+		char sLayout[16];
+		switch (hMapInfo.GetInt("type")) {
+			case 1:
+				sLayout = "Connectors";
+			case 2:
+				sLayout = "Doors";
+		}
+
+		if (sLayout[0]) {
+			Format(sBuffer, iBufferLength, "%s\n   Layout: %s", sBuffer, sLayout);
+		}
 	}
 
 	if (hMapInfo.HasKey("courses")) {
@@ -910,20 +924,40 @@ void ShowMapInfoPanel(int iClient, int iTime=0, bool bShowControls=true) {
 
 	hPanel.DrawText(" ");
 
+	// Layout type between jumps
+	if (hMapInfo.HasKey("type")) {
+		char sLayout[16];
+		switch (hMapInfo.GetInt("type")) {
+			case 1:
+				sLayout = "Connectors";
+			case 2:
+				sLayout = "Doors";
+		}
+
+		if (sLayout[0]) {
+			FormatEx(sBuffer, sizeof(sBuffer), "  Layout:  %s", sLayout);
+			hPanel.DrawText(sBuffer);
+		}
+	}  else {
+		hPanel.DrawText(" ");
+	}
+
 	if (iCourses && iJumps) {
-		FormatEx(sBuffer, sizeof(sBuffer), "Courses:  %d\n  Jumps:  %d", iCourses, iJumps);
+		FormatEx(sBuffer, sizeof(sBuffer), "Courses:  %d\n   Jumps:  %d", iCourses, iJumps);
 		if (iBonus > 0) {
 			Format(sBuffer, sizeof(sBuffer), "%s (+%d)", sBuffer, iBonus);
 		}
 		hPanel.DrawText(sBuffer);
 	} else {
 		hPanel.DrawText(" ");
-		hPanel.DrawText(" ");
 	}
 
 	hPanel.DrawText(" ");
 
 	if (bShowControls) {
+		bool bCanNominate = CheckCommandAccess(iClient, "sm_nominate", ADMFLAG_CHANGEMAP);
+		bool bCanChangeMap = CheckCommandAccess(iClient, NULL_STRING, ADMFLAG_CHANGEMAP, true);
+
 		char sFoundMapName[32];
 		if (FindMap(sMapName, sFoundMapName, sizeof(sFoundMapName)) == FindMap_Found) {
 			char sCurrentMapName[32];
@@ -931,25 +965,32 @@ void ShowMapInfoPanel(int iClient, int iTime=0, bool bShowControls=true) {
 
 			int iDrawStyle = StrEqual(sFoundMapName, sCurrentMapName, false) ? ITEMDRAW_DISABLED : ITEMDRAW_DEFAULT;
 
-			if (GetFeatureStatus(FeatureType_Native, "NominateMap") == FeatureStatus_Available && CheckCommandAccess(iClient, "sm_nominate", ADMFLAG_CHANGEMAP)) {
-				hPanel.CurrentKey = 1;
-				hPanel.DrawItem("Nominate", iDrawStyle);
-			} else {
-				hPanel.DrawText(" ");
+			if (bCanNominate) {
+				if (GetFeatureStatus(FeatureType_Native, "NominateMap") == FeatureStatus_Available && bCanNominate) {
+					hPanel.CurrentKey = 1;
+					hPanel.DrawItem("Nominate", iDrawStyle);
+				} else {
+					hPanel.DrawText(" ");
+				}
 			}
 
-			if (CheckCommandAccess(iClient, "", ADMFLAG_CHANGEMAP, true)) {
+			if (bCanChangeMap) {
 				hPanel.CurrentKey = 2;
 				hPanel.DrawItem("Change Map", iDrawStyle);
-			} else {
-				hPanel.DrawText(" ");
 			}
 		} else {
-			hPanel.DrawText(" ");
-			hPanel.DrawText(" ");
+			if (bCanNominate) {
+				hPanel.DrawText(" ");
+			}
+
+			if (bCanChangeMap) {
+				hPanel.DrawText(" ");
+			}
 		}
 
-		hPanel.DrawText(" ");
+		if (bCanNominate || bCanChangeMap) {
+			hPanel.DrawText(" ");
+		}
 	}
 
 	if (hMapInfo.HasKey("authors")) {
@@ -969,36 +1010,36 @@ void ShowMapInfoPanel(int iClient, int iTime=0, bool bShowControls=true) {
 
 	hPanel.DrawText(" ");
 
-	if (eInfoLookup.bListView) {
-		hPanel.CurrentKey = 8;
-		hPanel.DrawItem("Back");
-	} else {
-		if (eInfoLookup.hMapInfoList.Length > 1) {
-			hPanel.CurrentKey = 7;
-			hPanel.DrawItem("List View");
-		}
-
-		if (eInfoLookup.iPage > 0) {
-			hPanel.CurrentKey = 8;
-			FormatEx(sBuffer, sizeof(sBuffer), "Previous (%d)", eInfoLookup.iPage);
-			hPanel.DrawItem(sBuffer);
-		} else if (g_hLookupStack[iClient].Length > 1) {
+	if (bShowControls) {
+		if (eInfoLookup.bListView) {
 			hPanel.CurrentKey = 8;
 			hPanel.DrawItem("Back");
 		} else {
-			hPanel.DrawText(" ");
-		}
+			if (eInfoLookup.hMapInfoList.Length > 1) {
+				hPanel.CurrentKey = 7;
+				hPanel.DrawItem("List View");
+			}
 
-		if (eInfoLookup.iPage < eInfoLookup.hMapInfoList.Length-1) {
-			hPanel.CurrentKey = 9;
-			FormatEx(sBuffer, sizeof(sBuffer), "Next (%d)", eInfoLookup.hMapInfoList.Length-eInfoLookup.iPage-1);
-			hPanel.DrawItem(sBuffer);
-		} else {
-			hPanel.DrawText(" ");
+			if (eInfoLookup.iPage > 0) {
+				hPanel.CurrentKey = 8;
+				FormatEx(sBuffer, sizeof(sBuffer), "Previous (%d)", eInfoLookup.iPage);
+				hPanel.DrawItem(sBuffer);
+			} else if (g_hLookupStack[iClient].Length > 1) {
+				hPanel.CurrentKey = 8;
+				hPanel.DrawItem("Back");
+			} else {
+				hPanel.DrawText(" ");
+			}
+
+			if (eInfoLookup.iPage < eInfoLookup.hMapInfoList.Length-1) {
+				hPanel.CurrentKey = 9;
+				FormatEx(sBuffer, sizeof(sBuffer), "Next (%d)", eInfoLookup.hMapInfoList.Length-eInfoLookup.iPage-1);
+				hPanel.DrawItem(sBuffer);
+			} else {
+				hPanel.DrawText(" ");
+			}
 		}
 	}
-
-	hPanel.DrawText(" ");
 
 	hPanel.CurrentKey = 10;
 	hPanel.DrawItem("Exit", ITEMDRAW_CONTROL);
@@ -1018,18 +1059,76 @@ void ShowMapInfoListMenu(int iClient) {
 	g_hLookupStack[iClient].GetArray(g_hLookupStack[iClient].Length-1, eInfoLookup);
 
 	Menu hMenu = new Menu(MenuHandler_MapList);
-	hMenu.SetTitle("==== Maps ====");
+	hMenu.SetTitle("========= Maps =========\n    S D Cls   Name");
 
-	char sMapIdx[8];
-	char sMapName[32];
+	char sBuffer[64];
+
 	for (int i=0; i<eInfoLookup.hMapInfoList.Length; i++) {
+		char sMapIdx[8];
 		IntToString(i, sMapIdx, sizeof(sMapIdx));
 
 		JSONObject hMapInfo = view_as<JSONObject>(eInfoLookup.hMapInfoList.Get(i));
+
+		char sMapName[32];
 		hMapInfo.GetString("filename", sMapName, sizeof(sMapName));
+
+		char sMapClass[8];
+		if (hMapInfo.HasKey("class")) {
+			switch (hMapInfo.GetInt("class")) {
+				case 3:
+					sMapClass = "S";
+				case 4:
+					sMapClass = "D";
+				default:
+					sMapClass = "\u2013";
+			}
+		} else {
+			sMapClass = "\u2013";
+		}
+
+		char sMapTiers[8];
+		if (hMapInfo.HasKey("tier")) {
+			JSONObject hTier = view_as<JSONObject>(hMapInfo.Get("tier"));
+
+			if (hTier.HasKey("3")) {
+				int iTier = hTier.GetInt("3");
+				if (iTier > MAX_REGULAR_TIER && !g_bExtendedTiers[iClient]) {
+					iTier = MAX_REGULAR_TIER;
+				}
+
+				if (iTier > 9) {
+					sMapTiers = "X";
+				} else {
+					FormatEx(sMapTiers, sizeof(sMapTiers), "%d", iTier);
+				}
+			} else {
+				sMapTiers = "\u2013";
+			}
+
+			if (hTier.HasKey("4")) {
+				int iTier = hTier.GetInt("4");
+				if (iTier > MAX_REGULAR_TIER && !g_bExtendedTiers[iClient]) {
+					iTier = MAX_REGULAR_TIER;
+				}
+
+				if (iTier > 9) {
+					Format(sMapTiers, sizeof(sMapTiers), "%s X", sMapTiers);
+				} else {
+					Format(sMapTiers, sizeof(sMapTiers), "%s %d", sMapTiers, iTier);
+				}
+			} else {
+				Format(sMapTiers, sizeof(sMapTiers), "%s \u2013", sMapTiers);
+			}
+
+			delete hTier;
+		} else {
+			sMapTiers = "\u2013 \u2013";
+		}
+
 		delete hMapInfo;
 
-		hMenu.AddItem(sMapIdx, sMapName);
+		FormatEx(sBuffer, sizeof(sBuffer), "%3s   %s    %s", sMapTiers, sMapClass, sMapName);
+		hMenu.AddItem(sMapIdx, sBuffer);
 	}
 
 	hMenu.ExitBackButton = g_hLookupStack[iClient].Length > 1;
@@ -1183,7 +1282,6 @@ public int MenuHandler_MapInfo(Menu hMenu, MenuAction iAction, int iClient, int 
 
 	InfoLookup eInfoLookup;
 	g_hLookupStack[iClient].GetArray(g_hLookupStack[iClient].Length-1, eInfoLookup);
-
 
 	switch (iAction) {
 		case MenuAction_Select: {
