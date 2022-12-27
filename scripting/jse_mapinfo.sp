@@ -1,9 +1,10 @@
 #pragma semicolon 1
+#pragma dynamic 16384
 
 // #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.2.1"
+#define PLUGIN_VERSION "0.2.2"
 
 #include <sourcemod>
 #include <clientprefs>
@@ -100,7 +101,7 @@ public void OnMapStart() {
 		}
 	}
 
-	CreateTimer(10.0, Timer_MapStartInfo, 0, TIMER_FLAG_NO_MAPCHANGE);
+// 	CreateTimer(10.0, Timer_MapStartInfo, 0, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void OnMapEnd() {
@@ -203,7 +204,7 @@ public int Native_LookupAll(Handle hPlugin, int iArgC) {
 	bool bExtendedTiers = GetNativeCell(3) != 0;
 	bool bExactMatch = GetNativeCell(4) != 0;
 
-	char sSearchTerms[4096];
+	char sSearchTerms[8190];
 	GetNativeString(5, sSearchTerms, sizeof(sSearchTerms));
 
 	char sSplit[32];
@@ -220,7 +221,7 @@ public int Native_LookupAll(Handle hPlugin, int iArgC) {
 	int iTierS = GetNativeCell(11);
 	int iTierD = GetNativeCell(12);
 
-	char sSearchTermsArray[128][32];
+	char sSearchTermsArray[1024][32];
 	int iSearchTerms = ExplodeString(sSearchTerms, sSplit, sSearchTermsArray, sizeof(sSearchTermsArray), sizeof(sSearchTermsArray[]));
 
 	DataPack hRequestDataPack = new DataPack();
@@ -249,7 +250,11 @@ public Action Timer_MapStartInfo(Handle hTimer) {
 	return Plugin_Handled;
 }
 
-public void MapInfoResponse_FetchFromAPI(any aData, JSONArray hMapInfoList) {
+public void MapInfoResponse_FetchFromAPI(any aData, JSONArray hMapInfoList, const char[] sError) {
+	if (!hMapInfoList) {
+		ThrowError(sError);
+	}
+
 	int iCaller = aData;
 
 	if (!hMapInfoList.Length) {
@@ -309,21 +314,39 @@ public void HTTPRequestCallback_NativeFetchFromAPI(HTTPResponse mHTTPResponse, a
 	delete hRequestDataPack;
 
 	if (mHTTPResponse.Status != HTTPStatus_OK) {
+		char sCallbackError[512];
+
 		if (mHTTPResponse.Status == HTTPStatus_BadRequest) {
 			JSONObject hError = view_as<JSONObject>(mHTTPResponse.Data);
 			if (hError.HasKey("message")) {
 				char sMessage[256];
 				hError.GetString("message", sMessage, sizeof(sMessage));
-				ThrowError("Error while looking up map: %s",sMessage);
+				FormatEx(sCallbackError, sizeof(sCallbackError), "Error while looking up map (%s)", sMessage);
+
+				Call_StartFunction(hPlugin, fnCallback);
+				Call_PushCell(aData);
+				Call_PushCell(0); // null
+				Call_PushString(sCallbackError);
+				Call_Finish();
+
+				return;
 			}
 		}
 
-		ThrowError("Unexpected HTTP response code %d (%s) while looking up map", mHTTPResponse.Status, sError);
+		FormatEx(sCallbackError, sizeof(sCallbackError), "Unexpected HTTP response code %d while looking up map (%s)", mHTTPResponse.Status, sError);
+		Call_StartFunction(hPlugin, fnCallback);
+		Call_PushCell(aData);
+		Call_PushCell(0); // null
+		Call_PushString(sCallbackError);
+		Call_Finish();
+
+		return;
 	}
 
 	Call_StartFunction(hPlugin, fnCallback);
 	Call_PushCell(aData);
 	Call_PushCell(mHTTPResponse.Data);
+	Call_PushString(NULL_STRING);
 	Call_Finish();
 }
 
@@ -422,13 +445,13 @@ void FetchFromAPI_Multiple(HTTPRequestCallback fnCallback, any aData, bool bExte
 		FormatEx(sAuthorFilter, sizeof(sAuthorFilter), "&authorname=%s", sAuthorName);
 	}
 
-	char sSearchTermsFilter[4096];
+	char sSearchTermsFilter[8190];
 	if (iSearchTermsTotal) {
 		ImplodeStrings(sSearchTerms, iSearchTermsTotal, "+", sSearchTermsFilter, sizeof(sSearchTermsFilter));
 		Format(sSearchTermsFilter, sizeof(sSearchTermsFilter), "&filename=%s", sSearchTermsFilter);
 	}
 
-	char sURL[4096];
+	char sURL[8190];
 	FormatEx(sURL, sizeof(sURL), "%s?version=%s%s%s%s%s%s%s%s", API_URL, API_VERSION, sExtendedFilter, sExactFilter, sClassIntendedTierFilter, sTierFilters, sAuthorAuthIDFilter, sAuthorFilter, sSearchTermsFilter);
 
 #if defined DEBUG
@@ -571,7 +594,7 @@ public Action cmdMapInfo(int iClient, int iArgC) {
 		delete hRegexInvalid;
 
 		if (iSearchTermsTotal || sAuthorName[0] || iFilterClass || iFilterTier || iFilterTierS || iFilterTierD) {
-			char sSearchTerms[4096];
+			char sSearchTerms[8190];
 			ImplodeStrings(sSearchTermsArray, iSearchTermsTotal, "+", sSearchTerms, sizeof(sSearchTerms));
 
 			ClearLookupStack(iClient);
