@@ -101,7 +101,7 @@ public void OnMapStart() {
 		}
 	}
 
-// 	CreateTimer(10.0, Timer_MapStartInfo, 0, TIMER_FLAG_NO_MAPCHANGE);
+	CreateTimer(10.0, Timer_MapStartInfo, 0, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void OnMapEnd() {
