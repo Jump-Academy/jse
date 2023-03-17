@@ -1,10 +1,10 @@
 #pragma semicolon 1
-#pragma dynamic 16384
+#pragma dynamic 24576
 
 // #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.2.2"
+#define PLUGIN_VERSION "0.2.3"
 
 #include <sourcemod>
 #include <clientprefs>
