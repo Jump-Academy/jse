@@ -4661,6 +4661,8 @@ void CreateSpatialIndex() {
 	fMaxHalfWidth = fHalfWidth[1] > fMaxHalfWidth ? fHalfWidth[1] : fMaxHalfWidth;
 	fMaxHalfWidth = fHalfWidth[2] > fMaxHalfWidth ? fHalfWidth[2] : fMaxHalfWidth;
 
+	fMaxHalfWidth += 50.0; // Prevents Octree out of bounds
+
 	if (g_iSpatialIdx) {
 		Octree.Destroy(g_iSpatialIdx);
 	}
