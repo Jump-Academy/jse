@@ -5,6 +5,8 @@ public void Course_SetupNatives() {
 	CreateNative("Jump.iNumber.set",				Native_Jump_SetNumber);
 	CreateNative("Jump.GetOrigin",					Native_Jump_GetOrigin);
 	CreateNative("Jump.SetOrigin",					Native_Jump_SetOrigin);
+	CreateNative("Jump.fAngle.get",					Native_Jump_GetAngle);
+	CreateNative("Jump.fAngle.set",					Native_Jump_SetAngle);
 	CreateNative("Jump.GetIdentifier",				Native_Jump_GetIdentifier);
 	CreateNative("Jump.SetIdentifier",				Native_Jump_SetIdentifier);
 	CreateNative("Jump.Instance",					Native_Jump_Instance);
@@ -14,6 +16,8 @@ public void Course_SetupNatives() {
 	CreateNative("ControlPoint.iID.set",			Native_ControlPoint_SetID);
 	CreateNative("ControlPoint.GetOrigin",			Native_ControlPoint_GetOrigin);
 	CreateNative("ControlPoint.SetOrigin",			Native_ControlPoint_SetOrigin);
+	CreateNative("ControlPoint.fAngle.get",			Native_ControlPoint_GetAngle);
+	CreateNative("ControlPoint.fAngle.set",			Native_ControlPoint_SetAngle);
 	CreateNative("ControlPoint.GetIdentifier",		Native_ControlPoint_GetIdentifier);
 	CreateNative("ControlPoint.SetIdentifier",		Native_ControlPoint_SetIdentifier);
 	CreateNative("ControlPoint.Instance",			Native_ControlPoint_Instance);
@@ -38,6 +42,7 @@ enum struct _Jump {
 	int iID;
 	int iNumber;
 	float fOrigin[3];
+	float fAngle;
 	char sIdentifier[128];
 	bool bGCFlag;
 }
@@ -55,6 +60,8 @@ public int Native_Jump_SetID(Handle hPlugin, int iArgC) {
 	int iID = GetNativeCell(2);
 	
 	hJumps.Set(iThis, iID, _Jump::iID);
+
+	return 0;
 }
 
 public int Native_Jump_GetNumber(Handle hPlugin, int iArgC) {
@@ -68,6 +75,8 @@ public int Native_Jump_SetNumber(Handle hPlugin, int iArgC) {
 	int iNumber = GetNativeCell(2);
 	
 	hJumps.Set(iThis, iNumber, _Jump::iNumber);
+
+	return 0;
 }
 
 public int Native_Jump_GetOrigin(Handle hPlugin, int iArgC) {
@@ -76,6 +85,8 @@ public int Native_Jump_GetOrigin(Handle hPlugin, int iArgC) {
 	hJumps.GetArray(iThis, eJump, sizeof(_Jump));
 
 	SetNativeArray(2, eJump.fOrigin, sizeof(_Jump::fOrigin));
+
+	return 0;
 }
 
 public int Native_Jump_SetOrigin(Handle hPlugin, int iArgC) {
@@ -91,6 +102,23 @@ public int Native_Jump_SetOrigin(Handle hPlugin, int iArgC) {
 	eJump.fOrigin[2] = fOrigin[2];
 
 	hJumps.SetArray(iThis, eJump);
+
+	return 0;
+}
+
+public any Native_Jump_GetAngle(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1)-1;
+	
+	return hJumps.Get(iThis, _Jump::fAngle);
+}
+
+public int Native_Jump_SetAngle(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1)-1;
+	float fAngle = GetNativeCell(2);
+	
+	hJumps.Set(iThis, fAngle, _Jump::fAngle);
+
+	return 0;
 }
 
 public int Native_Jump_GetIdentifier(Handle hPlugin, int iArgC) {
@@ -105,6 +133,8 @@ public int Native_Jump_GetIdentifier(Handle hPlugin, int iArgC) {
 	hJumps.GetArray(iThis, eJump, sizeof(_Jump));
 
 	SetNativeString(2, eJump.sIdentifier, iLength);
+
+	return 0;
 }
 
 public int Native_Jump_SetIdentifier(Handle hPlugin, int iArgC) {
@@ -116,6 +146,8 @@ public int Native_Jump_SetIdentifier(Handle hPlugin, int iArgC) {
 	GetNativeString(2, eJump.sIdentifier, sizeof(_Jump::sIdentifier));
 
 	hJumps.SetArray(iThis, eJump);
+
+	return 0;
 }
 
 public int Native_Jump_Instance(Handle hPlugin, int iArgC) {
@@ -142,6 +174,8 @@ public int Native_Jump_Destroy(Handle hPlugin, int iArgC) {
 
 		hJumps.Set(iJump-1, 1, _Jump::bGCFlag);
 	}
+
+	return 0;
 }
 
 // class ControlPoint
@@ -149,6 +183,7 @@ public int Native_Jump_Destroy(Handle hPlugin, int iArgC) {
 enum struct _ControlPoint {
 	int iID;
 	float fOrigin[3];
+	float fAngle;
 	char sIdentifier[128];
 	bool bGCFlag;
 }
@@ -166,6 +201,8 @@ public int Native_ControlPoint_SetID(Handle hPlugin, int iArgC) {
 	int iID = GetNativeCell(2);
 	
 	hControlPoints.Set(iThis, iID, _ControlPoint::iID);
+
+	return 0;
 }
 
 public int Native_ControlPoint_GetOrigin(Handle hPlugin, int iArgC) {
@@ -174,6 +211,8 @@ public int Native_ControlPoint_GetOrigin(Handle hPlugin, int iArgC) {
 	hControlPoints.GetArray(iThis, eControlPoint, sizeof(_ControlPoint));
 
 	SetNativeArray(2, eControlPoint.fOrigin, sizeof(_ControlPoint::fOrigin));
+
+	return 0;
 }
 
 public int Native_ControlPoint_SetOrigin(Handle hPlugin, int iArgC) {
@@ -189,6 +228,23 @@ public int Native_ControlPoint_SetOrigin(Handle hPlugin, int iArgC) {
 	eControlPoint.fOrigin[2] = fOrigin[2];
 
 	hControlPoints.SetArray(iThis, eControlPoint);
+
+	return 0;
+}
+
+public any Native_ControlPoint_GetAngle(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1)-1;
+
+	return hControlPoints.Get(iThis, _ControlPoint::fAngle);
+}
+
+public int Native_ControlPoint_SetAngle(Handle hPlugin, int iArgC) {
+	int iThis = GetNativeCell(1)-1;
+	float fAngle = GetNativeCell(2);
+
+	hControlPoints.Set(iThis, fAngle, _ControlPoint::fAngle);
+
+	return 0;
 }
 
 public int Native_ControlPoint_GetIdentifier(Handle hPlugin, int iArgC) {
@@ -203,6 +259,8 @@ public int Native_ControlPoint_GetIdentifier(Handle hPlugin, int iArgC) {
 	hControlPoints.GetArray(iThis, eControlPoint, sizeof(_ControlPoint));
 
 	SetNativeString(2, eControlPoint.sIdentifier, iLength);
+
+	return 0;
 }
 
 public int Native_ControlPoint_SetIdentifier(Handle hPlugin, int iArgC) {
@@ -214,6 +272,8 @@ public int Native_ControlPoint_SetIdentifier(Handle hPlugin, int iArgC) {
 	GetNativeString(2, eControlPoint.sIdentifier, sizeof(_ControlPoint::sIdentifier));
 
 	hControlPoints.SetArray(iThis, eControlPoint);
+
+	return 0;
 }
 
 public int Native_ControlPoint_Instance(Handle hPlugin, int iArgC) {
@@ -242,6 +302,8 @@ public int Native_ControlPoint_Destroy(Handle hPlugin, int iArgC) {
 
 		hControlPoints.Set(iControlPoint-1, 1, _ControlPoint::bGCFlag);
 	}
+
+	return 0;
 }
 
 // class Course
@@ -268,6 +330,8 @@ public int Native_Course_SetID(Handle hPlugin, int iArgC) {
 	int iID = GetNativeCell(2);
 	
 	hCourses.Set(iThis, iID, _Course::iID);
+
+	return 0;
 }
 
 public int Native_Course_GetNumber(Handle hPlugin, int iArgC) {
@@ -279,6 +343,8 @@ public int Native_Course_SetNumber(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
 	int iNumber = GetNativeCell(2);
 	hCourses.Set(iThis, iNumber, _Course::iNumber);
+
+	return 0;
 }
 
 public int Native_Course_GetJumps(Handle hPlugin, int iArgC) {
@@ -295,6 +361,8 @@ public int Native_Course_SetControlPoint(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
 	int iControlPoint = GetNativeCell(2);
 	hCourses.Set(iThis, iControlPoint, _Course::iControlPoint);
+
+	return 0;
 }
 
 public int Native_Course_GetName(Handle hPlugin, int iArgC) {
@@ -309,6 +377,8 @@ public int Native_Course_GetName(Handle hPlugin, int iArgC) {
 	hCourses.GetArray(iThis, eCourse, sizeof(_Course));
 
 	SetNativeString(2, eCourse.sName, iLength);
+
+	return 0;
 }
 
 public int Native_Course_SetName(Handle hPlugin, int iArgC) {
@@ -320,6 +390,8 @@ public int Native_Course_SetName(Handle hPlugin, int iArgC) {
 	GetNativeString(2, eCourse.sName, sizeof(_Course::sName));
 
 	hCourses.SetArray(iThis, eCourse);
+
+	return 0;
 }
 
 public int Native_Course_Instance(Handle hPlugin, int iArgC) {
@@ -363,4 +435,6 @@ public int Native_Course_Destroy(Handle hPlugin, int iArgC) {
 
 		hCourses.Set(view_as<int>(iCourse)-1, 1, _Course::bGCFlag);
 	}
+
+	return 0;
 }

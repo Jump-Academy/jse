@@ -2,15 +2,15 @@ Database g_hDatabase;
 
 // Database callbacks
 
-public void DB_Callback_Connect(Handle hOwner, Handle hHandle, char[] sError, any aData) {
-	if (hHandle == null) {
+public void DB_Callback_Connect(Database hDatabase, char[] sError, any aData) {
+	if (hDatabase == null) {
 		LogError("Cannot connect to database: %s", sError);
 
 		CreateTimer(30.0, Timer_Reconnect);
 		return;
 	}
 
-	g_hDatabase = view_as<Database>(hHandle);
+	g_hDatabase = hDatabase;
 	g_hDatabase.SetCharset("utf8mb4");
 
 	DB_CreateTables();
@@ -74,10 +74,10 @@ public void DB_Callback_LoadMapData(Database hDatabase, DBResultSet hResultSet, 
 
 		iCourse.SetName(sCourseName);
 
-		hDatabase.Format(sQuery, sizeof(sQuery), "SELECT `id`, `identifier`, `x`, `y`, `z` FROM `jse_map_controlpoints` WHERE `course_id`=%d", iCourseID);
+		hDatabase.Format(sQuery, sizeof(sQuery), "SELECT `id`, `identifier`, `x`, `y`, `z`, `a` FROM `jse_map_controlpoints` WHERE `course_id`=%d", iCourseID);
 		hTxn.AddQuery(sQuery, iCourse);
 
-		hDatabase.Format(sQuery, sizeof(sQuery), "SELECT `id`, `jump`, `identifier`, `x`, `y`, `z` FROM `jse_map_jumps` WHERE `course_id`=%d", iCourseID);
+		hDatabase.Format(sQuery, sizeof(sQuery), "SELECT `id`, `jump`, `identifier`, `x`, `y`, `z`, `a` FROM `jse_map_jumps` WHERE `course_id`=%d", iCourseID);
 		hTxn.AddQuery(sQuery, iCourse);
 
 		g_hCourses.Push(iCourse);
@@ -126,6 +126,10 @@ public void DB_Callback_AddMapInfo_Txn_Failure(Database hDatabase, any aData, in
 }
 
 public void DB_Callback_LoadMapInfo_Txn_Success(Database hDatabase, any aData, int iNumQueries, DBResultSet[] hResults, any[] aQueryData) {
+	char sIdentifier[128];
+	float fOrigin[3];
+	float fAngles[3];
+
 	for (int i=0; i<iNumQueries; i+=2) {
 		DBResultSet hResultSet = hResults[i];
 
@@ -142,15 +146,13 @@ public void DB_Callback_LoadMapInfo_Txn_Success(Database hDatabase, any aData, i
 
 		iCourse.iControlPoint = iControlPoint;
 
-		char sIdentifier[128];
-		float fOrigin[3];
-
 		if (hResults[i].IsFieldNull(1)) {
 			fOrigin[0] = float(hResultSet.FetchInt(2));
 			fOrigin[1] = float(hResultSet.FetchInt(3));
 			fOrigin[2] = float(hResultSet.FetchInt(4));
 
 			iControlPoint.SetOrigin(fOrigin);
+			iControlPoint.fAngle = float(hResultSet.FetchInt(5));
 		} else {
 			hResultSet.FetchString(1, sIdentifier, sizeof(sIdentifier));
 			iControlPoint.SetIdentifier(sIdentifier);
@@ -158,8 +160,10 @@ public void DB_Callback_LoadMapInfo_Txn_Success(Database hDatabase, any aData, i
 			int iEntity = Entity_FindByName(sIdentifier, "team_control_point");
 			if (iEntity != INVALID_ENT_REFERENCE) {
 				Entity_GetAbsOrigin(iEntity, fOrigin);
+				Entity_GetAbsAngles(iEntity, fAngles);
 				fOrigin[2] += 10.0; // In case buried in ground
 				iControlPoint.SetOrigin(fOrigin);
+				iControlPoint.fAngle = fAngles[1];
 			}
 		}
 	}
@@ -172,9 +176,6 @@ public void DB_Callback_LoadMapInfo_Txn_Success(Database hDatabase, any aData, i
 		ArrayList hJumps = iCourse.hJumps;
 		DBResultSet hResultSet = hResults[i];
 
-		char sIdentifier[128];
-		float fOrigin[3];
-
 		while (hResultSet.FetchRow()) {
 			Jump iJump = Jump.Instance();
 			hJumps.Push(iJump);
@@ -183,11 +184,12 @@ public void DB_Callback_LoadMapInfo_Txn_Success(Database hDatabase, any aData, i
 			iJump.iNumber = hResultSet.FetchInt(1);
 
 			if (hResults[i].IsFieldNull(2)) {
-				fOrigin[0] = float(hResultSet.FetchInt(3));
-				fOrigin[1] = float(hResultSet.FetchInt(4));
-				fOrigin[2] = float(hResultSet.FetchInt(5));
+				fOrigin[0] = hResultSet.FetchFloat(3);
+				fOrigin[1] = hResultSet.FetchFloat(4);
+				fOrigin[2] = hResultSet.FetchFloat(5);
 
 				iJump.SetOrigin(fOrigin);
+				iJump.fAngle = hResultSet.FetchFloat(6);
 			} else {
 				hResultSet.FetchString(2, sIdentifier, sizeof(sIdentifier));
 				iJump.SetIdentifier(sIdentifier);
@@ -195,8 +197,10 @@ public void DB_Callback_LoadMapInfo_Txn_Success(Database hDatabase, any aData, i
 				int iEntity = Entity_FindByName(sIdentifier, "info_*");
 				if (iEntity != INVALID_ENT_REFERENCE) {
 					Entity_GetAbsOrigin(iEntity, fOrigin);
+					Entity_GetAbsAngles(iEntity, fAngles);
 					fOrigin[2] += 10.0; // In case buried in ground
 					iJump.SetOrigin(fOrigin);
+					iJump.fAngle = fAngles[1];
 				}
 			}
 		}
@@ -252,7 +256,7 @@ public void DB_Callback_GetProgress(Database hDatabase, DBResultSet hResultSet, 
 	int iClient = GetClientFromSerial(hDataPack.ReadCell());
 	ArrayList hResult = hDataPack.ReadCell();
 	hDataPack.ReadString(sMapName, sizeof(sMapName));
-	Function pCallback = view_as<ProgressLookup>(hDataPack.ReadFunction());
+	Function pCallback = hDataPack.ReadFunction(); // ProgressLookup
 	aData = hDataPack.ReadCell();
 
 	delete hDataPack;
@@ -366,7 +370,7 @@ public void DB_Callback_DeleteProgress_Txn_Failure(Database hDatabase, any aData
 // Database helpers
 
 void DB_Connect() {
-	SQL_TConnect(DB_Callback_Connect, "jse");
+	Database.Connect(DB_Callback_Connect, "jse");
 }
 
 void DB_CreateTables() {
@@ -400,9 +404,10 @@ void DB_CreateTables() {
 	...		"`course_id` INT NOT NULL,"
 	...		"`jump` INT NOT NULL,"
 	...		"`identifier` VARCHAR(128),"
-	...		"`x` FLOAT,"
-	...		"`y` FLOAT,"
-	...		"`z` FLOAT,"
+	...		"`x` INT,"
+	...		"`y` INT,"
+	...		"`z` INT,"
+	...		"`a` INT,"
 	...		"PRIMARY KEY(`id`),"
 	... 	"UNIQUE(`map_id`, `course_id`, `jump`),"
 	...		"CONSTRAINT `fk_jump_map` FOREIGN KEY(`map_id`)"
@@ -420,6 +425,7 @@ void DB_CreateTables() {
 	...		"`x` INT,"
 	...		"`y` INT,"
 	...		"`z` INT,"
+	...		"`a` INT,"
 	...		"PRIMARY KEY(`id`),"
 	... 	"UNIQUE(`map_id`, `course_id`),"
 	...		"CONSTRAINT `fk_controlpoint_map` FOREIGN KEY(`map_id`)"
@@ -505,7 +511,7 @@ void DB_AddCourse(Transaction hTxn, int iCourse, char[] sName) {
 	hTxn.AddQuery(sQuery, iCourse);
 }
 
-void DB_AddJump(Transaction hTxn, int iCourse, int iJump, char[] sIdentifier, int iX, int iY, int iZ) {
+void DB_AddJump(Transaction hTxn, int iCourse, int iJump, char[] sIdentifier, int iX, int iY, int iZ, int iA) {
 	char sQuery[1024];
 
 	if (sIdentifier[0]) {
@@ -514,14 +520,14 @@ void DB_AddJump(Transaction hTxn, int iCourse, int iJump, char[] sIdentifier, in
 		...	"SELECT %d, `id`, %d, '%s' FROM `jse_map_courses` WHERE `map_id`=%d AND `course`=%d", g_iMapID, iJump, sIdentifier, g_iMapID, iCourse);
 	} else {
 		g_hDatabase.Format(sQuery, sizeof(sQuery), \
-			"INSERT IGNORE INTO `jse_map_jumps`(`map_id`, `course_id`, `jump`, `x`, `y`, `z`)"
-		...	"SELECT %d, `id`, %d, %d, %d, %d FROM `jse_map_courses` WHERE `map_id`=%d AND `course`=%d", g_iMapID, iJump, iX, iY, iZ, g_iMapID, iCourse);
+			"INSERT IGNORE INTO `jse_map_jumps`(`map_id`, `course_id`, `jump`, `x`, `y`, `z`, `a`)"
+		...	"SELECT %d, `id`, %d, %d, %d, %d, %d FROM `jse_map_courses` WHERE `map_id`=%d AND `course`=%d", g_iMapID, iJump, iX, iY, iZ, iA, g_iMapID, iCourse);
 	}
 
 	hTxn.AddQuery(sQuery, iCourse);
 }
 
-void DB_AddControlPoint(Transaction hTxn, int iCourse, char[] sIdentifier, int iX, int iY, int iZ) {
+void DB_AddControlPoint(Transaction hTxn, int iCourse, char[] sIdentifier, int iX, int iY, int iZ, int iA) {
 	char sQuery[1024];
 
 	if (sIdentifier[0]) {
@@ -530,8 +536,8 @@ void DB_AddControlPoint(Transaction hTxn, int iCourse, char[] sIdentifier, int i
 		...	"SELECT %d, `id`, '%s' FROM `jse_map_courses` WHERE `map_id`=%d AND `course`=%d", g_iMapID, sIdentifier, g_iMapID, iCourse);
 	} else {
 		g_hDatabase.Format(sQuery, sizeof(sQuery), \
-			"INSERT IGNORE INTO `jse_map_controlpoints`(`map_id`, `course_id`, `x`, `y`, `z`)"
-		...	"SELECT %d, `id`, %d, %d, %d FROM `jse_map_courses` WHERE `map_id`=%d AND `course`=%d", g_iMapID, iX, iY, iZ, g_iMapID, iCourse);
+			"INSERT IGNORE INTO `jse_map_controlpoints`(`map_id`, `course_id`, `x`, `y`, `z`, `a`)"
+		...	"SELECT %d, `id`, %d, %d, %d, %d FROM `jse_map_courses` WHERE `map_id`=%d AND `course`=%d", g_iMapID, iX, iY, iZ, iA, g_iMapID, iCourse);
 	}
 
 	hTxn.AddQuery(sQuery, iCourse);
@@ -559,7 +565,8 @@ void DB_LookupMapID() {
 	g_hDatabase.Query(DB_Callback_LookupMapID, sQuery, 0, DBPrio_High);
 }
 
-void DB_GetProgress(int iClient, ArrayList hResult, TFTeam iTeam, TFClassType iClass, char[] sMapName, ProgressLookup pCallback, any aData) {
+// void DB_GetProgress(int iClient, ArrayList hResult, TFTeam iTeam, TFClassType iClass, char[] sMapName, ProgressLookup pCallback, any aData) {
+void DB_GetProgress(int iClient, ArrayList hResult, TFTeam iTeam, TFClassType iClass, char[] sMapName, Function pCallback, any aData) {
 	char sAuthID[64];
 	if (!GetClientAuthId(iClient, AuthId_SteamID64, sAuthID, sizeof(sAuthID))) {
 		LogError("Failed to get progress due to bad auth ID: %L", iClient);
@@ -659,7 +666,7 @@ void DB_LoadProgress(int iClient) {
 }
 
 void DB_BackupProgress(int iClient=0) {
-	if (!g_bPersist) {
+	if (!g_bPersist || iClient && IsFakeClient(iClient)) {
 		return;
 	}
 
