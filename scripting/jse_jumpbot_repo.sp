@@ -180,6 +180,8 @@ public int OnSocketError(Handle hSocket, const int iErrorType, const int iErrorN
 	}
 	
 	delete hFileInfo;
+
+	return 0;
 }
 
 public int OnSocketConnected(Handle hSocket, any aArg) {
@@ -195,6 +197,8 @@ public int OnSocketConnected(Handle hSocket, any aArg) {
 	
 	FormatEx(sRequest, sizeof(sRequest), "GET %s HTTP/1.0\r\nHost: %s\r\nConnection: close\r\nCache-Control: no-cache, no-store, must-revalidate\r\nPragma: no-cache\r\nExpires: 0\r\n\r\n", sPage, API_HOST);
 	SocketSend(hSocket, sRequest);
+
+	return 0;
 }
 
 public int OnSocketReceive(Handle hSocket, char[] sData, const int iSize, any aArg) {
@@ -245,6 +249,8 @@ public int OnSocketReceive(Handle hSocket, char[] sData, const int iSize, any aA
 			hFile.WriteInt8(sData[i]);
 		}
 	}
+
+	return 0;
 }
 
 public int OnSocketDisconnected(Handle hSocket, any aArg) {
@@ -303,7 +309,7 @@ public int OnSocketDisconnected(Handle hSocket, any aArg) {
 				if (!(LoadRecording(iRecording) && PrepareBots(iRecording) && LoadFrames(iRecording))) {
 					g_iClientInstruction = INST_NOP;
 					doReturn();
-					return;
+					return 0;
 				}
 				
 				SetPlaybackSpeedCOI();
@@ -342,6 +348,8 @@ public int OnSocketDisconnected(Handle hSocket, any aArg) {
 	
 	delete hFileInfo;
 	CloseHandle(hSocket);
+
+	return 0;
 }
 
 void ParseIndex(char[] sPath) {
