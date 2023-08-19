@@ -1527,6 +1527,8 @@ public int Native_Shutdown(Handle hPlugin, int iArgC) {
 		KickClient(iClient, "%t", "Punt Bot");
 		doFullStop();
 	}
+
+	return 0;
 }
 
 public int Native_LoadRecordings(Handle hPlugin, int iArgC) {
@@ -1534,6 +1536,8 @@ public int Native_LoadRecordings(Handle hPlugin, int iArgC) {
 
 	RemoveAllModels();
 	LoadRecordings();
+
+	return 0;
 }
 
 public int Native_GetRecordings(Handle hPlugin, int iArgC) {
@@ -3164,6 +3168,8 @@ public Action Event_RoundStart(Event hEvent, const char[] sName, bool bDontBroad
 	RemoveAllModels();
 	blockFlags();
 	blockRegen();
+
+	return Plugin_Continue;
 }
 
 public Action UserMessage_VoiceSubtitle(UserMsg iMessageID, Handle hMessage, const int[] iPlayers, int iPlayersNum, bool bReliable, bool bInit) {
@@ -5755,7 +5761,7 @@ float InterpAngle(float fAlpha, float fAngleA, float fAngleB) {
 	return RadToDeg(ArcTangent2(fAlpha * Sine(fAngleB) + (1.0 - fAlpha) * Sine(fAngleA), fAlpha * Cosine(fAngleB) + (1.0 - fAlpha) * Cosine(fAngleA)));
 }
 
-float InterpAngles(float fAlpha, float fAngA[3], float fAngB[3], float fAngResult[3]) {
+void InterpAngles(float fAlpha, float fAngA[3], float fAngB[3], float fAngResult[3]) {
 	fAngResult[0] = InterpAngle(fAlpha, fAngA[0], fAngB[0]);
 	fAngResult[1] = InterpAngle(fAlpha, fAngA[1], fAngB[1]);
 	fAngResult[2] = InterpAngle(fAlpha, fAngA[2], fAngB[2]);
@@ -5765,13 +5771,13 @@ float InterpCoord(float fAlpha, float fCoordA, float fCoordB) {
 	return (1.0 - fAlpha) * fCoordA + fAlpha * fCoordB;
 }
 
-float InterpCoords(float fAlpha, float fCoordA[3], float fCoordB[3], float fCoordResult[3]) {
+void InterpCoords(float fAlpha, float fCoordA[3], float fCoordB[3], float fCoordResult[3]) {
 	fCoordResult[0] = InterpCoord(fAlpha, fCoordA[0], fCoordB[0]);
 	fCoordResult[1] = InterpCoord(fAlpha, fCoordA[1], fCoordB[1]);
 	fCoordResult[2] = InterpCoord(fAlpha, fCoordA[2], fCoordB[2]);
 }
 
-float CalcCorrectionalVelocity(float fPos[3], float fPosTarget[3], float fVelResult[3]) {
+void CalcCorrectionalVelocity(float fPos[3], float fPosTarget[3], float fVelResult[3]) {
 	fVelResult[0] = (fPosTarget[0] - fPos[0]) * 66;
 	fVelResult[1] = (fPosTarget[1] - fPos[1]) * 66;
 	fVelResult[2] = (fPosTarget[2] - fPos[2]) * 66;
@@ -5833,6 +5839,8 @@ public int MenuHandler_Queue(Menu hMenu, MenuAction iAction, int iClient, int iS
 		delete hMenu;
 		doPlayerQueueRemove(iClient);
 	}
+
+	return 0;
 }
 
 public void CookieMenuHandler_Options(int iClient, CookieMenuAction iAction, any aInfo, char[] sBuffer, int iMaxLength) {
@@ -5980,6 +5988,8 @@ public int MenuHandler_Options(Menu hMenu, MenuAction iAction, int iClient, int 
 			delete hMenu;
 		}
 	}
+
+	return 0;
 }
 
 public int MenuHandler_SpeedOptions(Menu hMenu, MenuAction iAction, int iClient, int iOption) {
@@ -6002,6 +6012,8 @@ public int MenuHandler_SpeedOptions(Menu hMenu, MenuAction iAction, int iClient,
 			delete hMenu;
 		}
 	}
+
+	return 0;
 }
 
 
@@ -6025,6 +6037,8 @@ public int MenuHandler_PerspectiveOptions(Menu hMenu, MenuAction iAction, int iC
 			delete hMenu;
 		}
 	}
+
+	return 0;
 }
 
 public int MenuHandler_LoadState(Menu hMenu, MenuAction iAction, int iClient, int iOption) {
@@ -6044,6 +6058,8 @@ public int MenuHandler_LoadState(Menu hMenu, MenuAction iAction, int iClient, in
 			delete hMenu;
 		}
 	}
+
+	return 0;
 }
 
 public int MenuHandler_DeleteState(Menu hMenu, MenuAction iAction, int iClient, int iOption) {
@@ -6063,4 +6079,6 @@ public int MenuHandler_DeleteState(Menu hMenu, MenuAction iAction, int iClient, 
 			delete hMenu;
 		}
 	}
+
+	return 0;
 }

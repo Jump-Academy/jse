@@ -50,6 +50,8 @@ public int Native_ClientInfo_GetAuthID(Handle hPlugin, int iArgC) {
 	hClientInfo.GetArray(iThis, eClientInfo);
 
 	SetNativeString(2, eClientInfo.sAuthID, iLength);
+
+	return 0;
 }
 
 public int Native_ClientInfo_SetAuthID(Handle hPlugin, int iArgC) {
@@ -61,6 +63,8 @@ public int Native_ClientInfo_SetAuthID(Handle hPlugin, int iArgC) {
 	GetNativeString(2, eClientInfo.sAuthID, sizeof(_ClientInfo::sAuthID));
 	
 	hClientInfo.SetArray(iThis, eClientInfo);
+
+	return 0;
 }
 
 public int Native_ClientInfo_GetName(Handle hPlugin, int iArgC) {
@@ -71,6 +75,8 @@ public int Native_ClientInfo_GetName(Handle hPlugin, int iArgC) {
 	hClientInfo.GetArray(iThis, eClientInfo);
 	
 	SetNativeString(2, eClientInfo.sName, iLength);
+
+	return 0;
 }
 
 public int Native_ClientInfo_SetName(Handle hPlugin, int iArgC) {
@@ -82,6 +88,8 @@ public int Native_ClientInfo_SetName(Handle hPlugin, int iArgC) {
 	GetNativeString(2, eClientInfo.sName, sizeof(_ClientInfo::sName));
 	
 	hClientInfo.SetArray(iThis, eClientInfo);
+
+	return 0;
 }
 
 public int Native_ClientInfo_GetTeam(Handle hPlugin, int iArgC) {
@@ -93,6 +101,8 @@ public int Native_ClientInfo_SetTeam(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
 	int iTeam = GetNativeCell(2);
 	hClientInfo.Set(iThis, iTeam, _ClientInfo::iTeam);
+
+	return 0;
 }
 
 public int Native_ClientInfo_GetClass(Handle hPlugin, int iArgC) {
@@ -104,6 +114,8 @@ public int Native_ClientInfo_SetClass(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
 	int iClass = GetNativeCell(2);
 	hClientInfo.Set(iThis, iClass, _ClientInfo::iClass);
+
+	return 0;
 }
 
 public int Native_ClientInfo_GetStartPos(Handle hPlugin, int iArgC) {
@@ -114,6 +126,8 @@ public int Native_ClientInfo_GetStartPos(Handle hPlugin, int iArgC) {
 	fStartPos[2] = hClientInfo.Get(iThis, _ClientInfo::fStartPos+2);
 
 	SetNativeArray(2, fStartPos, sizeof(fStartPos));
+
+	return 0;
 }
 
 public int Native_ClientInfo_SetStartPos(Handle hPlugin, int iArgC) {
@@ -124,6 +138,8 @@ public int Native_ClientInfo_SetStartPos(Handle hPlugin, int iArgC) {
 	hClientInfo.Set(iThis, fStartPos[0], _ClientInfo::fStartPos  );
 	hClientInfo.Set(iThis, fStartPos[1], _ClientInfo::fStartPos+1);
 	hClientInfo.Set(iThis, fStartPos[2], _ClientInfo::fStartPos+2);
+
+	return 0;
 }
 
 public int Native_ClientInfo_GetStartAng(Handle hPlugin, int iArgC) {
@@ -133,6 +149,8 @@ public int Native_ClientInfo_GetStartAng(Handle hPlugin, int iArgC) {
 	fStartAng[1] = hClientInfo.Get(iThis, _ClientInfo::fStartAng+1);
 
 	SetNativeArray(2, fStartAng, sizeof(fStartAng));
+
+	return 0;
 }
 
 public int Native_ClientInfo_SetStartAng(Handle hPlugin, int iArgC) {
@@ -142,6 +160,8 @@ public int Native_ClientInfo_SetStartAng(Handle hPlugin, int iArgC) {
 
 	hClientInfo.Set(iThis, fStartAng[0], _ClientInfo::fStartAng  );
 	hClientInfo.Set(iThis, fStartAng[1], _ClientInfo::fStartAng+1);
+
+	return 0;
 }
 
 public int Native_ClientInfo_GetEquipItemDefIdx(Handle hPlugin, int iArgC) {
@@ -157,6 +177,8 @@ public int Native_ClientInfo_SetEquipItemDefIdx(Handle hPlugin, int iArgC) {
 	int iItemDefIdx = GetNativeCell(3);
 
 	hClientInfo.Set(iThis, iItemDefIdx, _ClientInfo::iEquipItemDefIdx + iSlot);
+
+	return 0;
 }
 
 public int Native_ClientInfo_GetEquipClassName(Handle hPlugin, int iArgC) {
@@ -168,6 +190,8 @@ public int Native_ClientInfo_GetEquipClassName(Handle hPlugin, int iArgC) {
 	hClientInfo.GetArray(iThis, eClientInfo);
 
 	SetNativeString(3, eClientInfo.sEquipClassName[128*iSlot], iLength);
+
+	return 0;
 }
 
 public int Native_ClientInfo_SetEquipClassName(Handle hPlugin, int iArgC) {
@@ -180,6 +204,8 @@ public int Native_ClientInfo_SetEquipClassName(Handle hPlugin, int iArgC) {
 	GetNativeString(3, eClientInfo.sEquipClassName[128*iSlot], 128);
 	
 	hClientInfo.SetArray(iThis, eClientInfo);
+
+	return 0;
 }
 
 public int Native_ClientInfo_Instance(Handle hPlugin, int iArgC) {
@@ -205,6 +231,8 @@ public int Native_ClientInfo_Destroy(Handle hPlugin, int iArgC) {
 		int iClientInfo = GetNativeCell(1);
 		hClientInfo.Set(iClientInfo-1, 1, _ClientInfo::bGCFlag);
 	}
+
+	return 0;
 }
 
 // class Recording
@@ -284,6 +312,8 @@ public int Native_Recording_GetFilePath(Handle hPlugin, int iArgC) {
 	hRecordings.GetArray(iThis, eRecording);
 	
 	SetNativeString(2, eRecording.sFilePath, iLength);
+
+	return 0;
 }
 
 public int Native_Recording_SetFilePath(Handle hPlugin, int iArgC) {
@@ -295,6 +325,8 @@ public int Native_Recording_SetFilePath(Handle hPlugin, int iArgC) {
 	GetNativeString(2, eRecording.sFilePath, sizeof(_Recording::sFilePath));
 	
 	hRecordings.SetArray(iThis, eRecording);
+
+	return 0;
 }
 
 public int Native_Recording_GetRepo(Handle hPlugin, int iArgC) {
@@ -307,6 +339,8 @@ public int Native_Recording_SetRepo(Handle hPlugin, int iArgC) {
 	bool bRepo = GetNativeCell(2) != 0;
 
 	hRecordings.Set(iThis, bRepo, _Recording::bRepo);
+
+	return 0;
 }
 
 public int Native_Recording_GetDownloading(Handle hPlugin, int iArgC) {
@@ -318,6 +352,8 @@ public int Native_Recording_SetDownloading(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
 	int iDownloading = GetNativeCell(2);
 	hRecordings.Set(iThis, iDownloading, _Recording::iDownloading);
+
+	return 0;
 }
 
 public int Native_Recording_GetFileSize(Handle hPlugin, int iArgC) {
@@ -329,6 +365,8 @@ public int Native_Recording_SetFileSize(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
 	int iFileSize = GetNativeCell(2);
 	hRecordings.Set(iThis, iFileSize, _Recording::iFileSize);
+
+	return 0;
 }
 
 public int Native_Recording_GetTimestamp(Handle hPlugin, int iArgC) {
@@ -340,6 +378,8 @@ public int Native_Recording_SetTimestamp(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
 	int iTimestamp = GetNativeCell(2);
 	hRecordings.Set(iThis, iTimestamp, _Recording::iTimestamp);
+
+	return 0;
 }
 
 public int Native_Recording_GetFrames(Handle hPlugin, int iArgC) {
@@ -356,6 +396,8 @@ public int Native_Recording_SetFramesExpected(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
 	int iFrames = GetNativeCell(2);
 	hRecordings.Set(iThis, iFrames, _Recording::iFramesExpected);
+
+	return 0;
 }
 
 public int Native_Recording_GetLength(Handle hPlugin, int iArgC) {
@@ -367,6 +409,8 @@ public int Native_Recording_SetLength(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
 	int iLength = GetNativeCell(2);
 	hRecordings.Set(iThis, iLength, _Recording::iLength);
+
+	return 0;
 }
 
 public int Native_Recording_GetClientInfo(Handle hPlugin, int iArgC) {
@@ -383,6 +427,8 @@ public int Native_Recording_GetEquipFilter(Handle hPlugin, int iArgC) {
 
 	SetNativeCellRef(2, iSlot);
 	SetNativeCellRef(3, iItemDefIdx);
+
+	return 0;
 }
 
 public int Native_Recording_SetEquipFilter(Handle hPlugin, int iArgC) {
@@ -392,6 +438,8 @@ public int Native_Recording_SetEquipFilter(Handle hPlugin, int iArgC) {
 
 	int iEquipFilter = (iItemDefIdx << 16) | (iSlot & 0xFF);
 	hRecordings.Set(iThis, iEquipFilter, _Recording::iEquipFilter);
+
+	return 0;
 }
 
 public int Native_Recording_GetNodeModel(Handle hPlugin, int iArgC) {
@@ -403,6 +451,8 @@ public int Native_Recording_SetNodeModel(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
 	int iNodeModel = GetNativeCell(2);
 	hRecordings.Set(iThis, iNodeModel, _Recording::iNodeModel);
+
+	return 0;
 }
 
 public int Native_Recording_GetWeaponModel(Handle hPlugin, int iArgC) {
@@ -414,6 +464,8 @@ public int Native_Recording_SetWeaponModel(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
 	int iWeaponModel = GetNativeCell(2);
 	hRecordings.Set(iThis, iWeaponModel, _Recording::iWeaponModel);
+
+	return 0;
 }
 
 public int Native_Recording_GetVisibility(Handle hPlugin, int iArgC) {
@@ -445,6 +497,8 @@ public int Native_Recording_ResetVisibility(Handle hPlugin, int iArgC) {
 
 	hRecordings.Set(iThis, 0, _Recording::iVisibility);
 	hRecordings.Set(iThis, 0, _Recording::iVisibility+1);
+
+	return 0;
 }
 
 public int Native_Recording_Instance(Handle hPlugin, int iArgC) {
@@ -488,6 +542,8 @@ public int Native_Recording_Destroy(Handle hPlugin, int iArgC) {
 		
 		delete hRecClientInfo;
 	}
+
+	return 0;
 }
 
 public int Sort_Recordings(int iIdx1, int iIdx2, Handle hArray, Handle hParam) {
