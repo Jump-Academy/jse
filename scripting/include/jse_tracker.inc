@@ -20,30 +20,34 @@ public SharedPlugin __pl_jse_tracker =
 #if !defined REQUIRE_PLUGIN
 public void __pl_jse_tracker_SetNTVOptional()
 {
-	MarkNativeAsOptional("Jump.ID.get");
-	MarkNativeAsOptional("Jump.ID.set");
-	MarkNativeAsOptional("Jump.Number.get");
-	MarkNativeAsOptional("Jump.Number.set");
+	MarkNativeAsOptional("Jump.iID.get");
+	MarkNativeAsOptional("Jump.iID.set");
+	MarkNativeAsOptional("Jump.iNumber.get");
+	MarkNativeAsOptional("Jump.iNumber.set");
 	MarkNativeAsOptional("Jump.GetOrigin");
 	MarkNativeAsOptional("Jump.SetOrigin");
+	MarkNativeAsOptional("Jump.fAngle.get");
+	MarkNativeAsOptional("Jump.fAngle.set");
 	MarkNativeAsOptional("Jump.GetIdentifier");
 	MarkNativeAsOptional("Jump.SetIdentifier");
 	MarkNativeAsOptional("Jump.Instance");
 	MarkNativeAsOptional("Jump.Destroy");
 
-	MarkNativeAsOptional("ControlPoint.ID.get");
-	MarkNativeAsOptional("ControlPoint.ID.set");
+	MarkNativeAsOptional("ControlPoint.iID.get");
+	MarkNativeAsOptional("ControlPoint.iID.set");
 	MarkNativeAsOptional("ControlPoint.GetOrigin");
 	MarkNativeAsOptional("ControlPoint.SetOrigin");
+	MarkNativeAsOptional("ControlPoint.fAngle.get");
+	MarkNativeAsOptional("ControlPoint.fAngle.set");
 	MarkNativeAsOptional("ControlPoint.GetIdentifier");
 	MarkNativeAsOptional("ControlPoint.SetIdentifier");
 	MarkNativeAsOptional("ControlPoint.Instance");
 	MarkNativeAsOptional("ControlPoint.Destroy");
 
-	MarkNativeAsOptional("Course.ID.get");
-	MarkNativeAsOptional("Course.ID.set");
-	MarkNativeAsOptional("Course.Number.get");
-	MarkNativeAsOptional("Course.Number.set");
+	MarkNativeAsOptional("Course.iID.get");
+	MarkNativeAsOptional("Course.iID.set");
+	MarkNativeAsOptional("Course.iNumber.get");
+	MarkNativeAsOptional("Course.iNumber.set");
 	MarkNativeAsOptional("Course.Jumps.get");
 	MarkNativeAsOptional("Course.ControlPoint.get");
 	MarkNativeAsOptional("Course.ControlPoint.set");
@@ -84,6 +88,11 @@ methodmap Jump {
 		public native set(int iNumber);
 	}
 
+	property float fAngle {
+		public native get();
+		public native set(float fAngle);
+	}
+
 	public native void GetOrigin(float fOrigin[3]);
 	public native void SetOrigin(float fOrigin[3]);
 	public native void GetIdentifier(char[] sIdentifier, int iLength);
@@ -97,6 +106,11 @@ methodmap ControlPoint {
 	property int iID {
 		public native get();
 		public native set(int iID);
+	}
+
+	property float fAngle {
+		public native get();
+		public native set(float fAngle);
 	}
 
 	public native void GetOrigin(float fOrigin[3]);
@@ -194,7 +208,7 @@ enum struct Checkpoint {
 		return (this.iHash >>> 18 & 0xFF) == 0;
 	}
 
-	bool SetControlPoint() {
+	void SetControlPoint() {
 		this.iHash = this.iHash & 0xFC03FFFF;
 	}
 
@@ -265,6 +279,7 @@ forward void OnTrackerLoaded(ArrayList hCourses);
 
 forward Action OnProgressLoad(int iClient);
 forward void OnProgressLoaded(int iClient);
+forward void OnCheckpointApproached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint);
 forward void OnCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint);
 forward void OnNewCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint, bool bUnlock);
 
@@ -277,7 +292,7 @@ native bool GetPlayerNearestCheckpoint(int iClient, int &iCourseNumber, int &iJu
 native bool GetPlayerNewestCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint, int &iLastUpdateTime=0, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown);
 native bool GetPlayerLastCheckpoint(int iClient, int &iCourseNumber, int &iJumpNumber, bool &bControlPoint, int &iUnlockTime=0, int &iArrivalTimeTime=0, int &iLastUpdateTime=0, TFTeam &iTeam=TFTeam_Unassigned, TFClassType &iClass=TFClass_Unknown);
 
-native int GetPlayerProgress(int iClient, ArrayList hResult, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown, char[] sMapName=NULL_STRING, ProgressLookup pCallback=view_as<ProgressLookup>(0), any aData=0);
+native int GetPlayerProgress(int iClient, ArrayList hResult, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown, char[] sMapName=NULL_STRING, ProgressLookup pCallback=INVALID_FUNCTION, any aData=0);
 native void ResetPlayerProgress(int iClient, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass=TFClass_Unknown, bool bPersist=false, char[] sMapName=NULL_STRING);
 
 typedef ProgressLookup = function void (int iClient, ArrayList hResult, int iResults, char[] sMapName, StringMap hCourseNames, StringMap hCourseLengths, any aData);

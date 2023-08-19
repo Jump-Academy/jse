@@ -5,8 +5,33 @@
 #define PLUGIN_AUTHOR	"AI"
 #define PLUGIN_VERSION	"1.0.0-rc5"
 
-#define UPDATE_URL		"http://jumpacademy.tf/plugins/jse/jumpbot/updatefile.txt"
-#define API_HOST		"api.jumpacademy.tf"
+#include <sourcemod>
+#include <sdkhooks>
+#include <sdktools>
+#include <tf2>
+#include <tf2_stocks>
+#include <clientprefs>
+
+#include <autoexecconfig>
+#include <botcontroller>
+#include <multicolors>
+#include <sha1>
+#include <smlib/arrays>
+#include <smlib/clients>
+#include <tf2attributes>
+#include <tf2items>
+#include <socket>
+
+#include <jse_jumpbot>
+
+#undef REQUIRE_PLUGIN
+#include <updater>
+#include <jse_core>
+#include <jse_showkeys>
+#include <jse_autosave>
+#include <octree>
+
+#pragma newdecls required
 
 enum struct ClientState {
 	float fPos[3];
@@ -59,6 +84,9 @@ enum struct SpawnFreeze {
 	float fAng[3];
 }
 
+#define UPDATE_URL		"http://jumpacademy.tf/plugins/jse/jumpbot/updatefile.txt"
+#define API_HOST		"api.jumpacademy.tf"
+
 #define REC_FORMAT_VERSION_MAJOR	1
 #define REC_FORMAT_VERSION_MINOR	0
 
@@ -94,34 +122,6 @@ enum struct SpawnFreeze {
 
 #define POSITIVE_INFINITY	view_as<float>(0x7F800000)
 #define NEGATIVE_INFINITY	view_as<float>(0xFF800000)
-
-#include <sourcemod>
-#include <sdkhooks>
-#include <sdktools>
-#include <tf2>
-#include <tf2_stocks>
-#include <clientprefs>
-
-#include <autoexecconfig>
-#include <botcontroller>
-#include <multicolors>
-#include <sha1>
-#include <smlib/arrays>
-#include <smlib/clients>
-#include <tf2attributes>
-#include <tf2items>
-#include <socket>
-
-#include <jse_jumpbot>
-
-#undef REQUIRE_PLUGIN
-#include <updater>
-#include <jse_core>
-#include <jse_showkeys>
-#include <jse_autosave>
-#include <octree>
-
-#pragma newdecls required
 
 enum FindResult {
 	NO_RECORDING,
@@ -4264,6 +4264,7 @@ bool LoadRecording(Recording iRecording) {
 	char sError[256];
 	if (!CheckVersion(hFile, sError, sizeof(sError))) {
 		LogError("%s: %s", sError, sFilePath);
+		delete hFile;
 		return false;
 	}
 
@@ -4526,6 +4527,8 @@ bool LoadFrames(Recording iRecording) {
 	char sError[256];
 	if (!CheckVersion(hFile, sError, sizeof(sError))) {
 		LogError("%s: %s", sError, sFilePath);
+		delete hFile;
+
 		return false;
 	}
 
@@ -4552,10 +4555,15 @@ bool LoadFrames(Recording iRecording) {
 			if (!iRecording.Downloading) {
 				DeleteFile(sFilePath);
 			}
+
+			delete hFile;
+
 			return false;
 		}
 	} else if (!FileSize(sFilePath)) {
 		LogError("%T: %s (0 KB) -- %T", "Cannot Load Incomplete", LANG_SERVER, sFilePath, "Delete", LANG_SERVER);
+		delete hFile;
+
 		return false;
 	}
 	
@@ -4564,6 +4572,8 @@ bool LoadFrames(Recording iRecording) {
 	for (int i=0; i<iRecBufferUsed; i++) {
 		if (!hFile.ReadInt32(aFrameData)) {
 			LogError("%T (%d/%d B): %s", "Unexpected EOF", LANG_SERVER, i, iRecBufferUsed, sFilePath);
+			delete hFile;
+
 			return false;
 		}
 
