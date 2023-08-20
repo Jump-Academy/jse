@@ -4808,7 +4808,7 @@ void ResetBubbleRotation(Recording iRecording) {
 			fBubbleAng[0] = 0.0;
 
 			if (IsValidEntity(EntRefToEntIndex(iRecording.WeaponModel))) {
-				fBubbleAng[1] = float((RoundFloat(fBubbleAng[1]) - 90) % 360);
+				fBubbleAng[1] = 90.0;
 			} else {
 				fBubbleAng[1] = float((RoundFloat(fBubbleAng[1]) + 90) % 360);
 			}
@@ -5286,7 +5286,7 @@ void RefreshModels() {
 
 				fPosOffset[2] = 11.0;
 
-				fAngOffset[1] = float(RoundFloat(fAng[1] - 90) % 360);
+				fAngOffset[1] = 90.0;
 			}
 
 			TeleportEntity(iNodeEntity, fPosOffset, fAngOffset, NULL_VECTOR);
