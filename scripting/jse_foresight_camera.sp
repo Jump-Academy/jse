@@ -1,102 +1,82 @@
-// class FSCamera
+static ArrayList m_hFSCameras = null;
+const FSCamera NULL_CAMERA = view_as<FSCamera>(0);
 
-#define Camera_iClient			0
-#define Camera_iEntity			1
-#define Camera_iViewControl		2
-#define Camera_fStartTime		3
-#define Camera_bGCFlag			4
-#define Camera_Size				5
-
-static ArrayList hCameras = null;
-const FSCamera NULL_CAMERA = view_as<FSCamera>(-1);
-
-public void Camera_SetupNatives() {
-	CreateNative("FSCamera.Client.get",			Native_Camera_GetClient);
-	CreateNative("FSCamera.Client.set",			Native_Camera_SetClient);
-
-	CreateNative("FSCamera.Entity.get",			Native_Camera_GetEntity);
-	CreateNative("FSCamera.Entity.set",			Native_Camera_SetEntity);
-
-	CreateNative("FSCamera.ViewControl.get",		Native_Camera_GetViewControl);
-	CreateNative("FSCamera.ViewControl.set",		Native_Camera_SetViewControl);
-
-	CreateNative("FSCamera.StartTime.get",		Native_Camera_GetStartTime);
-	CreateNative("FSCamera.StartTime.set",		Native_Camera_SetStartTime);
-
-	CreateNative("FSCamera.Instance",				Native_Camera_Instance);
-	CreateNative("FSCamera.Destroy",				Native_Camera_Destroy);
+enum struct _FSCamera {
+	int iClient;
+	int iEntityRef;
+	int iViewControlRef;
+	float fStartTime;
+	bool bGCFlag;
 }
 
-public int Native_Camera_GetClient(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
-	return hCameras.Get(iThis, Camera_iClient);
-}
+methodmap FSCamera {
+	property int iClient {
+		public get() {
+			return m_hFSCameras.Get(view_as<int>(this)-1, _FSCamera::iClient);
+		}
 
-public int Native_Camera_SetClient(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
-	int iClient = GetNativeCell(2);
-	hCameras.Set(iThis, iClient, Camera_iClient);
-}
-
-public int Native_Camera_GetEntity(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
-	return hCameras.Get(iThis, Camera_iEntity);
-}
-
-public int Native_Camera_SetEntity(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
-	int iEntity = GetNativeCell(2);
-	hCameras.Set(iThis, iEntity, Camera_iEntity);
-}
-
-public int Native_Camera_GetViewControl(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
-	return hCameras.Get(iThis, Camera_iViewControl);
-}
-
-public int Native_Camera_SetViewControl(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
-	int iViewControl = GetNativeCell(2);
-	hCameras.Set(iThis, iViewControl, Camera_iViewControl);
-}
-
-public int Native_Camera_GetStartTime(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
-	return hCameras.Get(iThis, Camera_fStartTime);
-}
-
-public int Native_Camera_SetStartTime(Handle hPlugin, int iArgC) {
-	int iThis = GetNativeCell(1);
-	float fStartTime = GetNativeCell(2);
-	hCameras.Set(iThis, fStartTime, Camera_fStartTime);
-}
-
-public int Native_Camera_Instance(Handle hPlugin, int iArgC) {
-	if (hCameras == null) {
-		hCameras = new ArrayList(Camera_Size);
-	}
-	
-	static any iEmptyCamera[Camera_Size] =  { 0, ... };
-	iEmptyCamera[Camera_iEntity] = INVALID_ENT_REFERENCE;
-	iEmptyCamera[Camera_iViewControl] = INVALID_ENT_REFERENCE;
-
-	for (int i=0; i<hCameras.Length; i++) {
-		if (hCameras.Get(i, Camera_bGCFlag)) {
-			hCameras.SetArray(i, iEmptyCamera);
-
-			return i;
+		public set(int iClient) {
+			m_hFSCameras.Set(view_as<int>(this)-1, iClient, _FSCamera::iClient);
 		}
 	}
-	
-	hCameras.PushArray(iEmptyCamera);
-	
-	return hCameras.Length-1;
-}
 
-public int Native_Camera_Destroy(Handle hPlugin, int iArgC) {
-	if (hCameras != null) {
-		FSCamera iCamera = GetNativeCell(1);
+	property int iEntity {
+		public get() {
+			return EntRefToEntIndex(m_hFSCameras.Get(view_as<int>(this)-1, _FSCamera::iEntityRef));
+		}
 
-		hCameras.Set(view_as<int>(iCamera), 1, Camera_bGCFlag);
+		public set(int iEntity) {
+			int iEntRef = IsValidEntity(iEntity) ? EntIndexToEntRef(iEntity) : INVALID_ENT_REFERENCE;
+			m_hFSCameras.Set(view_as<int>(this)-1, iEntRef, _FSCamera::iEntityRef);
+		}
+	}
+
+	property int iViewControl {
+		public get() {
+			return EntRefToEntIndex(m_hFSCameras.Get(view_as<int>(this)-1, _FSCamera::iViewControlRef));
+		}
+
+		public set(int iViewControl) {
+			int iViewControlRef = IsValidEntity(iViewControl) ? EntIndexToEntRef(iViewControl) : INVALID_ENT_REFERENCE;
+			m_hFSCameras.Set(view_as<int>(this)-1, iViewControlRef, _FSCamera::iViewControlRef);
+		}
+	}
+
+	property float fStartTime {
+		public get() {
+			return m_hFSCameras.Get(view_as<int>(this)-1, _FSCamera::fStartTime);
+		}
+
+		public set(float fStartTime) {
+			m_hFSCameras.Set(view_as<int>(this)-1, fStartTime, _FSCamera::fStartTime);
+		}
+	}
+
+	public static FSCamera Instance() {
+		if (m_hFSCameras == null) {
+			m_hFSCameras = new ArrayList(sizeof(_FSCamera));
+		}
+		
+		_FSCamera eFSCamera;
+		eFSCamera.iEntityRef = INVALID_ENT_REFERENCE;
+		eFSCamera.iViewControlRef = INVALID_ENT_REFERENCE;
+
+		for (int i=0; i<m_hFSCameras.Length; i++) {
+			if (m_hFSCameras.Get(i, _FSCamera::bGCFlag)) {
+				m_hFSCameras.SetArray(i, eFSCamera);
+
+				return view_as<FSCamera>(i+1);
+			}
+		}
+		
+		return view_as<FSCamera>(m_hFSCameras.PushArray(eFSCamera)+1);
+	}
+
+	public static void Destroy(FSCamera &mCamera) {
+		if (m_hFSCameras != null) {
+			m_hFSCameras.Set(view_as<int>(mCamera)-1, 1, _FSCamera::bGCFlag);
+		}
+
+		mCamera = NULL_CAMERA;
 	}
 }
