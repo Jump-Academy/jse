@@ -5222,7 +5222,7 @@ void RefreshModels() {
 
 		if (sWeaponModel[0] && (iWeaponEntity = CreateEntityByName("prop_dynamic")) != INVALID_ENT_REFERENCE) {
 			char sKey[32];
-			FormatEx(sKey, sizeof(sKey), "_jumpbot_rec_weapon:%d", i);
+			FormatEx(sKey, sizeof(sKey), "_jumpbot_rec_weapon:%d", iRecording);
 			g_hBubbleLookup.SetValue(sKey, iRecording);
 
 			SetEntityModel(iWeaponEntity, sWeaponModel);
@@ -5253,7 +5253,7 @@ void RefreshModels() {
 		int iNodeEntity = CreateEntityByName("prop_dynamic");
 		if (IsValidEntity(iNodeEntity)) {
 			char sKey[32];
-			FormatEx(sKey, sizeof(sKey), "_jumpbot_rec_node:%d", i);
+			FormatEx(sKey, sizeof(sKey), "_jumpbot_rec_node:%d", iRecording);
 
 			SetEntityModel(iNodeEntity, HINT_MODEL_MARKER);
 			SetEntPropFloat(iNodeEntity, Prop_Data, "m_flModelScale", 0.5);
