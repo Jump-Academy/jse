@@ -3,7 +3,7 @@
 //#define DEBUG
 
 #define PLUGIN_AUTHOR		"AI"
-#define PLUGIN_VERSION		"0.2.6"
+#define PLUGIN_VERSION		"0.3.0"
 
 #define CAMERA_MODEL		"models/combine_scanner.mdl"
 
@@ -13,7 +13,6 @@
 #include <smlib/clients>
 #include <smlib/entities>
 
-#include <jse_foresight>
 #include "jse_foresight_camera.sp"
 
 #undef REQUIRE_PLUGIN
@@ -21,14 +20,14 @@
 
 #define UPDATE_URL	"http://jumpacademy.tf/plugins/jse/foresight/updatefile.txt"
 
-ConVar g_hDuration;
-ConVar g_hTurnRatio;
-ConVar g_hSpeed;
-ConVar g_hAccel;
-ConVar g_hAlpha;
+ConVar g_hCVDuration;
+ConVar g_hCVTurnRatio;
+ConVar g_hCVSpeed;
+ConVar g_hCVAccel;
+ConVar g_hCVAlpha;
 
 ArrayList g_hCameras;
-FSCamera g_iActiveCamera[MAXPLAYERS+1] = {NULL_CAMERA, ...};
+FSCamera g_mActiveCamera[MAXPLAYERS+1] = {NULL_CAMERA, ...};
 
 enum struct FOV {
 	int iFOV;
@@ -48,11 +47,11 @@ public Plugin myinfo = {
 
 public void OnPluginStart() {
 	CreateConVar("jse_foresight_version", PLUGIN_VERSION, "Jump Server Essentials foresight version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
-	g_hDuration = CreateConVar("jse_foresight_duration", "30.0", "Foresight max duration", FCVAR_NONE, true, -1.0);
-	g_hTurnRatio = CreateConVar("jse_foresight_turn_ratio", "0.08", "Foresight mouse-to-angle turn ratio", FCVAR_NONE, true, 0.0);
-	g_hSpeed = CreateConVar("jse_foresight_speed", "1000.0", "Foresight fly speed", FCVAR_NONE, true, 0.0);
-	g_hAccel = CreateConVar("jse_foresight_accel", "0.075", "Foresight fly acceleration", FCVAR_NONE, true, 0.0, true, 1.0);
-	g_hAlpha = CreateConVar("jse_foresight_alpha", "0.6", "Player body transparency ratio when using foresight", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVDuration = CreateConVar("jse_foresight_duration", "30.0", "Foresight max duration", FCVAR_NONE, true, -1.0);
+	g_hCVTurnRatio = CreateConVar("jse_foresight_turn_ratio", "0.08", "Foresight mouse-to-angle turn ratio", FCVAR_NONE, true, 0.0);
+	g_hCVSpeed = CreateConVar("jse_foresight_speed", "1000.0", "Foresight fly speed", FCVAR_NONE, true, 0.0);
+	g_hCVAccel = CreateConVar("jse_foresight_accel", "0.075", "Foresight fly acceleration", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVAlpha = CreateConVar("jse_foresight_alpha", "0.6", "Player body transparency ratio when using foresight", FCVAR_NONE, true, 0.0, true, 1.0);
 	
 	RegConsoleCmd("sm_foresight",	cmdForesight, "Explore in spirit form");
 	RegConsoleCmd("sm_fs",			cmdForesight, "Explore in spirit form");
@@ -82,11 +81,6 @@ public void OnLibraryAdded(const char[] sName) {
 	}
 }
 
-public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErrMax) {
-	RegPluginLibrary("jse_foresight");
-	Camera_SetupNatives();
-}
-
 public void OnMapStart() {
 	PrecacheModel(CAMERA_MODEL);
 }
@@ -96,30 +90,30 @@ public void OnMapEnd() {
 }
 
 public void OnClientDisconnect(int iClient) {
-	FSCamera iCamera = g_iActiveCamera[iClient];
-	if (iCamera != NULL_CAMERA) {
-		DisableForesight(iCamera);
+	FSCamera mCamera = g_mActiveCamera[iClient];
+	if (mCamera) {
+		DisableForesight(mCamera);
 	}
 }
 
-public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fVel[3], float fAng[3], int &iWeapon, int& iSubType, int& iCmdNum, int& iTickCount, int& iSeed, int iMouse[2]) {
+public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float vecVel[3], float vecAng[3], int &iWeapon, int& iSubType, int& iCmdNum, int& iTickCount, int& iSeed, int iMouse[2]) {
 	if (!IsClientInGame(iClient)) {
 		return Plugin_Continue;
 	}
 
-	FSCamera iCamera = g_iActiveCamera[iClient];
-	if (iCamera == NULL_CAMERA) {
+	FSCamera mCamera = g_mActiveCamera[iClient];
+	if (!mCamera) {
 		return Plugin_Continue;
 	}
 
 	float fTimeLeft = 1.0;
-	float fStartTime = iCamera.StartTime;
-	if (g_hDuration.IntValue != -1 && fStartTime > 0.0) {
-		fTimeLeft = g_hDuration.FloatValue - (GetGameTime()-fStartTime);
+	float fStartTime = mCamera.fStartTime;
+	if (g_hCVDuration.IntValue != -1 && fStartTime > 0.0) {
+		fTimeLeft = g_hCVDuration.FloatValue - (GetGameTime()-fStartTime);
 	}
 
 	if (iButtons & IN_ATTACK || fTimeLeft <= 0.0) {
-		DisableForesight(iCamera);
+		DisableForesight(mCamera);
 		return Plugin_Continue;
 	}
 
@@ -127,33 +121,33 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 		SetEntProp(iClient, Prop_Send, "m_nForceTauntCam", 0);
 	}
 
-	int iEntity = EntRefToEntIndex(iCamera.Entity);
-	float fAlpha = g_hTurnRatio.FloatValue;
-	float fAngDesired[3];
-	Entity_GetAbsAngles(iEntity, fAngDesired);
-	fAngDesired[0] = Clamp(fAngDesired[0] + fAlpha*float(iMouse[1]), -90.0, 90.0);
-	fAngDesired[1] -= fAlpha*float(iMouse[0]);
-	if (fAngDesired[1] > 180.0) {
-		fAngDesired[1] -= 360.0;
-	} else if (fAngDesired[1] < -180.0) {
-		fAngDesired[1] += 360.0;
+	int iEntity = mCamera.iEntity;
+	float fAlpha = g_hCVTurnRatio.FloatValue;
+	float vecAngDesired[3];
+	Entity_GetAbsAngles(iEntity, vecAngDesired);
+	vecAngDesired[0] = Clamp(vecAngDesired[0] + fAlpha*float(iMouse[1]), -90.0, 90.0);
+	vecAngDesired[1] -= fAlpha*float(iMouse[0]);
+	if (vecAngDesired[1] > 180.0) {
+		vecAngDesired[1] -= 360.0;
+	} else if (vecAngDesired[1] < -180.0) {
+		vecAngDesired[1] += 360.0;
 	}
-	Entity_SetAbsAngles(iEntity, fAngDesired);
+	Entity_SetAbsAngles(iEntity, vecAngDesired);
 
-	float fVelDesired[3];
+	float vecVelDesired[3];
 
-	float fFwd[3], fRight[3];
-	GetAngleVectors(fAngDesired, fFwd, fRight, NULL_VECTOR);
+	float vecFwd[3], vecRight[3];
+	GetAngleVectors(vecAngDesired, vecFwd, vecRight, NULL_VECTOR);
 
-	float fUp[3] = {0.0, 0.0, 1.0};
+	float vecUp[3] = {0.0, 0.0, 1.0};
 
-	float fSpeed = g_hSpeed.FloatValue;
-	ScaleVector(fFwd, fSpeed * (float((iButtons & IN_FORWARD) != 0) - float((iButtons & IN_BACK) != 0)));
-	ScaleVector(fRight, fSpeed * (float((iButtons & IN_MOVERIGHT) != 0) - float((iButtons & IN_MOVELEFT) != 0)));
-	ScaleVector(fUp, fSpeed * (float((iButtons & IN_JUMP) != 0) - float((iButtons & IN_DUCK) != 0)));
+	float fSpeed = g_hCVSpeed.FloatValue;
+	ScaleVector(vecFwd, fSpeed * (float((iButtons & IN_FORWARD) != 0) - float((iButtons & IN_BACK) != 0)));
+	ScaleVector(vecRight, fSpeed * (float((iButtons & IN_MOVERIGHT) != 0) - float((iButtons & IN_MOVELEFT) != 0)));
+	ScaleVector(vecUp, fSpeed * (float((iButtons & IN_JUMP) != 0) - float((iButtons & IN_DUCK) != 0)));
 	
-	AddVectors(fFwd, fRight, fVelDesired);
-	AddVectors(fVelDesired, fUp, fVelDesired);
+	AddVectors(vecFwd, vecRight, vecVelDesired);
+	AddVectors(vecVelDesired, vecUp, vecVelDesired);
 
 	if (GetGameTickCount() % 33 == 0) {
 		if (fStartTime) {
@@ -165,13 +159,13 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 		StopSound(iClient, SNDCHAN_STATIC, "ui/hint.wav");
 	}
 	
-	float fVelCurrent[3], fVelDiff[3];
-	Entity_GetAbsVelocity(iEntity, fVelCurrent);
-	SubtractVectors(fVelDesired, fVelCurrent, fVelDiff);
+	float vecVelCurrent[3], vecVelDiff[3];
+	Entity_GetAbsVelocity(iEntity, vecVelCurrent);
+	SubtractVectors(vecVelDesired, vecVelCurrent, vecVelDiff);
 
-	ScaleVector(fVelDiff, g_hAccel.FloatValue);
-	AddVectors(fVelCurrent, fVelDiff, fVelDesired);
-	Entity_SetAbsVelocity(iEntity, fVelDesired);
+	ScaleVector(vecVelDiff, g_hCVAccel.FloatValue);
+	AddVectors(vecVelCurrent, vecVelDiff, vecVelDesired);
+	Entity_SetAbsVelocity(iEntity, vecVelDesired);
 
 	return Plugin_Continue;
 }
@@ -184,8 +178,8 @@ public Action Event_PlayerChangeState(Event hEvent, const char[] sName, bool bDo
 		return Plugin_Handled;
 	}
 	
-	if (g_iActiveCamera[iClient] != NULL_CAMERA) {
-		DisableForesight(g_iActiveCamera[iClient]);
+	if (g_mActiveCamera[iClient]) {
+		DisableForesight(g_mActiveCamera[iClient]);
 	}	
 	
 	return Plugin_Continue;
@@ -194,8 +188,8 @@ public Action Event_PlayerChangeState(Event hEvent, const char[] sName, bool bDo
 // Commands
 
 public Action cmdForesight(int iClient, int iArgC) {
-	if (g_iActiveCamera[iClient] != NULL_CAMERA) {
-		DisableForesight(g_iActiveCamera[iClient]);
+	if (g_mActiveCamera[iClient]) {
+		DisableForesight(g_mActiveCamera[iClient]);
 
 		return Plugin_Handled;
 	}
@@ -230,40 +224,40 @@ public Action cmdForesight(int iClient, int iArgC) {
 	DispatchSpawn(iEntity);
 	SetEntityMoveType(iEntity, MOVETYPE_NOCLIP);
 
-	if (g_hAlpha.FloatValue < 1.0) {
+	if (g_hCVAlpha.FloatValue < 1.0) {
 		SetEntityRenderMode(iClient, RENDER_TRANSALPHA);
 		int iR, iG, iB, iA;
 		GetEntityRenderColor(iClient, iR, iG, iB, iA);
-		SetEntityRenderColor(iClient, iR, iG, iB, RoundToNearest(255*g_hAlpha.FloatValue));
+		SetEntityRenderColor(iClient, iR, iG, iB, RoundToNearest(255*g_hCVAlpha.FloatValue));
 	}
 
 	SetVariantString("!activator");
 	AcceptEntityInput(iViewControl, "SetParent", iEntity, iViewControl);
 	DispatchSpawn(iViewControl);
 
-	FSCamera iCamera = FSCamera.Instance();
-	iCamera.Client = iClient;
-	iCamera.Entity = EntIndexToEntRef(iEntity);
-	iCamera.ViewControl = EntIndexToEntRef(iViewControl);
+	FSCamera mCamera = FSCamera.Instance();
+	mCamera.iClient = iClient;
+	mCamera.iEntity = iEntity;
+	mCamera.iViewControl = iViewControl;
 
 	if (!CheckCommandAccess(iClient, "jse_foresight_untimed", ADMFLAG_RESERVATION)) {
-		iCamera.StartTime = GetGameTime();
+		mCamera.fStartTime = GetGameTime();
 	}
 	
-	float fPos[3], fAng[3], fDir[3];
-	GetClientEyePosition(iClient, fPos);
-	GetClientEyeAngles(iClient, fAng);
+	float vecPos[3], vecAng[3], vecDir[3];
+	GetClientEyePosition(iClient, vecPos);
+	GetClientEyeAngles(iClient, vecAng);
 	
-	GetAngleVectors(fAng, fDir, NULL_VECTOR, NULL_VECTOR);
-	ScaleVector(fDir, 50.0);
-	AddVectors(fPos, fDir, fPos);
-	NormalizeVector(fDir, fDir);
-	ScaleVector(fDir, 0.5*g_hSpeed.FloatValue);
+	GetAngleVectors(vecAng, vecDir, NULL_VECTOR, NULL_VECTOR);
+	ScaleVector(vecDir, 50.0);
+	AddVectors(vecPos, vecDir, vecPos);
+	NormalizeVector(vecDir, vecDir);
+	ScaleVector(vecDir, 0.5*g_hCVSpeed.FloatValue);
 	
-	TeleportEntity(iEntity, fPos, fAng, fDir);
+	TeleportEntity(iEntity, vecPos, vecAng, vecDir);
 
-	g_hCameras.Push(iCamera);
-	g_iActiveCamera[iClient] = iCamera;
+	g_hCameras.Push(mCamera);
+	g_mActiveCamera[iClient] = mCamera;
 
 	#if !defined DEBUG
 	SetClientViewEntity(iClient, iViewControl);
@@ -299,17 +293,17 @@ void Cleanup() {
 		DisableForesight(g_hCameras.Get(0));
 	}
 
-	Array_Fill(g_iActiveCamera, sizeof(g_iActiveCamera), NULL_CAMERA);
+	Array_Fill(g_mActiveCamera, sizeof(g_mActiveCamera), NULL_CAMERA);
 }
 
-void DisableCamera(FSCamera iCamera) {
-	if (iCamera == NULL_CAMERA) {
+void DisableCamera(FSCamera mCamera) {
+	if (!mCamera) {
 		return;
 	}
 
-	int iClient = iCamera.Client;
+	int iClient = mCamera.iClient;
 	if (Client_IsValid(iClient) && IsClientInGame(iClient)) {
-		int iViewControl = EntRefToEntIndex(iCamera.ViewControl);
+		int iViewControl = mCamera.iViewControl;
 		if (IsValidEntity(iViewControl)) {
 			AcceptEntityInput(iViewControl, "Disable");
 			Entity_Kill(iViewControl);
@@ -323,7 +317,7 @@ void DisableCamera(FSCamera iCamera) {
 			AcceptEntityInput(hViewEntity, "Disable");
 		}
 
-		if (g_hAlpha.FloatValue < 1.0) {
+		if (g_hCVAlpha.FloatValue < 1.0) {
 			SetEntityRenderMode(iClient, RENDER_TRANSALPHA);
 			int iR, iG, iB, iA;
 			GetEntityRenderColor(iClient, iR, iG, iB, iA);
@@ -331,29 +325,28 @@ void DisableCamera(FSCamera iCamera) {
 		}
 	}
 
-	int iEntiy = EntRefToEntIndex(iCamera.Entity);
+	int iEntiy = mCamera.iEntity;
 	if (IsValidEntity(iEntiy)) {
 		Entity_Kill(iEntiy, true);
 	}
 	
-	iCamera.Entity = INVALID_ENT_REFERENCE;
-	iCamera.ViewControl = INVALID_ENT_REFERENCE;
+	mCamera.iEntity = INVALID_ENT_REFERENCE;
+	mCamera.iViewControl = INVALID_ENT_REFERENCE;
 }
 
-void DisableForesight(FSCamera iCamera) {
-	if (iCamera == NULL_CAMERA) {
+void DisableForesight(FSCamera mCamera) {
+	if (!mCamera) {
 		return;
 	}
 
-	int iCameraIdx = g_hCameras.FindValue(iCamera);
+	int iCameraIdx = g_hCameras.FindValue(mCamera);
 	if (iCameraIdx != -1) {
 		g_hCameras.Erase(iCameraIdx);
 	}
 
-	DisableCamera(iCamera);
-	FSCamera.Destroy(iCamera);
+	DisableCamera(mCamera);
 
-	int iClient = iCamera.Client;
+	int iClient = mCamera.iClient;
 	if (IsClientInGame(iClient)) {
 		Client_SetObserverTarget(iClient, -1);
 		Client_SetObserverMode(iClient, OBS_MODE_NONE);
@@ -366,7 +359,8 @@ void DisableForesight(FSCamera iCamera) {
 		StopSound(iClient, SNDCHAN_STATIC, "ui/hint.wav");
 	}
 
-	g_iActiveCamera[iClient] = NULL_CAMERA;
+	FSCamera.Destroy(mCamera);
+	g_mActiveCamera[iClient] = NULL_CAMERA;
 }
 
 void ResetFOV(int iClient) {
