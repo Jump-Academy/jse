@@ -2247,7 +2247,7 @@ public Action cmdNearby(int iClient, int iArgC) {
 		}
 	}
 
-	if (g_bOctreeAvailable) {
+	if (hRecordings != g_hRecordings) {
 		delete hRecordings;
 	}
 	
@@ -4114,7 +4114,7 @@ FindResult FindNearestRecording(float fPos[3], TFClassType iClass, Recording &iC
 		}
 	}
 
-	if (g_bOctreeAvailable) {
+	if (hRecordings != g_hRecordings) {
 		delete hRecordings;
 	}
 	
