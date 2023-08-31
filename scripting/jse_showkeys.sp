@@ -208,6 +208,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 				SetHudTextParams(g_fHUDCoords[iClient][0] - 0.05, g_fHUDCoords[iClient][1], TEXT_HOLD_TIME, g_iHUDColorsAlphaMultiplied[iClient][0], g_iHUDColorsAlphaMultiplied[iClient][1], g_iHUDColorsAlphaMultiplied[iClient][2], 255, 0, 0.0, 0.0, 0.0);
 				ShowSyncHudText(iClient, g_hHudText, sKeys);
 			} else {
+				SetHudTextParams(0, 0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0);
 				ShowSyncHudText(iClient, g_hHudText, NULL_STRING);
 			}
 		}
