@@ -45,9 +45,9 @@ int g_iHUDColorsAlphaMultiplied[MAXPLAYERS + 1][3];
 
 int g_iLastUpdate[MAXPLAYERS + 1][2];
 
-Handle g_hCookieEnabled;
-Handle g_hCookieCoords;
-Handle g_hCookieColor;
+Cookie g_hCookieEnabled;
+Cookie g_hCookieCoords;
+Cookie g_hCookieColor;
 
 public Plugin myinfo = {
 	name = "Jump Server Essentials - Show Keys",
@@ -78,9 +78,9 @@ public void OnPluginStart() {
 	HookEvent("player_spawn", Event_PlayerSpawn);
 
 	// Cookies
-	g_hCookieEnabled = RegClientCookie("jse_showkeys_enabled", "Show keys enable toggle", CookieAccess_Private);
-	g_hCookieCoords = RegClientCookie("jse_showkeys_coords", "Show keys HUD coordinates", CookieAccess_Private);
-	g_hCookieColor = RegClientCookie("jse_showkeys_color", "Show keys HUD text color", CookieAccess_Private);
+	g_hCookieEnabled = new Cookie("jse_showkeys_enabled", "Show keys enable toggle", CookieAccess_Private);
+	g_hCookieCoords = new Cookie("jse_showkeys_coords", "Show keys HUD coordinates", CookieAccess_Private);
+	g_hCookieColor = new Cookie("jse_showkeys_color", "Show keys HUD text color", CookieAccess_Private);
 
 	SetCookieMenuItem(CookieMenuHandler_Options, 0, "Show Keys");
 
@@ -95,10 +95,12 @@ public void OnPluginStart() {
 	}
 }
 
-public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErrMax) {
+public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int iErrMax) {
 	RegPluginLibrary("jse_showkeys");
 	CreateNative("ForceShowKeys", Native_ForceShowKeys);
 	CreateNative("ResetShowKeys", Native_ResetShowKeys);
+
+	return APLRes_Success;
 }
 
 public void OnMapStart() {
@@ -343,6 +345,7 @@ public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fV
 }
 
 // Custom callbacks
+
 public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
 	if (!iClient) {
@@ -356,6 +359,8 @@ public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroa
 
 public Action Timer_Unfreeze(Handle hTimer, any aData) {
 	SetEntityFlags(aData, GetEntityFlags(aData) & ~(FL_ATCONTROLS | FL_FROZEN));
+
+	return Plugin_Handled;
 }
 
 // Natives
@@ -365,6 +370,8 @@ public int Native_ForceShowKeys(Handle hPlugin, int iArgC) {
 		g_iTarget[iClient] = GetNativeCell(2);
 		g_bEnabled[iClient] = true;
 	}
+
+	return 0;
 }
 
 public int Native_ResetShowKeys(Handle hPlugin, int iArgC) {
@@ -376,6 +383,8 @@ public int Native_ResetShowKeys(Handle hPlugin, int iArgC) {
 
 		g_iTarget[iClient] = 0;
 	}
+
+	return 0;
 }
 
 // Commands
@@ -408,7 +417,7 @@ public Action cmdShowKeys(int iClient, int iArgC) {
 		g_iTarget[iClient] = 0;
 	}
 
-	SetClientCookie(iClient, g_hCookieEnabled, g_bEnabled[iClient] ? "1" : "0");
+	g_hCookieEnabled.Set(iClient, g_bEnabled[iClient] ? "1" : "0");
 
 	return Plugin_Handled;
 }
@@ -467,7 +476,7 @@ public Action cmdShowKeysOptions(int iClient, int iArgC) {
 
 public Action cmdForceShowKeys(int iClient, int iArgC) {
 	if (iArgC != 2) {
-		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Usage: sm_forceshowkeys <target> <0/1>");
+		ReplyToCommand(iClient, "[jse] Usage: sm_forceshowkeys <target> <0/1>");
 		return Plugin_Handled;
 	}
 
@@ -483,20 +492,21 @@ public Action cmdForceShowKeys(int iClient, int iArgC) {
 	if (iTarget != -1) {
 		g_iTarget[iTarget] = 0;
 		g_bEnabled[iTarget] = bEnabled;
-		
-		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Show keys %s for {limegreen}%N{white}.", bEnabled ? "enabled" : "disabled", iTarget);
-		CPrintToChat(iTarget, "{dodgerblue}[jse] {white}Show keys %s.", bEnabled ? "enabled" : "disabled");
 
-		SetClientCookie(iTarget, g_hCookieEnabled, bEnabled ? "1" : "0");
+		CPrintToChat(iTarget, "{dodgerblue}[jse] {white}Show keys %s.", bEnabled ? "enabled" : "disabled");
+		CPrintToChat(iClient, "{dodgerblue}[jse] {white}Show keys %s for {limegreen}%N{white}.", bEnabled ? "enabled" : "disabled", iTarget);
+
+		g_hCookieEnabled.Set(iTarget, bEnabled ? "1" : "0");
 	}
 
 	return Plugin_Handled;
 }
 
 // Stock
-stock bool GetCookieBool(int iClient, Handle hCookie, bool &bValue) {
+
+stock bool GetCookieBool(int iClient, Cookie hCookie, bool &bValue) {
 	char sBuffer[8];
-	GetClientCookie(iClient, hCookie, sBuffer, sizeof(sBuffer));
+	hCookie.Get(iClient, sBuffer, sizeof(sBuffer));
 
 	if (sBuffer[0]) {
 		bValue = StringToInt(sBuffer) != 0;
@@ -506,9 +516,9 @@ stock bool GetCookieBool(int iClient, Handle hCookie, bool &bValue) {
 	return false;
 }
 
-stock bool GetCookieFloat2D(int iClient, Handle hCookie, float &fValueA, float &fValueB) {
+stock bool GetCookieFloat2D(int iClient, Cookie hCookie, float &fValueA, float &fValueB) {
 	char sBuffer[32];
-	GetClientCookie(iClient, hCookie, sBuffer, sizeof(sBuffer));
+	hCookie.Get(iClient, sBuffer, sizeof(sBuffer));
 
 	char sFloatBuffers[2][32];
 	if (ExplodeString(sBuffer, " ", sFloatBuffers, sizeof(sFloatBuffers), sizeof(sFloatBuffers[]), false) != 2) {
@@ -521,9 +531,9 @@ stock bool GetCookieFloat2D(int iClient, Handle hCookie, float &fValueA, float &
 	return true;
 }
 
-stock bool GetCookieRGBA(int iClient, Handle hCookie, int &iValueA, int &iValueB, int &iValueC, int &iValueD) {
+stock bool GetCookieRGBA(int iClient, Cookie hCookie, int &iValueA, int &iValueB, int &iValueC, int &iValueD) {
 	char sBuffer[32];
-	GetClientCookie(iClient, hCookie, sBuffer, sizeof(sBuffer));
+	hCookie.Get(iClient, sBuffer, sizeof(sBuffer));
 
 	if (strlen(sBuffer) != 8) {
 		return false;
@@ -539,22 +549,22 @@ stock bool GetCookieRGBA(int iClient, Handle hCookie, int &iValueA, int &iValueB
 	return true;
 }
 
-stock void SetCookieFloat2D(int iClient, Handle hCookie, float fValueA, float fValueB) {
+stock void SetCookieFloat2D(int iClient, Cookie hCookie, float fValueA, float fValueB) {
 	char sBuffer[32];
 	FormatEx(sBuffer, sizeof(sBuffer), "%.4f %.4f", fValueA, fValueB);
 
-	SetClientCookie(iClient, hCookie, sBuffer);
+	hCookie.Set(iClient, sBuffer);
 }
 
-stock void SetCookieRGBA(int iClient, Handle hCookie, int iValueA, int iValueB, int iValueC, int iValueD) {
+stock void SetCookieRGBA(int iClient, Cookie hCookie, int iValueA, int iValueB, int iValueC, int iValueD) {
 	char sBuffer[9];
 	FormatEx(sBuffer, sizeof(sBuffer), "%02X%02X%02X%02X", iValueA & 0xFF, iValueB & 0xFF, iValueC & 0xFF, iValueD & 0xFF);
 
-	SetClientCookie(iClient, hCookie, sBuffer);
+	hCookie.Set(iClient, sBuffer);
 }
 
-
 // Menus
+
 public void CookieMenuHandler_Options(int iClient, CookieMenuAction iAction, any aInfo, char[] sBuffer, int iMaxLength) {
 	if (iAction == CookieMenuAction_SelectOption) {
 		SendOptionsPanel(iClient);
@@ -568,7 +578,7 @@ void SendOptionsPanel(int iClient) {
 	hMenu.AddItem(NULL_STRING, "Move");
 	hMenu.AddItem(NULL_STRING, "Recolor");
 
-	DisplayMenu(hMenu, iClient, 0);
+	hMenu.Display(iClient, 0);
 }
 
 public int MenuHandler_Options(Menu hMenu, MenuAction iAction, int iClient, int iOption) {
@@ -587,7 +597,10 @@ public int MenuHandler_Options(Menu hMenu, MenuAction iAction, int iClient, int 
 		}
 
 		case MenuAction_End: {
-			CloseHandle(hMenu);
+			delete hMenu;
 		}
+
 	}
+
+	return 0;
 }
