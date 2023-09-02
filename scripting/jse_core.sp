@@ -89,6 +89,8 @@ public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErr
 	CreateNative("SetRegen", Native_SetRegen);
 	CreateNative("ClearControlPointCapture", Native_ClearControlPointCapture);
 	CreateNative("ClearScore", Native_ClearScore);
+
+	return APLRes_Success;
 }
 
 public void OnPluginStart() {
@@ -326,11 +328,15 @@ public Action Event_BuiltObject(Event hEvent, const char[] sName, bool bDontBroa
 	}
 
 	SDKHook(iEntity, SDKHook_Touch, Hook_BuildingTouch);
+
+	return Plugin_Continue;
 }
 
 public Action Event_CarryObject(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iEntity = hEvent.GetInt("index");
 	SetEntProp(iEntity, Prop_Send, "m_iUpgradeLevel", GetEntProp(iEntity, Prop_Send, "m_iHighestUpgradeLevel"));
+
+	return Plugin_Continue;
 }
 
 public Action Event_UpgradedObject(Event hEvent, const char[] sName, bool bDontBroadcast) {
@@ -338,6 +344,7 @@ public Action Event_UpgradedObject(Event hEvent, const char[] sName, bool bDontB
 		int iEntity = hEvent.GetInt("index");
 		RequestFrame(FrameCallback_FinishUpgrading, iEntity);
 	}
+
 	return Plugin_Continue;
 }
 
@@ -408,6 +415,8 @@ public Action Event_PlayerSpawn(Event hEvent, const char[] sName, bool bDontBroa
 
 public Action Event_RoundStart(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	Setup();
+
+	return Plugin_Continue;
 }
 
 public void FrameCallback_FinishBuilding(any iEntity) {
@@ -651,18 +660,24 @@ public int Native_SetBlockEquip(Handle hPlugin, int iArgC) {
 	int iClient = GetNativeCell(1);
 	bool bEnabled = GetNativeCell(2);
 	g_bBlockEquip[iClient] = bEnabled;
+
+	return 0;
 }
 
 public int Native_SetBlockRegen(Handle hPlugin, int iArgC) {
 	int iClient = GetNativeCell(1);
 	bool bEnabled = GetNativeCell(2);
 	g_bBlockRegen[iClient] = bEnabled;
+
+	return 0;
 }
 
 public int Native_SetRegen(Handle hPlugin, int iArgC) {
 	int iClient = GetNativeCell(1);
 	bool bEnabled = GetNativeCell(2);
 	g_bAmmoRegen[iClient] = bEnabled;
+
+	return 0;
 }
 
 public int Native_ClearControlPointCapture(Handle hPlugin, int iArgC) {
@@ -680,6 +695,8 @@ public int Native_ClearControlPointCapture(Handle hPlugin, int iArgC) {
 		g_hControlPoints.SetArray(sCapName, iControlPointData, sizeof(iControlPointData));
 	}
 	delete hSnap;
+
+	return 0;
 }
 
 public int Native_ClearScore(Handle hPlugin, int iArgC) {
@@ -688,6 +705,8 @@ public int Native_ClearScore(Handle hPlugin, int iArgC) {
 	if (IsClientInGame(iClient)) {
 		SDKCall(g_hSDKResetScores, iClient);
 	}
+
+	return 0;
 }
 
 // Commands
