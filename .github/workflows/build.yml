@@ -1,0 +1,93 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v3
+
+    - name: Setup SourcePawn compiler 1.12
+      uses: rumblefrog/setup-sp@master
+      with:
+        version: '1.12.x'
+
+    - name: Create external dependency directories
+      run: |
+        mkdir includes
+        mkdir includes/multicolors
+        mkdir includes/ripext
+
+    - name: Copy local include files to dependency directory
+      run: cp -r scripting/include/* includes/
+
+    - name: Fetch small dependencies
+      run: |
+        wget https://raw.githubusercontent.com/Impact123/AutoExecConfig/development/autoexecconfig.inc -P includes
+        wget https://raw.githubusercontent.com/VoiDeD/sourcemod-botcontroller/master/scripting/botcontroller.inc -P includes
+        wget https://raw.githubusercontent.com/geominorai/sm-octree/master/scripting/include/octree.inc -P includes
+        wget https://raw.githubusercontent.com/Bara/Multi-Colors/master/addons/sourcemod/scripting/include/multicolors.inc -P includes
+        wget https://raw.githubusercontent.com/Bara/Multi-Colors/master/addons/sourcemod/scripting/include/multicolors/colors.inc -P includes/multicolors
+        wget https://raw.githubusercontent.com/Bara/Multi-Colors/master/addons/sourcemod/scripting/include/multicolors/morecolors.inc  -P includes/multicolors
+        wget https://raw.githubusercontent.com/JoinedSenses/sm-ext-socket/master/scripting/include/socket.inc -P includes
+        wget https://raw.githubusercontent.com/FlaminSarge/tf2attributes/master/scripting/include/tf2attributes.inc -P includes
+        wget https://raw.githubusercontent.com/asherkin/TF2Items/master/pawn/tf2items.inc -P includes
+        wget https://raw.githubusercontent.com/ErikMinekus/sm-ripext/main/pawn/scripting/include/ripext.inc -P includes
+        wget https://raw.githubusercontent.com/ErikMinekus/sm-ripext/main/pawn/scripting/include/ripext/http.inc -P includes/ripext
+        wget https://raw.githubusercontent.com/ErikMinekus/sm-ripext/main/pawn/scripting/include/ripext/json.inc -P includes/ripext
+        wget https://raw.githubusercontent.com/JoinedSenses/SourceMod-IncludeLibrary/master/include/updater.inc -P includes
+
+    - name: Fetch smlib dependency
+      uses: actions/checkout@v3
+      with:
+        repository: bcserv/smlib
+        ref: transitional_syntax
+        path: smlib
+
+    - name: Copy smlib to dependency directory
+      run: cp -r smlib/scripting/include/* includes
+
+    - name: Create plugins folder
+      run: mkdir plugins
+
+    - name: Build plugins
+      run: |
+        spcomp -iincludes scripting/jse_autosave.sp -o plugins/jse_autosave.smx
+        spcomp -iincludes scripting/jse_core.sp -o plugins/jse_core.smx
+        spcomp -iincludes scripting/jse_foresight.sp -o plugins/jse_foresight.smx
+        spcomp -iincludes scripting/jse_jumpbot.sp -o plugins/jse_jumpbot.smx
+        spcomp -iincludes scripting/jse_mapinfo.sp -o plugins/jse_mapinfo.smx
+        spcomp -iincludes scripting/jse_marker.sp -o plugins/jse_marker.smx
+        spcomp -iincludes scripting/jse_scoreboard.sp -o plugins/jse_scoreboard.smx
+        spcomp -iincludes scripting/jse_showkeys.sp -o plugins/jse_showkeys.smx
+        spcomp -iincludes scripting/jse_teleport.sp -o plugins/jse_teleport.smx
+        spcomp -iincludes scripting/jse_tracker.sp -o plugins/jse_tracker.smx
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+          name: Plugins
+          path: plugins/
+
+    - name: Prepare release bundles
+      run: |
+        zip -r jse-bundle.zip LICENSE gamedata plugins scripting translations
+        tar -czf jse-bundle.tar.gz LICENSE gamedata plugins scripting translations
+
+    - name: "Release development build"
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: true
+        title: "Development Build"
+        files: |
+          jse-bundle.zip
+          jse-bundle.tar.gz
