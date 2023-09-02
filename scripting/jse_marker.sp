@@ -504,4 +504,6 @@ public int MenuHandler_Unmark(Menu hMenu, MenuAction iAction, int iClient, int i
 			delete hMenu;
 		}
 	}
+
+	return 0;
 }
