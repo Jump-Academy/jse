@@ -515,12 +515,12 @@ public int MenuHandler_CourseList(Menu hMenu, MenuAction iAction, int iClient, i
 			TFClassType iClass = TF2_GetPlayerClass(iClient);
 
 			if (iTeam <= TFTeam_Spectator || iClass == TFClass_Unknown) {
-				return;
+				return 0;
 			}
 
 			ArrayList hCheckpoint = g_hAutosave[iClient][view_as<int>(iTeam)-view_as<int>(TFTeam_Red)][view_as<int>(iClass)-1];
 			if (!hCheckpoint || !hCheckpoint.Length) {
-				return;
+				return 0;
 			}
 
 			char sKey[8];
@@ -528,7 +528,7 @@ public int MenuHandler_CourseList(Menu hMenu, MenuAction iAction, int iClient, i
 
 			int iIndex = StringToInt(sKey);
 			if (iIndex < 0 || hCheckpoint > hCheckpoint) {
-				return;
+				return 0;
 			}
 
 			hCheckpoint.GetArray(iIndex, g_eCheckpointSelected[iClient]);
@@ -539,6 +539,8 @@ public int MenuHandler_CourseList(Menu hMenu, MenuAction iAction, int iClient, i
 			delete hMenu;
 		}
 	}
+
+	return 0;
 }
 
 public int MenuHandler_Confirmation(Menu hMenu, MenuAction iAction, int iClient, int iOption) {
@@ -557,4 +559,6 @@ public int MenuHandler_Confirmation(Menu hMenu, MenuAction iAction, int iClient,
 			}
 		}
 	}
+
+	return 0;
 }

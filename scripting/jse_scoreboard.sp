@@ -84,6 +84,8 @@ public void OnClientDisconnect(int iClient) {
 public Action CommandListener_Restart(int iClient, const char[] sCommand, int iArgC) {
 	ResetClient(iClient);
 	ResetPlayerProgress(iClient);
+
+	return Plugin_Continue;
 }
 
 public Action Hook_ChangeTeamClass(Event hEvent, const char[] sName, bool bDontBroadcast) {
@@ -99,6 +101,8 @@ public Action Hook_ChangeTeamClass(Event hEvent, const char[] sName, bool bDontB
 
 public Action Hook_RoundStart(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	ResetAllClients();
+
+	return Plugin_Continue;
 }
 
 public void OnNewCheckpointReached(int iClient, int iCourseNumber, int iJumpNumber, bool bControlPoint, bool bUnlock) {

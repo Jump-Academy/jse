@@ -749,7 +749,7 @@ public int MenuHandler_BringPlayer(Menu hMenu, MenuAction iAction, int iClient, 
 
 			int iTarget = StringToInt(sKey);			
 			if (!IsClientInGame(iTarget)) {
-				return;
+				return 0;
 			}
 
 			float fPos[3];
@@ -767,6 +767,8 @@ public int MenuHandler_BringPlayer(Menu hMenu, MenuAction iAction, int iClient, 
 			delete hMenu;
 		}
 	}
+
+	return 0;
 }
 
 public int MenuHandler_GotoMain(Menu hMenu, MenuAction iAction, int iClient, int iOption) {
@@ -782,6 +784,8 @@ public int MenuHandler_GotoMain(Menu hMenu, MenuAction iAction, int iClient, int
 			delete hMenu;
 		}
 	}
+
+	return 0;
 }
 
 public int MenuHandler_GotoPlayer(Menu hMenu, MenuAction iAction, int iClient, int iOption) {
@@ -840,6 +844,8 @@ public int MenuHandler_GotoPlayer(Menu hMenu, MenuAction iAction, int iClient, i
 			delete hMenu;
 		}
 	}
+
+	return 0;
 }
 
 public int MenuHandler_GotoCourse(Menu hMenu, MenuAction iAction, int iClient, int iOption) {
@@ -862,6 +868,8 @@ public int MenuHandler_GotoCourse(Menu hMenu, MenuAction iAction, int iClient, i
 			delete hMenu;
 		}
 	}
+
+	return 0;
 }
 
 public int MenuHandler_GotoJump(Menu hMenu, MenuAction iAction, int iClient, int iOption) {
@@ -896,4 +904,6 @@ public int MenuHandler_GotoJump(Menu hMenu, MenuAction iAction, int iClient, int
 			delete hMenu;
 		}
 	}
+
+	return 0;
 }
