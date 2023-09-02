@@ -815,7 +815,7 @@ stock int GetItemDefIndex(int iItem) {
 	return GetEntProp(iItem, Prop_Send, "m_iItemDefinitionIndex");
 }
 
-stock void TF2_GetClassName(TFClassType iClass, char[] sName, iLength) {
+stock void TF2_GetClassName(TFClassType iClass, char[] sName, int iLength) {
   static char sClass[10][10] = {"unknown", "scout", "sniper", "soldier", "demoman", "medic", "heavy", "pyro", "spy", "engineer"};
   strcopy(sName, iLength, sClass[view_as<int>(iClass)]);
 }
