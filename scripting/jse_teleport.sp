@@ -127,7 +127,11 @@ void GotoJump(int iClient, Course iCourse, int iJumpNumber, bool bNotify=true) {
 	iJump.GetOrigin(fOrigin);
 	fOrigin[2] += 10.0;
 
-	TeleportEntity(iClient, fOrigin, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
+	float fAngles[3];
+	GetClientAbsAngles(iClient, fAngles);
+	fAngles[1] = iJump.fAngle;
+
+	TeleportEntity(iClient, fOrigin, fAngles, view_as<float>({0.0, 0.0, 0.0}));
 
 	char sBuffer[256];
 	GetCourseCheckpointDisplayName(iCourse, iJumpNumber, false, sBuffer, sizeof(sBuffer));
@@ -142,7 +146,11 @@ void GotoControlPoint(int iClient, Course iCourse, bool bNotify=true) {
 	iCourse.iControlPoint.GetOrigin(fOrigin);
 	fOrigin[2] += 10.0;
 
-	TeleportEntity(iClient, fOrigin, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
+	float fAngles[3];
+	GetClientAbsAngles(iClient, fAngles);
+	fAngles[1] = iCourse.iControlPoint.fAngle;
+
+	TeleportEntity(iClient, fOrigin, fAngles, view_as<float>({0.0, 0.0, 0.0}));
 
 	char sBuffer[256];
 	GetCourseCheckpointDisplayName(iCourse, 0, true, sBuffer, sizeof(sBuffer));
