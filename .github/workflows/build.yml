@@ -54,27 +54,34 @@ jobs:
     - name: Copy smlib to dependency directory
       run: cp -r smlib/scripting/include/* includes
 
+    - name: Move dependency directory into scripting
+      run: mv includes scripting
+
     - name: Create plugins folder
       run: mkdir plugins
 
     - name: Build plugins
+      working-directory: ./scripting
       run: |
-        spcomp -iincludes scripting/jse_autosave.sp -o plugins/jse_autosave.smx
-        spcomp -iincludes scripting/jse_core.sp -o plugins/jse_core.smx
-        spcomp -iincludes scripting/jse_foresight.sp -o plugins/jse_foresight.smx
-        spcomp -iincludes scripting/jse_jumpbot.sp -o plugins/jse_jumpbot.smx
-        spcomp -iincludes scripting/jse_mapinfo.sp -o plugins/jse_mapinfo.smx
-        spcomp -iincludes scripting/jse_marker.sp -o plugins/jse_marker.smx
-        spcomp -iincludes scripting/jse_scoreboard.sp -o plugins/jse_scoreboard.smx
-        spcomp -iincludes scripting/jse_showkeys.sp -o plugins/jse_showkeys.smx
-        spcomp -iincludes scripting/jse_teleport.sp -o plugins/jse_teleport.smx
-        spcomp -iincludes scripting/jse_tracker.sp -o plugins/jse_tracker.smx
+        spcomp -iincludes jse_autosave.sp -o ../plugins/jse_autosave.smx
+        spcomp -iincludes jse_core.sp -o ../plugins/jse_core.smx
+        spcomp -iincludes jse_foresight.sp -o ../plugins/jse_foresight.smx
+        spcomp -iincludes jse_jumpbot.sp -o ../plugins/jse_jumpbot.smx
+        spcomp -iincludes jse_mapinfo.sp -o ../plugins/jse_mapinfo.smx
+        spcomp -iincludes jse_marker.sp -o ../plugins/jse_marker.smx
+        spcomp -iincludes jse_scoreboard.sp -o ../plugins/jse_scoreboard.smx
+        spcomp -iincludes jse_showkeys.sp -o ../plugins/jse_showkeys.smx
+        spcomp -iincludes jse_teleport.sp -o ../plugins/jse_teleport.smx
+        spcomp -iincludes jse_tracker.sp -o ../plugins/jse_tracker.smx
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
-          name: Plugins
+          name: jse-plugins
           path: plugins/
+
+    - name: Remove external dependency directory
+      run: rm -r scripting/includes
 
     - name: Prepare release bundles
       if: github.ref == 'refs/heads/master'
