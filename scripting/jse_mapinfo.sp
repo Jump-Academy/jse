@@ -4,7 +4,7 @@
 // #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.2.3"
+#define PLUGIN_VERSION "0.2.4"
 
 #include <sourcemod>
 #include <clientprefs>
@@ -185,12 +185,14 @@ public int Native_Lookup(Handle hPlugin, int iArgC) {
 	int iTierS = GetNativeCell(10);
 	int iTierD = GetNativeCell(11);
 
+	bool bLayout = GetNativeCell(12);
+
 	DataPack hRequestDataPack = new DataPack();
 	hRequestDataPack.WriteCell(hPlugin);
 	hRequestDataPack.WriteFunction(fnCallback);
 	hRequestDataPack.WriteCell(aData);
 
-	FetchFromAPI(HTTPRequestCallback_NativeFetchFromAPI, hRequestDataPack, bExtendedTiers, bExactMatch, sSearchTerm, sAuthorAuthID, sAuthorName, iClassType, iIntendedTier, iTierS, iTierD);
+	FetchFromAPI(HTTPRequestCallback_NativeFetchFromAPI, hRequestDataPack, bExtendedTiers, bExactMatch, sSearchTerm, sAuthorAuthID, sAuthorName, iClassType, iIntendedTier, iTierS, iTierD, bLayout);
 
 	return 0;
 }
@@ -221,6 +223,8 @@ public int Native_LookupAll(Handle hPlugin, int iArgC) {
 	int iTierS = GetNativeCell(11);
 	int iTierD = GetNativeCell(12);
 
+	bool bLayout = GetNativeCell(13);
+
 	char sSearchTermsArray[1024][32];
 	int iSearchTerms = ExplodeString(sSearchTerms, sSplit, sSearchTermsArray, sizeof(sSearchTermsArray), sizeof(sSearchTermsArray[]));
 
@@ -229,7 +233,7 @@ public int Native_LookupAll(Handle hPlugin, int iArgC) {
 	hRequestDataPack.WriteFunction(fnCallback);
 	hRequestDataPack.WriteCell(aData);
 
-	FetchFromAPI_Multiple(HTTPRequestCallback_NativeFetchFromAPI, hRequestDataPack, bExtendedTiers, bExactMatch, sSearchTermsArray, iSearchTerms, sAuthorAuthID, sAuthorName, iClassType, iIntendedTier, iTierS, iTierD);
+	FetchFromAPI_Multiple(HTTPRequestCallback_NativeFetchFromAPI, hRequestDataPack, bExtendedTiers, bExactMatch, sSearchTermsArray, iSearchTerms, sAuthorAuthID, sAuthorName, iClassType, iIntendedTier, iTierS, iTierD, bLayout);
 
 	return 0;
 }
@@ -400,14 +404,14 @@ public Action Timer_MapChange(Handle hTimer, Handle hHandle) {
 
 // Helpers
 
-void FetchFromAPI(HTTPRequestCallback fnCallback, any aData, bool bExtendedTiers, bool bExactMatch, const char sSearchTerm[32]="", const char[] sAuthorAuthID=NULL_STRING, const char[] sAuthorName=NULL_STRING, TFClassType iClassType=TFClass_Unknown, int iIntendedTier=0, int iTierS=0, int iTierD=0) {
+void FetchFromAPI(HTTPRequestCallback fnCallback, any aData, bool bExtendedTiers, bool bExactMatch, const char sSearchTerm[32]="", const char[] sAuthorAuthID=NULL_STRING, const char[] sAuthorName=NULL_STRING, TFClassType iClassType=TFClass_Unknown, int iIntendedTier=0, int iTierS=0, int iTierD=0, bool bLayout=false) {
 	char[][] sSearchTerms = new char[1][32];
 	strcopy(sSearchTerms[0], 32, sSearchTerm);
 
-	FetchFromAPI_Multiple(fnCallback, aData, bExtendedTiers, bExactMatch, sSearchTerms, sSearchTerm[0] ? 1 : 0, sAuthorAuthID, sAuthorName, iClassType, iIntendedTier, iTierS, iTierD);
+	FetchFromAPI_Multiple(fnCallback, aData, bExtendedTiers, bExactMatch, sSearchTerms, sSearchTerm[0] ? 1 : 0, sAuthorAuthID, sAuthorName, iClassType, iIntendedTier, iTierS, iTierD, bLayout);
 }
 
-void FetchFromAPI_Multiple(HTTPRequestCallback fnCallback, any aData, bool bExtendedTiers, bool bExactMatch, const char[][] sSearchTerms={}, int iSearchTermsTotal=0, const char[] sAuthorAuthID=NULL_STRING, const char[] sAuthorName=NULL_STRING, TFClassType iClassType=TFClass_Unknown, int iIntendedTier=0, int iTierS=0, int iTierD=0) {
+void FetchFromAPI_Multiple(HTTPRequestCallback fnCallback, any aData, bool bExtendedTiers, bool bExactMatch, const char[][] sSearchTerms={}, int iSearchTermsTotal=0, const char[] sAuthorAuthID=NULL_STRING, const char[] sAuthorName=NULL_STRING, TFClassType iClassType=TFClass_Unknown, int iIntendedTier=0, int iTierS=0, int iTierD=0, bool bLayout=false) {
 	char sExtendedFilter[13];
 	if (bExtendedTiers) {
 		sExtendedFilter = "&extended=1";
@@ -451,8 +455,13 @@ void FetchFromAPI_Multiple(HTTPRequestCallback fnCallback, any aData, bool bExte
 		Format(sSearchTermsFilter, sizeof(sSearchTermsFilter), "&filename=%s", sSearchTermsFilter);
 	}
 
+	char sLayoutFilter[16];
+	if (bLayout) {
+		sLayoutFilter = "&layout=1";
+	}
+
 	char sURL[8190];
-	FormatEx(sURL, sizeof(sURL), "%s?version=%s%s%s%s%s%s%s%s", API_URL, API_VERSION, sExtendedFilter, sExactFilter, sClassIntendedTierFilter, sTierFilters, sAuthorAuthIDFilter, sAuthorFilter, sSearchTermsFilter);
+	FormatEx(sURL, sizeof(sURL), "%s?version=%s%s%s%s%s%s%s%s%s", API_URL, API_VERSION, sExtendedFilter, sExactFilter, sClassIntendedTierFilter, sTierFilters, sAuthorAuthIDFilter, sAuthorFilter, sSearchTermsFilter, sLayoutFilter);
 
 #if defined DEBUG
 	PrintToServer("Calling API: %s", sURL);

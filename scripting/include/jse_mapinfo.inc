@@ -48,8 +48,9 @@ native void MapInfo_CurrentMap(MapInfoResponse fnCallback, any aData);
  * @param iIntendedTier		Map tier for intended class
  * @param iTierS			Map tier for soldier (regardless of intended class)
  * @param iTierD			Map tier for demoman (regardless of intended class)
+ * @param bLayout			Include map layout details
  */
-native void MapInfo_Lookup(MapInfoResponse fnCallback, any aData, bool bExtendedTiers, bool bExactMatch=false, const char[] sSearchTerm=NULL_STRING, const char[] sAuthorAuthID=NULL_STRING, const char[] sAuthorName=NULL_STRING, TFClassType iClassType=TFClass_Unknown, int iIntendedTier=0, int iTierS=0, int iTierD=0);
+native void MapInfo_Lookup(MapInfoResponse fnCallback, any aData, bool bExtendedTiers, bool bExactMatch=false, const char[] sSearchTerm=NULL_STRING, const char[] sAuthorAuthID=NULL_STRING, const char[] sAuthorName=NULL_STRING, TFClassType iClassType=TFClass_Unknown, int iIntendedTier=0, int iTierS=0, int iTierD=0, bool bLayout=false);
 
 /**
  * Looks up information for multiple maps
@@ -72,8 +73,9 @@ native void MapInfo_Lookup(MapInfoResponse fnCallback, any aData, bool bExtended
  * @param iIntendedTier		Map tier for intended class
  * @param iTierS			Map tier for soldier (regardless of intended class)
  * @param iTierD			Map tier for demoman (regardless of intended class)
+ * @param bLayout			Include map layout details
  */
-native void MapInfo_LookupAll(MapInfoResponse fnCallback, any aData, bool bExtendedTiers, bool bExactMatch=false, const char[] sSearchTerms=NULL_STRING, const char[] sSplit, const char[] sAuthorAuthID=NULL_STRING, const char[] sAuthorName=NULL_STRING, TFClassType iClassType=TFClass_Unknown, int iIntendedTier=0, int iTierS=0, int iTierD=0);
+native void MapInfo_LookupAll(MapInfoResponse fnCallback, any aData, bool bExtendedTiers, bool bExactMatch=false, const char[] sSearchTerms=NULL_STRING, const char[] sSplit, const char[] sAuthorAuthID=NULL_STRING, const char[] sAuthorName=NULL_STRING, TFClassType iClassType=TFClass_Unknown, int iIntendedTier=0, int iTierS=0, int iTierD=0, bool bLayout=false);
 
 /**
  * Callback for receiving MapInfo query results
