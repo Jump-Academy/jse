@@ -79,20 +79,6 @@ public Plugin myinfo = {
 	url = "https://jumpacademy.tf"
 };
 
-public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErrMax) {
-	RegPluginLibrary("jse_core");
-	CreateNative("GetBlockEquip", Native_GetBlockEquip);
-	CreateNative("GetBlockRegen", Native_GetBlockRegen);
-	CreateNative("GetRegen", Native_GetRegen);
-	CreateNative("SetBlockEquip", Native_SetBlockEquip);
-	CreateNative("SetBlockRegen", Native_SetBlockRegen);
-	CreateNative("SetRegen", Native_SetRegen);
-	CreateNative("ClearControlPointCapture", Native_ClearControlPointCapture);
-	CreateNative("ClearScore", Native_ClearScore);
-
-	return APLRes_Success;
-}
-
 public void OnPluginStart() {
 	CreateConVar("jse_core_version", PLUGIN_VERSION, "Jump Server Essentials core version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 
@@ -224,6 +210,20 @@ public void OnPluginEnd() {
 	for (int i = 1; i <= MaxClients; i++) {
 		ClearScore(i);
 	}
+}
+
+public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErrMax) {
+	RegPluginLibrary("jse_core");
+	CreateNative("GetBlockEquip", Native_GetBlockEquip);
+	CreateNative("GetBlockRegen", Native_GetBlockRegen);
+	CreateNative("GetRegen", Native_GetRegen);
+	CreateNative("SetBlockEquip", Native_SetBlockEquip);
+	CreateNative("SetBlockRegen", Native_SetBlockRegen);
+	CreateNative("SetRegen", Native_SetRegen);
+	CreateNative("ClearControlPointCapture", Native_ClearControlPointCapture);
+	CreateNative("ClearScore", Native_ClearScore);
+
+	return APLRes_Success;
 }
 
 public void OnConfigsExecuted() {
