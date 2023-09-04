@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.4"
+#define PLUGIN_VERSION "0.1.5"
 
 #include <sourcemod>
 #include <sdktools>
@@ -12,6 +12,7 @@
 bool g_bJSECoreLoaded;
 
 int g_iScore[MAXPLAYERS + 1];
+int g_iLastTeam[MAXPLAYERS + 1];
 
 Handle g_hSDKResetScores = null;
 
@@ -56,6 +57,9 @@ public void OnPluginStart()
 			if (IsClientInGame(i)) {
 				g_iScore[i] = ComputeScore(i);
 				AddScore(i, g_iScore[i]);
+				if (GetClientTeam(i) != 1) {
+					g_iLastTeam[i] = GetClientTeam(i);
+				}
 			}
 		}
 	}
@@ -77,6 +81,7 @@ public void OnMapEnd() {
 
 public void OnClientDisconnect(int iClient) {
 	g_iScore[iClient] = 0;
+	g_iLastTeam[iClient] = 0;
 }
 
 // Custom callbacks
@@ -90,11 +95,18 @@ public Action CommandListener_Restart(int iClient, const char[] sCommand, int iA
 
 public Action Hook_ChangeTeamClass(Event hEvent, const char[] sName, bool bDontBroadcast) {
 	int iClient = GetClientOfUserId(hEvent.GetInt("userid"));
+	int iTeam = hEvent.GetInt("team", -1);
 	if (!iClient) {
 		return Plugin_Handled;
 	}
 	
-	ResetClient(iClient);
+	if ((iTeam != 1 && g_iLastTeam[iClient] != iTeam) || iTeam == -1) {
+		ResetClient(iClient);
+	}
+	
+	if (iTeam == 2 || iTeam == 3) {
+		g_iLastTeam[iClient] = iTeam;
+	}
 	
 	return Plugin_Continue;
 }
