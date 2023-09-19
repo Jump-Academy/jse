@@ -83,9 +83,9 @@ public void OnPluginStart() {
 	CreateConVar("jse_core_version", PLUGIN_VERSION, "Jump Server Essentials core version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 
 	g_hCVBlockSounds = CreateConVar("jse_core_block_sounds", "regenerate, ammo_pickup, Pain, fallpain, vo/announcer, stickybomblauncher_det, wpn_denyselect", "Sounds to block", FCVAR_NONE);
-	g_hCVBlockFXBlood = CreateConVar("jse_core_block_blood", "1", "Block blood effects", FCVAR_NONE);
-	g_hCVBlockFXExplosions = CreateConVar("jse_core_block_explosions", "1", "Block explosion effects", FCVAR_NONE);
-	g_hCVBlockFXShake = CreateConVar("jse_core_block_shake", "1", "Block screen shake effects", FCVAR_NONE);
+	g_hCVBlockFXBlood = CreateConVar("jse_core_block_blood", "1", "Block blood effects", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVBlockFXExplosions = CreateConVar("jse_core_block_explosions", "1", "Block explosion effects", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVBlockFXShake = CreateConVar("jse_core_block_shake", "1", "Block screen shake effects", FCVAR_NONE, true, 0.0, true, 1.0);
 	g_hCVBlockFallDamage = CreateConVar("jse_core_block_falldamage", "1", "Block fall damage", FCVAR_NONE, true, 0.0, true, 1.0);
 
 	g_hCVRegenHP = CreateConVar("jse_core_regen_hp", "1", "Toggles per-tick health regen", FCVAR_NOTIFY, true, 0.0, true, 1.0);
