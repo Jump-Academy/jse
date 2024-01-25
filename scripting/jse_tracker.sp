@@ -4,7 +4,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.5.0"
+#define PLUGIN_VERSION "0.5.1"
 
 #define API_URL "https://api.jumpacademy.tf/mapinfo_json"
 
@@ -31,12 +31,12 @@
 #define NEGATIVE_INFINITY	view_as<float>(0xFF800000)
 
 enum struct CheckpointCache {
-	float fOrigin[3];
-	Course iCourse;
+	float vecOrigin[3];
+	Course mCourse;
 	int iCourseNumber;
-	Jump iJump;
+	Jump mJump;
 	int iJumpNumber;
-	ControlPoint iControlPoint;
+	ControlPoint mControlPoint;
 }
 
 GlobalForward g_hTrackerLoadedForward;
@@ -71,7 +71,7 @@ float g_fTeleSettleTime;
 bool g_bPersist;
 
 bool g_bOctreeAvailable;
-Octree g_iSpatialIdx;
+Octree g_mSpatialIdx;
 
 #include "jse_tracker_database.sp"
 
@@ -143,7 +143,7 @@ public void OnPluginEnd() {
 	DB_BackupProgress();
 
 	if (g_bOctreeAvailable) {
-		Octree.Destroy(g_iSpatialIdx);
+		Octree.Destroy(g_mSpatialIdx);
 	}
 }
 
@@ -157,7 +157,7 @@ public void OnLibraryAdded(const char[] sName) {
 public void OnLibraryRemoved(const char[] sName) {
 	if (StrEqual(sName, "octree")) {
 		g_bOctreeAvailable = false;
-		g_iSpatialIdx = NULL_OCTREE;
+		g_mSpatialIdx = NULL_OCTREE;
 		SetupCheckpointCache();
 	}
 }
@@ -208,8 +208,8 @@ public void OnMapEnd() {
 	}
 
 	for (int i=0; i<g_hCourses.Length; i++) {
-		Course iCourse = view_as<Course>(g_hCourses.Get(i));
-		Course.Destroy(iCourse);
+		Course mCourse = view_as<Course>(g_hCourses.Get(i));
+		Course.Destroy(mCourse);
 	}
 
 	g_hCheckpointCache.Clear();
@@ -221,7 +221,7 @@ public void OnMapEnd() {
 	delete g_hTimer;
 
 	if (g_bOctreeAvailable) {
-		Octree.Destroy(g_iSpatialIdx);
+		Octree.Destroy(g_mSpatialIdx);
 	}
 }
 
@@ -363,11 +363,11 @@ public void HTTPRequestCallback_FetchedLayout(HTTPResponse hResponse, any aValue
 }
 
 int Sort_Courses(int iIdx1, int iIdx2, Handle hArr, Handle hHandle) {
-	Course iCourse1 = g_hCourses.Get(iIdx1);
-	Course iCourse2 = g_hCourses.Get(iIdx2);
+	Course mCourse1 = g_hCourses.Get(iIdx1);
+	Course mCourse2 = g_hCourses.Get(iIdx2);
 
-	int iCourseNumber1 = iCourse1.iNumber;
-	int iCourseNumber2 = iCourse2.iNumber;
+	int iCourseNumber1 = mCourse1.iNumber;
+	int iCourseNumber2 = mCourse2.iNumber;
 	if (iCourseNumber1 > 0) {
 		if (iCourseNumber2 > 0) {
 			return iCourseNumber1-iCourseNumber2;
@@ -664,26 +664,26 @@ public int Native_ResetPlayerProgress(Handle hPlugin, int iArgC) {
 
 public any Native_ResolveCourseNumber(Handle hPlugin, int iArgC) {
 	int iCourseNumber = GetNativeCell(1);
-	Course iCourse = NULL_COURSE;
+	Course mCourse = NULL_COURSE;
 
 	for (int i=0; i<g_hCourses.Length; i++) {
-		Course iCourseIter = g_hCourses.Get(i);
-		if (iCourseIter.iNumber == iCourseNumber) {
-			iCourse = iCourseIter;
+		Course mCourseIter = g_hCourses.Get(i);
+		if (mCourseIter.iNumber == iCourseNumber) {
+			mCourse = mCourseIter;
 			break;
 		}
 	}
 
-	return iCourse;
+	return mCourse;
 }
 
 public any Native_ResolveJumpNumber(Handle hPlugin, int iArgC) {
-	Course iCourse = GetNativeCell(1);
+	Course mCourse = GetNativeCell(1);
 	int iJumpNumber = GetNativeCell(2);
 
-	ArrayList hJumps = iCourse.hJumps;
+	ArrayList hJumps = mCourse.hJumps;
 
-	if (!iCourse || iJumpNumber <= 0 || iJumpNumber > hJumps.Length) {
+	if (!mCourse || iJumpNumber <= 0 || iJumpNumber > hJumps.Length) {
 		return view_as<int>(NULL_JUMP);
 	}
 
@@ -691,13 +691,13 @@ public any Native_ResolveJumpNumber(Handle hPlugin, int iArgC) {
 }
 
 public int Native_GetCourseDisplayName(Handle hPlugin, int iArgC) {
-	Course iCourse = GetNativeCell(1);
+	Course mCourse = GetNativeCell(1);
 	int iMaxLength = GetNativeCell(3);
 
-	int iCourseNumber = iCourse.iNumber;
+	int iCourseNumber = mCourse.iNumber;
 
 	char sBuffer[128];
-	iCourse.GetName(sBuffer, sizeof(sBuffer));
+	mCourse.GetName(sBuffer, sizeof(sBuffer));
 
 	bool bCanHide = false;
 	if (sBuffer[0]) {
@@ -707,14 +707,14 @@ public int Native_GetCourseDisplayName(Handle hPlugin, int iArgC) {
 	} else {
 		if (iCourseNumber > 0) {
 			if (g_iNormalCourses > 1) {
-				FormatEx(sBuffer, sizeof(sBuffer), "Course %d", iCourse.iNumber);
+				FormatEx(sBuffer, sizeof(sBuffer), "Course %d", mCourse.iNumber);
 			} else {
 				FormatEx(sBuffer, sizeof(sBuffer), "Course");
 				bCanHide = true;
 			}
 		} else {
 			if (g_iBonusCourses > 1) {
-				FormatEx(sBuffer, sizeof(sBuffer), "Bonus %d", -iCourse.iNumber);
+				FormatEx(sBuffer, sizeof(sBuffer), "Bonus %d", -mCourse.iNumber);
 			} else {
 				FormatEx(sBuffer, sizeof(sBuffer), "Bonus");
 			}
@@ -727,7 +727,7 @@ public int Native_GetCourseDisplayName(Handle hPlugin, int iArgC) {
 }
 
 public int Native_GetCheckpointDisplayName(Handle hPlugin, int iArgC) {
-	Course iCourse = GetNativeCell(1);
+	Course mCourse = GetNativeCell(1);
 	int iJumpNumber = GetNativeCell(2);
 	bool bControlPoint = GetNativeCell(3);
 	int iMaxLength = GetNativeCell(5);
@@ -738,7 +738,7 @@ public int Native_GetCheckpointDisplayName(Handle hPlugin, int iArgC) {
 	if (bControlPoint) {
 		FormatEx(sBuffer, sizeof(sBuffer), "End");
 	} else {
-		if (iCourse.hJumps.Length > 1) {
+		if (mCourse.hJumps.Length > 1) {
 			FormatEx(sBuffer, sizeof(sBuffer), "Jump %d", iJumpNumber);
 		} else {
 			FormatEx(sBuffer, sizeof(sBuffer), "Jump");
@@ -752,7 +752,7 @@ public int Native_GetCheckpointDisplayName(Handle hPlugin, int iArgC) {
 }
 
 public int Native_GetCourseCheckpointDisplayName(Handle hPlugin, int iArgC) {
-	Course iCourse = GetNativeCell(1);
+	Course mCourse = GetNativeCell(1);
 	int iJumpNumber = GetNativeCell(2);
 	bool bControlPoint = GetNativeCell(3);
 	int iMaxLength = GetNativeCell(5);
@@ -760,10 +760,10 @@ public int Native_GetCourseCheckpointDisplayName(Handle hPlugin, int iArgC) {
 	char sBuffer[256];
 
 	char sCourseName[128];
-	bool bCanHideCourseName = GetCourseDisplayName(iCourse, sCourseName, sizeof(sCourseName));
+	bool bCanHideCourseName = GetCourseDisplayName(mCourse, sCourseName, sizeof(sCourseName));
 
 	char sCheckpointName[128];
-	bool bCanHideCheckpointName = GetCheckpointDisplayName(iCourse, iJumpNumber, bControlPoint, sCheckpointName, sizeof(sCheckpointName));
+	bool bCanHideCheckpointName = GetCheckpointDisplayName(mCourse, iJumpNumber, bControlPoint, sCheckpointName, sizeof(sCheckpointName));
 
 	if (bControlPoint) {
 		FormatEx(sBuffer, sizeof(sBuffer), "%s %s", sCourseName, sCheckpointName);
@@ -800,12 +800,12 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 	int iTime = GetTime();
 	float fGameTime = GetGameTime();
 
-	Course iActiveCourse[MAXPLAYERS + 1];
+	Course mActiveCourse[MAXPLAYERS + 1];
 
 	static int iActiveClients[MAXPLAYERS+1];
 	int iActiveClientCount;
 
-	if (g_iSpatialIdx) {
+	if (g_mSpatialIdx) {
 		ArrayList hCheckpoints = new ArrayList(sizeof(OctItem));
 
 		for (int i=1; i<=MaxClients; i++) {
@@ -819,22 +819,22 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 				TFTeam iTeam = TF2_GetClientTeam(i);
 				TFClassType iClass = TF2_GetPlayerClass(i);
 
-				float fPos[3];
-				GetClientAbsOrigin(i, fPos);
+				float vecPos[3];
+				GetClientAbsOrigin(i, vecPos);
 
-				int iCheckpoints = g_iSpatialIdx.Find(fPos, MAX_NEARBY_SEARCH_DISTANCE, hCheckpoints, true, true);
+				int iCheckpoints = g_mSpatialIdx.Find(vecPos, MAX_NEARBY_SEARCH_DISTANCE, hCheckpoints, true, true);
 
 				for (int j=0; j<iCheckpoints; j++) {
 					OctItem eItem;
 					hCheckpoints.GetArray(j, eItem);
 
-					if (IsVisible(fPos, eItem.vecPos)) {
+					if (IsVisible(vecPos, eItem.vecPos)) {
 						g_eNearestCheckpoint[i].iHash = eItem.aData;
 						g_eNearestCheckpoint[i].SetTeam(iTeam);
 						g_eNearestCheckpoint[i].SetClass(iClass);
 
 						g_eNearestCheckpoint[i].iLastUpdateTime = iTime;
-						iActiveCourse[i] = ResolveCourseNumber(g_eNearestCheckpoint[i].GetCourseNumber());
+						mActiveCourse[i] = ResolveCourseNumber(g_eNearestCheckpoint[i].GetCourseNumber());
 
 						iActiveClients[iActiveClientCount++] = i;
 
@@ -863,17 +863,17 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 				TFTeam iTeam = TF2_GetClientTeam(i);
 				TFClassType iClass = TF2_GetPlayerClass(i);
 
-				float fPos[3];
-				GetClientAbsOrigin(i, fPos);
+				float vecPos[3];
+				GetClientAbsOrigin(i, vecPos);
 
 				float fMinDist = POSITIVE_INFINITY;
 
 				for (int j=0; j<g_hCheckpointCache.Length; j++) {
 					g_hCheckpointCache.GetArray(j, eCheckpointCache);
 
-					float fDist = GetVectorDistance(fPos, eCheckpointCache.fOrigin);
-					if ((fDist < g_fProximity) && (fDist < fMinDist) && IsVisible(fPos, eCheckpointCache.fOrigin)) {
-						if (eCheckpointCache.iControlPoint) {
+					float fDist = GetVectorDistance(vecPos, eCheckpointCache.vecOrigin);
+					if ((fDist < g_fProximity) && (fDist < fMinDist) && IsVisible(vecPos, eCheckpointCache.vecOrigin)) {
+						if (eCheckpointCache.mControlPoint) {
 							g_eNearestCheckpoint[i].Init(
 								eCheckpointCache.iCourseNumber,
 								0,
@@ -892,7 +892,7 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 						}
 
 						g_eNearestCheckpoint[i].iLastUpdateTime = iTime;
-						iActiveCourse[i] = eCheckpointCache.iCourse;
+						mActiveCourse[i] = eCheckpointCache.mCourse;
 						fMinDist = fDist;
 
 						bActive = true;
@@ -975,7 +975,7 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 		TFTeam iTeam = eCheckpoint.GetTeam();
 		TFClassType iClass = eCheckpoint.GetClass();
 
-		ArrayList hJumps = iActiveCourse[iClient].hJumps;
+		ArrayList hJumps = mActiveCourse[iClient].hJumps;
 		int iPreviousJumps = bControlPoint ? hJumps.Length : iJumpNumber - 1;
 
 		for (int j=iLastJump; j<=iPreviousJumps; j++) {
@@ -1050,7 +1050,7 @@ public Action Timer_TrackPlayers(Handle hTimer, any aData) {
 
 // 	float fAvg = fTotal/iSlots;
 
-// 	PrintToServer("Timer_TrackPlayers (n=%d) exec time: %.3f ms / avg %.3f ms", g_iSpatialIdx ? g_iSpatialIdx.iSize : g_hCheckpointCache.Length, hP.Time*1000, fAvg*1000);
+// 	PrintToServer("Timer_TrackPlayers (n=%d) exec time: %.3f ms / avg %.3f ms", g_mSpatialIdx ? g_mSpatialIdx.iSize : g_hCheckpointCache.Length, hP.Time*1000, fAvg*1000);
 // 	delete hP;
 
 	return Plugin_Continue;
@@ -1186,8 +1186,8 @@ void ResetClient(int iClient, TFTeam iTeam=TFTeam_Unassigned, TFClassType iClass
 	}
 }
 
-bool IsVisible(float fPos[3], float fPosTarget[3]) {
-	Handle hTr = TR_TraceRayFilterEx(fPos, fPosTarget, MASK_SHOT_HULL, RayType_EndPoint, TraceFilter_Environment);
+bool IsVisible(float vecPos[3], float vecPosTarget[3]) {
+	Handle hTr = TR_TraceRayFilterEx(vecPos, vecPosTarget, MASK_SHOT_HULL, RayType_EndPoint, TraceFilter_Environment);
 	if (!TR_DidHit(hTr)) {
 		delete hTr;
 		return true;
@@ -1205,19 +1205,19 @@ void SetupCheckpointCache() {
 	g_hCheckpointCache.Clear();
 
 	Checkpoint eCheckpoint;
-	float fOrigin[3];
+	float vecOrigin[3];
 
-	float fMin[3] = {POSITIVE_INFINITY, ...};
-	float fMax[3] = {NEGATIVE_INFINITY, ...};
+	float vecMin[3] = {POSITIVE_INFINITY, ...};
+	float vecMax[3] = {NEGATIVE_INFINITY, ...};
 
 	for (int i=0; i<g_hCourses.Length; i++) {
-		Course iCourseIter = g_hCourses.Get(i);
-		int iCourseNumber = iCourseIter.iNumber;
+		Course mCourseIter = g_hCourses.Get(i);
+		int iCourseNumber = mCourseIter.iNumber;
 
-		ArrayList hJumps = iCourseIter.hJumps;
+		ArrayList hJumps = mCourseIter.hJumps;
 		for (int j=1; j<=hJumps.Length; j++) {
-			Jump iJumpIter = hJumps.Get(j-1);
-			iJumpIter.GetOrigin(fOrigin);
+			Jump mJumpIter = hJumps.Get(j-1);
+			mJumpIter.GetOrigin(vecOrigin);
 
 			eCheckpoint.Init(
 				iCourseNumber,
@@ -1228,28 +1228,28 @@ void SetupCheckpointCache() {
 			);
 
 			CheckpointCache eCheckpointCache;
-			eCheckpointCache.fOrigin = fOrigin;
-			eCheckpointCache.iCourse = iCourseIter;
+			eCheckpointCache.vecOrigin = vecOrigin;
+			eCheckpointCache.mCourse = mCourseIter;
 			eCheckpointCache.iCourseNumber = iCourseNumber;
-			eCheckpointCache.iJump = iJumpIter;
-			eCheckpointCache.iJumpNumber = iJumpIter.iNumber;
+			eCheckpointCache.mJump = mJumpIter;
+			eCheckpointCache.iJumpNumber = mJumpIter.iNumber;
 
 			g_hCheckpointCache.PushArray(eCheckpointCache);
 
 			if (g_bOctreeAvailable) {
-				fMin[0] = fOrigin[0] < fMin[0] ? fOrigin[0] : fMin[0];
-				fMin[1] = fOrigin[1] < fMin[1] ? fOrigin[1] : fMin[1];
-				fMin[2] = fOrigin[2] < fMin[2] ? fOrigin[2] : fMin[2];
+				vecMin[0] = vecOrigin[0] < vecMin[0] ? vecOrigin[0] : vecMin[0];
+				vecMin[1] = vecOrigin[1] < vecMin[1] ? vecOrigin[1] : vecMin[1];
+				vecMin[2] = vecOrigin[2] < vecMin[2] ? vecOrigin[2] : vecMin[2];
 
-				fMax[0] = fOrigin[0] > fMax[0] ? fOrigin[0] : fMax[0];
-				fMax[1] = fOrigin[1] > fMax[1] ? fOrigin[1] : fMax[1];
-				fMax[2] = fOrigin[2] > fMax[2] ? fOrigin[2] : fMax[2];
+				vecMax[0] = vecOrigin[0] > vecMax[0] ? vecOrigin[0] : vecMax[0];
+				vecMax[1] = vecOrigin[1] > vecMax[1] ? vecOrigin[1] : vecMax[1];
+				vecMax[2] = vecOrigin[2] > vecMax[2] ? vecOrigin[2] : vecMax[2];
 			}
 		}
 
-		ControlPoint iControlPointItr = iCourseIter.iControlPoint;
-		if (iControlPointItr) {
-			iControlPointItr.GetOrigin(fOrigin);
+		ControlPoint mControlPointItr = mCourseIter.mControlPoint;
+		if (mControlPointItr) {
+			mControlPointItr.GetOrigin(vecOrigin);
 
 			eCheckpoint.Init(
 				iCourseNumber,
@@ -1260,45 +1260,45 @@ void SetupCheckpointCache() {
 			);
 
 			CheckpointCache eCheckpointCache;
-			eCheckpointCache.fOrigin = fOrigin;
-			eCheckpointCache.iCourse = iCourseIter;
+			eCheckpointCache.vecOrigin = vecOrigin;
+			eCheckpointCache.mCourse = mCourseIter;
 			eCheckpointCache.iCourseNumber = iCourseNumber;
-			eCheckpointCache.iControlPoint = iControlPointItr;
+			eCheckpointCache.mControlPoint = mControlPointItr;
 
 			g_hCheckpointCache.PushArray(eCheckpointCache);
 
 			if (g_bOctreeAvailable) {
-				fMin[0] = fOrigin[0] < fMin[0] ? fOrigin[0] : fMin[0];
-				fMin[1] = fOrigin[1] < fMin[1] ? fOrigin[1] : fMin[1];
-				fMin[2] = fOrigin[2] < fMin[2] ? fOrigin[2] : fMin[2];
+				vecMin[0] = vecOrigin[0] < vecMin[0] ? vecOrigin[0] : vecMin[0];
+				vecMin[1] = vecOrigin[1] < vecMin[1] ? vecOrigin[1] : vecMin[1];
+				vecMin[2] = vecOrigin[2] < vecMin[2] ? vecOrigin[2] : vecMin[2];
 
-				fMax[0] = fOrigin[0] > fMax[0] ? fOrigin[0] : fMax[0];
-				fMax[1] = fOrigin[1] > fMax[1] ? fOrigin[1] : fMax[1];
-				fMax[2] = fOrigin[2] > fMax[2] ? fOrigin[2] : fMax[2];
+				vecMax[0] = vecOrigin[0] > vecMax[0] ? vecOrigin[0] : vecMax[0];
+				vecMax[1] = vecOrigin[1] > vecMax[1] ? vecOrigin[1] : vecMax[1];
+				vecMax[2] = vecOrigin[2] > vecMax[2] ? vecOrigin[2] : vecMax[2];
 			}
 		}
 	}
 
 	if (g_bOctreeAvailable) {
-		if (g_iSpatialIdx) {
-			Octree.Destroy(g_iSpatialIdx);
+		if (g_mSpatialIdx) {
+			Octree.Destroy(g_mSpatialIdx);
 		}
 
-		float fCenter[3];
-		AddVectors(fMin, fMax, fCenter);
-		ScaleVector(fCenter, 0.5);
+		float vecCenter[3];
+		AddVectors(vecMin, vecMax, vecCenter);
+		ScaleVector(vecCenter, 0.5);
 
-		float fHalfWidth[3];
-		SubtractVectors(fMax, fMin, fHalfWidth);
-		ScaleVector(fHalfWidth, 0.5);
+		float vecHalfWidth[3];
+		SubtractVectors(vecMax, vecMin, vecHalfWidth);
+		ScaleVector(vecHalfWidth, 0.5);
 
-		float fMaxHalfWidth = fHalfWidth[0];
-		fMaxHalfWidth = fHalfWidth[1] > fMaxHalfWidth ? fHalfWidth[1] : fMaxHalfWidth;
-		fMaxHalfWidth = fHalfWidth[2] > fMaxHalfWidth ? fHalfWidth[2] : fMaxHalfWidth;
+		float fMaxHalfWidth = vecHalfWidth[0];
+		fMaxHalfWidth = vecHalfWidth[1] > fMaxHalfWidth ? vecHalfWidth[1] : fMaxHalfWidth;
+		fMaxHalfWidth = vecHalfWidth[2] > fMaxHalfWidth ? vecHalfWidth[2] : fMaxHalfWidth;
 
 		fMaxHalfWidth += 50.0; // Prevents Octree out of bounds
 
-		g_iSpatialIdx = Octree.Instance(fCenter, fMaxHalfWidth, 3);
+		g_mSpatialIdx = Octree.Instance(vecCenter, fMaxHalfWidth, 3);
 
 		// Insert all checkpoint positions into octree
 
@@ -1314,7 +1314,7 @@ void SetupCheckpointCache() {
 				TFClass_Unknown
 			);
 
-			g_iSpatialIdx.Insert(eCheckpointCache.fOrigin, eCheckpoint.iHash);
+			g_mSpatialIdx.Insert(eCheckpointCache.vecOrigin, eCheckpoint.iHash);
 		}
 
 		g_hCheckpointCache.Clear();
@@ -1356,10 +1356,10 @@ public Action cmdWhereAmI(int iClient, int iArgC) {
 		Checkpoint eCheckpoint;
 		eCheckpoint.iHash = g_eNearestCheckpointLanded[iClient].iHash;
 
-		Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
+		Course mCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
 
 		char sLocationName[256];
-		GetCourseCheckpointDisplayName(iCourse, eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), sLocationName, sizeof(sLocationName));
+		GetCourseCheckpointDisplayName(mCourse, eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), sLocationName, sizeof(sLocationName));
 
 		CReplyToCommand(iClient, "{dodgerblue}[jse] {white}You are on {yellow}%s{white}.", sLocationName);
 	} else {
@@ -1402,10 +1402,10 @@ public Action cmdWhereIs(int iClient, int iArgC) {
 			Checkpoint eCheckpoint;
 			eCheckpoint.iHash = g_eNearestCheckpointLanded[iTarget].iHash;
 
-			Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
+			Course mCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
 
 			char sLocationName[128];
-			GetCourseCheckpointDisplayName(iCourse, eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), sLocationName, sizeof(sLocationName));
+			GetCourseCheckpointDisplayName(mCourse, eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), sLocationName, sizeof(sLocationName));
 
 			CReplyToCommand(iClient, "{dodgerblue}[jse] {limegreen}%N {white}is on {yellow}%s{white}.", iTarget, sLocationName);
 		} else {
@@ -1431,10 +1431,10 @@ public Action cmdWhereIs(int iClient, int iArgC) {
 			Checkpoint eCheckpoint;
 			eCheckpoint.iHash = g_eNearestCheckpointLanded[iTarget].iHash;
 
-			Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
+			Course mCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
 
 			char sLocationName[128];
-			GetCourseCheckpointDisplayName(iCourse, eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), sLocationName, sizeof(sLocationName));
+			GetCourseCheckpointDisplayName(mCourse, eCheckpoint.GetJumpNumber(), eCheckpoint.IsControlPoint(), sLocationName, sizeof(sLocationName));
 
 			CReplyToCommand(iClient, "\t{limegreen}%N {white}is on {yellow}%s{white}.", iTarget, sLocationName);
 		} else {
@@ -1538,20 +1538,20 @@ public Action cmdProgress(int iClient, int iArgC) {
 		StringMap hCourseLengths = new StringMap();
 
 		for (int i=0; i<hCourseList.Length; i++) {
-			Course iCourse = hCourseList.Get(i);
+			Course mCourse = hCourseList.Get(i);
 
 			char sKey[8];
-			IntToString(iCourse.iNumber, sKey, sizeof(sKey));
+			IntToString(mCourse.iNumber, sKey, sizeof(sKey));
 
 			char sCourseName[128];
-			GetCourseDisplayName(iCourse, sCourseName, sizeof(sCourseName));
+			GetCourseDisplayName(mCourse, sCourseName, sizeof(sCourseName));
 
 			if (!sCourseName[0]) {
 				FormatEx(sCourseName, sizeof(sCourseName), "Course");
 			}
 
 			hCourseNames.SetString(sKey, sCourseName);
-			hCourseLengths.SetValue(sKey, iCourse.hJumps.Length);
+			hCourseLengths.SetValue(sKey, mCourse.hJumps.Length);
 		}
 
 		delete hCourseList;

@@ -199,10 +199,10 @@ int DB_BackupAutosaves_Client(Database hDatabase, Transaction hTxn, int iClient)
 					continue;
 				}
 
-				Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
+				Course mCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
 
 				if (eCheckpoint.IsControlPoint()) {
-					ControlPoint iControlPoint = iCourse.iControlPoint;
+					ControlPoint mControlPoint = mCourse.mControlPoint;
 
 					hDatabase.Format(sQuery, sizeof(sQuery), \
 						"INSERT INTO `jse_autosaves`(`auth`, `map_id`, `team`, `class`, `course_id`, `controlpoint_id`)"
@@ -211,9 +211,9 @@ int DB_BackupAutosaves_Client(Database hDatabase, Transaction hTxn, int iClient)
 					...		"`course_id`=VALUES(`course_id`),"
 					...		"`jump_id`=NULL,"
 					...		"`controlpoint_id`=VALUES(`controlpoint_id`)",
-					sAuthID, GetTrackerMapID(), view_as<int>(TFTeam_Red)+i, j+1, iCourse.iID, iControlPoint.iID);
+					sAuthID, GetTrackerMapID(), view_as<int>(TFTeam_Red)+i, j+1, mCourse.iID, mControlPoint.iID);
 				} else {
-					Jump iJump = ResolveJumpNumber(iCourse, eCheckpoint.GetJumpNumber());
+					Jump mJump = ResolveJumpNumber(mCourse, eCheckpoint.GetJumpNumber());
 
 					hDatabase.Format(sQuery, sizeof(sQuery), \
 						"INSERT INTO `jse_autosaves`(`auth`, `map_id`, `team`, `class`, `course_id`, `jump_id`)"
@@ -222,7 +222,7 @@ int DB_BackupAutosaves_Client(Database hDatabase, Transaction hTxn, int iClient)
 					...		"`course_id`=VALUES(`course_id`),"
 					...		"`jump_id`=VALUES(`jump_id`),"
 					...		"`controlpoint_id`=NULL",
-					sAuthID, GetTrackerMapID(), view_as<int>(TFTeam_Red)+i, j+1, iCourse.iID, iJump.iID);
+					sAuthID, GetTrackerMapID(), view_as<int>(TFTeam_Red)+i, j+1, mCourse.iID, mJump.iID);
 				}
 
 				hTxn.AddQuery(sQuery, GetClientSerial(iClient));
@@ -250,24 +250,24 @@ void DB_DeleteAutosave(int iClient, int iCourseNumber, int iJumpNumber, bool bCo
 		return;
 	}
 
-	Course iCourse = ResolveCourseNumber(iCourseNumber);
+	Course mCourse = ResolveCourseNumber(iCourseNumber);
 
 	char sQuery[1024];
 
 	if (bControlPoint) {
-		ControlPoint iControlPoint = iCourse.iControlPoint;
+		ControlPoint mControlPoint = mCourse.mControlPoint;
 
 		hDatabase.Format(sQuery, sizeof(sQuery), \
 			"DELETE FROM `jse_autosaves`"
 		...	"WHERE `auth`=%s AND `map_id`=%d AND `team`=%d AND `class`=%d AND `course_id`=%d AND `controlpoint_id`=%d",
-			sAuthID, GetTrackerMapID(), iTeam, iClass, iCourse.iID, iControlPoint.iID);
+			sAuthID, GetTrackerMapID(), iTeam, iClass, mCourse.iID, mControlPoint.iID);
 	} else {
-		Jump iJump = ResolveJumpNumber(iCourse, iJumpNumber);
+		Jump mJump = ResolveJumpNumber(mCourse, iJumpNumber);
 
 		hDatabase.Format(sQuery, sizeof(sQuery), \
 			"DELETE FROM `jse_autosaves`"
 		...	"WHERE `auth`=%s AND `map_id`=%d AND `team`=%d AND `class`=%d AND `course_id`=%d AND `jump_id`=%d",
-			sAuthID, GetTrackerMapID(), iTeam, iClass, iCourse.iID, iJump.iID);
+			sAuthID, GetTrackerMapID(), iTeam, iClass, mCourse.iID, mJump.iID);
 	}
 
 	hDatabase.Query(DB_Callback_DeleteAutosave, sQuery, GetClientSerial(iClient));

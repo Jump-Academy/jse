@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR	"AI"
-#define PLUGIN_VERSION	"0.3.8"
+#define PLUGIN_VERSION	"0.3.9"
 
 #include <tf2>
 #include <tf2_stocks>
@@ -53,35 +53,35 @@ public bool TraceFilter_Environment(int iEntity, int iMask) {
 
 // Helpers
 
-void GetAimPos(int iClient, float fAimPos[3]) {
-	float fPos[3], fAng[3];
-	GetClientEyePosition(iClient, fPos);
-	GetClientEyeAngles(iClient, fAng);
+void GetAimPos(int iClient, float vecAimPos[3]) {
+	float vecPos[3], vecAng[3];
+	GetClientEyePosition(iClient, vecPos);
+	GetClientEyeAngles(iClient, vecAng);
 
-	Handle hTr = TR_TraceRayFilterEx(fPos, fAng, MASK_SHOT_HULL, RayType_Infinite, TraceFilter_Environment);
+	Handle hTr = TR_TraceRayFilterEx(vecPos, vecAng, MASK_SHOT_HULL, RayType_Infinite, TraceFilter_Environment);
 	if (TR_DidHit(hTr)) {
-		TR_GetEndPosition(fAimPos, hTr);	
+		TR_GetEndPosition(vecAimPos, hTr);
 	}
 	delete hTr;
 }
 
-void AdjustHullPos(int iTarget, float fSrcPos[3], float fAimPos[3]) {
-	float fMin[3], fMax[3];
-	Entity_GetMinSize(iTarget, fMin);
-	Entity_GetMaxSize(iTarget, fMax);
-	Handle hTr = TR_TraceHullFilterEx(fSrcPos, fAimPos, fMin, fMax, MASK_SHOT_HULL, TraceFilter_Environment);
+void AdjustHullPos(int iTarget, float vecSrcPos[3], float vecAimPos[3]) {
+	float vecMin[3], vecMax[3];
+	Entity_GetMinSize(iTarget, vecMin);
+	Entity_GetMaxSize(iTarget, vecMax);
+	Handle hTr = TR_TraceHullFilterEx(vecSrcPos, vecAimPos, vecMin, vecMax, MASK_SHOT_HULL, TraceFilter_Environment);
 	if (TR_DidHit(hTr)) {
-		TR_GetEndPosition(fAimPos, hTr);
+		TR_GetEndPosition(vecAimPos, hTr);
 	}
 	delete hTr;
 }
 
-void BringPlayer(int iClient, int iTarget, float fPos[3], bool bNotify=true) {
+void BringPlayer(int iClient, int iTarget, float vecPos[3], bool bNotify=true) {
 	if (!IsClientInGame(iTarget)) {
 		return;
 	}
 
-	TeleportEntity(iTarget, fPos, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
+	TeleportEntity(iTarget, vecPos, NULL_VECTOR, {0.0, 0.0, 0.0});
 
 	if (bNotify) {
 		CPrintToChat(iTarget, "{dodgerblue}[jse] {white}You have been teleported to {limegreen}%N{white}.", iClient);
@@ -93,13 +93,13 @@ void GotoPlayer(int iClient, int iTarget, bool bNotify=true) {
 		return;
 	}
 
-	float fOrigin[3], fAngles[3];
-	GetClientAbsOrigin(iTarget, fOrigin);
-	GetClientEyeAngles(iClient, fAngles);
-	fAngles[1] = 0.0;
-	fAngles[2] = 0.0;
+	float vecOrigin[3], vecAngles[3];
+	GetClientAbsOrigin(iTarget, vecOrigin);
+	GetClientEyeAngles(iClient, vecAngles);
+	vecAngles[1] = 0.0;
+	vecAngles[2] = 0.0;
 
-	TeleportEntity(iClient, fOrigin, fAngles, view_as<float>({0.0, 0.0, 0.0}));
+	TeleportEntity(iClient, vecOrigin, vecAngles, {0.0, 0.0, 0.0});
 
 	if (bNotify) {
 		int iCourseNumber;
@@ -107,10 +107,10 @@ void GotoPlayer(int iClient, int iTarget, bool bNotify=true) {
 		bool bControlPoint;
 
 		if (GetPlayerLastCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint)) {
-			Course iCourse = ResolveCourseNumber(iCourseNumber);
+			Course mCourse = ResolveCourseNumber(iCourseNumber);
 
 			char sBuffer[256];
-			GetCourseCheckpointDisplayName(iCourse, iJumpNumber, bControlPoint, sBuffer, sizeof(sBuffer));
+			GetCourseCheckpointDisplayName(mCourse, iJumpNumber, bControlPoint, sBuffer, sizeof(sBuffer));
 			CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have been teleported to {limegreen}%N {white}on {yellow}%s{white}.", iTarget, sBuffer);
 		} else {
 			CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have been teleported to {limegreen}%N{white}.", iTarget);	
@@ -120,40 +120,40 @@ void GotoPlayer(int iClient, int iTarget, bool bNotify=true) {
 	}
 }
 
-void GotoJump(int iClient, Course iCourse, int iJumpNumber, bool bNotify=true) {
-	Jump iJump = ResolveJumpNumber(iCourse, iJumpNumber);
+void GotoJump(int iClient, Course mCourse, int iJumpNumber, bool bNotify=true) {
+	Jump mJump = ResolveJumpNumber(mCourse, iJumpNumber);
 
-	float fOrigin[3];
-	iJump.GetOrigin(fOrigin);
-	fOrigin[2] += 10.0;
+	float vecOrigin[3];
+	mJump.GetOrigin(vecOrigin);
+	vecOrigin[2] += 10.0;
 
-	float fAngles[3];
-	GetClientAbsAngles(iClient, fAngles);
-	fAngles[1] = iJump.fAngle;
+	float vecAngles[3];
+	GetClientAbsAngles(iClient, vecAngles);
+	vecAngles[1] = mJump.fAngle;
 
-	TeleportEntity(iClient, fOrigin, fAngles, view_as<float>({0.0, 0.0, 0.0}));
+	TeleportEntity(iClient, vecOrigin, vecAngles, {0.0, 0.0, 0.0});
 
 	char sBuffer[256];
-	GetCourseCheckpointDisplayName(iCourse, iJumpNumber, false, sBuffer, sizeof(sBuffer));
+	GetCourseCheckpointDisplayName(mCourse, iJumpNumber, false, sBuffer, sizeof(sBuffer));
 
 	if (bNotify) {
 		CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have been teleported to {yellow}%s{white}.", sBuffer);
 	}
 }
 
-void GotoControlPoint(int iClient, Course iCourse, bool bNotify=true) {
-	float fOrigin[3];
-	iCourse.iControlPoint.GetOrigin(fOrigin);
-	fOrigin[2] += 10.0;
+void GotoControlPoint(int iClient, Course mCourse, bool bNotify=true) {
+	float vecOrigin[3];
+	mCourse.mControlPoint.GetOrigin(vecOrigin);
+	vecOrigin[2] += 10.0;
 
-	float fAngles[3];
-	GetClientAbsAngles(iClient, fAngles);
-	fAngles[1] = iCourse.iControlPoint.fAngle;
+	float vecAngles[3];
+	GetClientAbsAngles(iClient, vecAngles);
+	vecAngles[1] = mCourse.mControlPoint.fAngle;
 
-	TeleportEntity(iClient, fOrigin, fAngles, view_as<float>({0.0, 0.0, 0.0}));
+	TeleportEntity(iClient, vecOrigin, vecAngles, {0.0, 0.0, 0.0});
 
 	char sBuffer[256];
-	GetCourseCheckpointDisplayName(iCourse, 0, true, sBuffer, sizeof(sBuffer));
+	GetCourseCheckpointDisplayName(mCourse, 0, true, sBuffer, sizeof(sBuffer));
 
 	if (bNotify) {
 		CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have been teleported to {yellow}%s{white}.", sBuffer);
@@ -260,15 +260,15 @@ public Action cmdBring(int iClient, int iArgC) {
 		return Plugin_Handled;
 	}
 
-	float fPos[3];
-	GetClientEyePosition(iClient, fPos);
+	float vecPos[3];
+	GetClientEyePosition(iClient, vecPos);
 
-	float fAimPos[3];
-	GetAimPos(iClient, fAimPos);
+	float vecAimPos[3];
+	GetAimPos(iClient, vecAimPos);
 
 	for (int i = 0; i < iTargetCount; i++) {
-		AdjustHullPos(iTargetList[i], fPos, fAimPos);
-		BringPlayer(iClient, iTargetList[i], fAimPos, iTargetList[i] != iClient);
+		AdjustHullPos(iTargetList[i], vecPos, vecAimPos);
+		BringPlayer(iClient, iTargetList[i], vecAimPos, iTargetList[i] != iClient);
 	}
 
 	if (bTnIsML) {
@@ -314,17 +314,17 @@ public Action cmdGoto(int iClient, int iArgC) {
 					int iLastUpdateTime;
 
 					if (GetPlayerLastCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint, _, _, iLastUpdateTime) && GetTime()-iLastUpdateTime <= CHECKPOINT_TIME_CUTOFF) {
-						Course iCourse = ResolveCourseNumber(iCourseNumber);
+						Course mCourse = ResolveCourseNumber(iCourseNumber);
 
 						if (bCanTeleToAllJumps || CheckProgress(iClient, iCourseNumber, iJumpNumber, bControlPoint)) {
 							if (bControlPoint) {
-								GotoControlPoint(iClient, iCourse);
+								GotoControlPoint(iClient, mCourse);
 							} else {
-								GotoJump(iClient, iCourse, iJumpNumber);
+								GotoJump(iClient, mCourse, iJumpNumber);
 							}
 						} else {
 							char sBuffer[256];
-							GetCourseCheckpointDisplayName(iCourse, iJumpNumber, bControlPoint, sBuffer, sizeof(sBuffer));
+							GetCourseCheckpointDisplayName(mCourse, iJumpNumber, bControlPoint, sBuffer, sizeof(sBuffer));
 
 							CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have not been to {limegreen}%N{white}'s location before: {yellow}%s{white}.", iTarget, sBuffer);
 						}
@@ -347,30 +347,30 @@ public Action cmdGoto(int iClient, int iArgC) {
 			int iCourseNumber = StringToInt(sArg1);
 			int iJumpNumber = StringToInt(sArg2);
 
-			Course iCourse = ResolveCourseNumber(iCourseNumber);
-			if (iCourse) {
+			Course mCourse = ResolveCourseNumber(iCourseNumber);
+			if (mCourse) {
 				if (iJumpNumber == 0) {
 					if (!bCanTeleToAllJumps && !CheckProgress(iClient, iCourseNumber, 0, true)) {
 						char sBuffer[256];
-						GetCourseCheckpointDisplayName(iCourse, iJumpNumber, true, sBuffer, sizeof(sBuffer));
+						GetCourseCheckpointDisplayName(mCourse, iJumpNumber, true, sBuffer, sizeof(sBuffer));
 
 						CReplyToCommand(iClient, "{dodgerblue}[jse] {white}You have not yet finished {yellow}%s{white}.", sBuffer);
 						return Plugin_Handled;
 					}
 
-					GotoControlPoint(iClient, iCourse);
+					GotoControlPoint(iClient, mCourse);
 				} else {
-					Jump iJump = ResolveJumpNumber(iCourse, iJumpNumber);
-					if (iJump) {
+					Jump mJump = ResolveJumpNumber(mCourse, iJumpNumber);
+					if (mJump) {
 						if (!bCanTeleToAllJumps && !CheckProgress(iClient, iCourseNumber, iJumpNumber)) {
 							char sBuffer[256];
-							GetCourseCheckpointDisplayName(iCourse, iJumpNumber, false, sBuffer, sizeof(sBuffer));
+							GetCourseCheckpointDisplayName(mCourse, iJumpNumber, false, sBuffer, sizeof(sBuffer));
 
 							CReplyToCommand(iClient, "{dodgerblue}[jse] {white}You have not yet reached {yellow}%s{white}.", sBuffer);
 							return Plugin_Handled;
 						}
 
-						GotoJump(iClient, iCourse, iJumpNumber);
+						GotoJump(iClient, mCourse, iJumpNumber);
 					} else {
 						CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Cannot find specified jump number.");
 					}
@@ -433,8 +433,8 @@ public Action cmdSend(int iClient, int iArgC) {
 
 			int iTarget = FindTarget(iClient, sArg2, false, true);
 			if (iTarget != -1) {
-				float fPos[3];
-				GetClientAbsOrigin(iTarget, fPos);
+				float vecPos[3];
+				GetClientAbsOrigin(iTarget, vecPos);
 
 				for (int i = 0; i < iTargetCount; i++) {
 					if (iTargetList[i] == iTarget) {
@@ -482,16 +482,16 @@ public Action cmdSend(int iClient, int iArgC) {
 			int iCourseNumber = StringToInt(sArg2);
 			int iJumpNumber = StringToInt(sArg3);
 
-			Course iCourse = ResolveCourseNumber(iCourseNumber);
-			if (iCourse) {
+			Course mCourse = ResolveCourseNumber(iCourseNumber);
+			if (mCourse) {
 				char sBuffer[256];
 
 				if (iJumpNumber == 0) {
 					for (int i = 0; i < iTargetCount; i++) {
-						GotoControlPoint(iTargetList[i], iCourse, iTargetList[i] != iClient);
+						GotoControlPoint(iTargetList[i], mCourse, iTargetList[i] != iClient);
 					}
 
-					GetCourseCheckpointDisplayName(iCourse, 0, true, sBuffer, sizeof(sBuffer));
+					GetCourseCheckpointDisplayName(mCourse, 0, true, sBuffer, sizeof(sBuffer));
 
 					if (bTnIsML) {
 						CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported {limegreen}%t {white}to {yellow}%s{white}.", sTargetName, sBuffer);
@@ -499,13 +499,13 @@ public Action cmdSend(int iClient, int iArgC) {
 						CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported {limegreen}%s {white}to {yellow}%s{white}.", sTargetName, sBuffer);
 					}
 				} else {
-					Jump iJump = ResolveJumpNumber(iCourse, iJumpNumber);
-					if (iJump) {
+					Jump mJump = ResolveJumpNumber(mCourse, iJumpNumber);
+					if (mJump) {
 						for (int i = 0; i < iTargetCount; i++) {
-							GotoJump(iTargetList[i], iCourse, iJumpNumber, iTargetList[i] != iClient);
+							GotoJump(iTargetList[i], mCourse, iJumpNumber, iTargetList[i] != iClient);
 						}
 
-						GetCourseCheckpointDisplayName(iCourse, iJumpNumber, false, sBuffer, sizeof(sBuffer));
+						GetCourseCheckpointDisplayName(mCourse, iJumpNumber, false, sBuffer, sizeof(sBuffer));
 
 						if (bTnIsML) {
 							CReplyToCommand(iClient, "{dodgerblue}[jse] {white}Teleported {limegreen}%t {white}to {yellow}%s{white}.", sTargetName, sBuffer);
@@ -609,8 +609,8 @@ void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJump
 
 	if (bOverride) {
 		for (int i=0; i<hCourses.Length; i++) {
-			Course iCourse = hCourses.Get(i);
-			hCourseNumbers.Push(iCourse.iNumber);
+			Course mCourse = hCourses.Get(i);
+			hCourseNumbers.Push(mCourse.iNumber);
 		}
 	} else {
 		ArrayList hProgress = new ArrayList(sizeof(Checkpoint));
@@ -648,25 +648,25 @@ void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJump
 
 	char sKey[8], sBuffer[128];
 	for (int i=0; i<hCourses.Length; i++) {
-		Course iCourse = hCourses.Get(i);
-		int iCourseNumber = iCourse.iNumber;
+		Course mCourse = hCourses.Get(i);
+		int iCourseNumber = mCourse.iNumber;
 
 		if (iCourseNumber < 0) {
-			hBonusCourses.Push(iCourse);
+			hBonusCourses.Push(mCourse);
 			continue;
 		}
 		
-		GetCourseDisplayName(iCourse, sBuffer, sizeof(sBuffer));
+		GetCourseDisplayName(mCourse, sBuffer, sizeof(sBuffer));
 
 		IntToString(iCourseNumber, sKey, sizeof(sKey));
 		hMenu.AddItem(sKey, sBuffer, hCourseNumbers.FindValue(iCourseNumber) == -1 ? ITEMDRAW_DISABLED : ITEMDRAW_DEFAULT);
 	}
 
 	for (int i=hBonusCourses.Length-1; i>=0; i--) {
-		Course iCourse = hBonusCourses.Get(i);
-		int iCourseNumber = iCourse.iNumber;
+		Course mCourse = hBonusCourses.Get(i);
+		int iCourseNumber = mCourse.iNumber;
 
-		GetCourseDisplayName(iCourse, sBuffer, sizeof(sBuffer));
+		GetCourseDisplayName(mCourse, sBuffer, sizeof(sBuffer));
 
 		IntToString(iCourseNumber, sKey, sizeof(sKey));
 		hMenu.AddItem(sKey, sBuffer, hCourseNumbers.FindValue(iCourseNumber) == -1 ? ITEMDRAW_DISABLED : ITEMDRAW_DEFAULT);
@@ -678,10 +678,10 @@ void SendCourseMenu(int iClient, MenuHandler fnCourseHandler, MenuHandler fnJump
 	hMenu.Display(iClient, 0);
 }
 
-void SendJumpMenu(int iClient, MenuHandler fnHandler, Course iCourse) {
-	int iCourseNumber = iCourse.iNumber;
+void SendJumpMenu(int iClient, MenuHandler fnHandler, Course mCourse) {
+	int iCourseNumber = mCourse.iNumber;
 
-	ArrayList hJumps = iCourse.hJumps;
+	ArrayList hJumps = mCourse.hJumps;
 
 	Menu hMenu = new Menu(fnHandler);
 	hMenu.SetTitle("Select Jump");
@@ -694,7 +694,7 @@ void SendJumpMenu(int iClient, MenuHandler fnHandler, Course iCourse) {
 
 	if (CheckCommandAccess(iClient, JUMPS_OVERRIDE, ADMFLAG_GENERIC)) {
 		for (int i=1; i<=hJumps.Length; i++) {
-			GetCheckpointDisplayName(iCourse, i, false, sBuffer, sizeof(sBuffer));
+			GetCheckpointDisplayName(mCourse, i, false, sBuffer, sizeof(sBuffer));
 
 			int iKey = (i & 0xFFFF) << 16 | iCourseNumber & 0xFFFF;
 			IntToString(iKey, sKey, sizeof(sKey));
@@ -727,7 +727,7 @@ void SendJumpMenu(int iClient, MenuHandler fnHandler, Course iCourse) {
 		delete hProgress;
 
 		for (int i=1; i<=iFurthestJumpNumber; i++) {
-			GetCheckpointDisplayName(iCourse, i, false, sBuffer, sizeof(sBuffer));
+			GetCheckpointDisplayName(mCourse, i, false, sBuffer, sizeof(sBuffer));
 
 			int	iKey = (i & 0xFFFF) << 16 | iCourseNumber & 0xFFFF;
 
@@ -737,7 +737,7 @@ void SendJumpMenu(int iClient, MenuHandler fnHandler, Course iCourse) {
 	}
 
 	if (bCompleted) {
-		GetCheckpointDisplayName(iCourse, 0, true, sBuffer, sizeof(sBuffer));
+		GetCheckpointDisplayName(mCourse, 0, true, sBuffer, sizeof(sBuffer));
 		int iKey = iCourseNumber & 0xFFFF;
 
 		IntToString(iKey, sKey, sizeof(sKey));
@@ -760,15 +760,15 @@ public int MenuHandler_BringPlayer(Menu hMenu, MenuAction iAction, int iClient, 
 				return 0;
 			}
 
-			float fPos[3];
-			GetClientEyePosition(iClient, fPos);
+			float vecPos[3];
+			GetClientEyePosition(iClient, vecPos);
 
-			float fAimPos[3];
-			GetAimPos(iClient, fAimPos);
+			float vecAimPos[3];
+			GetAimPos(iClient, vecAimPos);
 
-			AdjustHullPos(iTarget, fPos, fAimPos);
+			AdjustHullPos(iTarget, vecPos, vecAimPos);
 
-			BringPlayer(iClient, iTarget, fAimPos);
+			BringPlayer(iClient, iTarget, vecAimPos);
 		}
 
 		case MenuAction_End: {
@@ -817,17 +817,17 @@ public int MenuHandler_GotoPlayer(Menu hMenu, MenuAction iAction, int iClient, i
 					int iLastUpdateTime;
 
 					if (GetPlayerLastCheckpoint(iTarget, iCourseNumber, iJumpNumber, bControlPoint, _, _, iLastUpdateTime) && GetTime()-iLastUpdateTime <= CHECKPOINT_TIME_CUTOFF) {
-						Course iCourse = ResolveCourseNumber(iCourseNumber);
+						Course mCourse = ResolveCourseNumber(iCourseNumber);
 
 						if (bCanTeleToAllJumps || CheckProgress(iClient, iCourseNumber, iJumpNumber, bControlPoint)) {
 							if (bControlPoint) {
-								GotoControlPoint(iClient, iCourse);
+								GotoControlPoint(iClient, mCourse);
 							} else {
-								GotoJump(iClient, iCourse, iJumpNumber);
+								GotoJump(iClient, mCourse, iJumpNumber);
 							}
 						} else {
 							char sBuffer[256];
-							GetCourseCheckpointDisplayName(iCourse, iJumpNumber, bControlPoint, sBuffer, sizeof(sBuffer));
+							GetCourseCheckpointDisplayName(mCourse, iJumpNumber, bControlPoint, sBuffer, sizeof(sBuffer));
 
 							CPrintToChat(iClient, "{dodgerblue}[jse] {white}You have not been to {limegreen}%N{white}'s location before: {yellow}%s{white}.", iTarget, sBuffer);
 
@@ -862,8 +862,8 @@ public int MenuHandler_GotoCourse(Menu hMenu, MenuAction iAction, int iClient, i
 			char sKey[8];
 			hMenu.GetItem(iOption, sKey, sizeof(sKey));
 
-			Course iCourse = ResolveCourseNumber(StringToInt(sKey));
-			SendJumpMenu(iClient, MenuHandler_GotoJump, iCourse);
+			Course mCourse = ResolveCourseNumber(StringToInt(sKey));
+			SendJumpMenu(iClient, MenuHandler_GotoJump, mCourse);
 		}
 
 		case MenuAction_Cancel: {
@@ -892,13 +892,13 @@ public int MenuHandler_GotoJump(Menu hMenu, MenuAction iAction, int iClient, int
 				iCourseNumber -= 65536;
 			}
 
-			Course iCourse = ResolveCourseNumber(iCourseNumber);
+			Course mCourse = ResolveCourseNumber(iCourseNumber);
 			int iJumpNumber = (iKey >> 16) & 0xFFFF;
 
 			if (iJumpNumber) {
-				GotoJump(iClient, iCourse, iJumpNumber);
+				GotoJump(iClient, mCourse, iJumpNumber);
 			} else {
-				GotoControlPoint(iClient, iCourse);
+				GotoControlPoint(iClient, mCourse);
 			}
 		}
 

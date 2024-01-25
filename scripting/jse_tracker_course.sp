@@ -28,8 +28,8 @@ public void Course_SetupNatives() {
 	CreateNative("Course.iNumber.get",				Native_Course_GetNumber);
 	CreateNative("Course.iNumber.set",				Native_Course_SetNumber);
 	CreateNative("Course.hJumps.get",				Native_Course_GetJumps);
-	CreateNative("Course.iControlPoint.get",		Native_Course_GetControlPoint);
-	CreateNative("Course.iControlPoint.set",		Native_Course_SetControlPoint);
+	CreateNative("Course.mControlPoint.get",		Native_Course_GetControlPoint);
+	CreateNative("Course.mControlPoint.set",		Native_Course_SetControlPoint);
 	CreateNative("Course.GetName",					Native_Course_GetName);
 	CreateNative("Course.SetName",					Native_Course_SetName);
 	CreateNative("Course.Instance",					Native_Course_Instance);
@@ -41,7 +41,7 @@ public void Course_SetupNatives() {
 enum struct _Jump {
 	int iID;
 	int iNumber;
-	float fOrigin[3];
+	float vecOrigin[3];
 	float fAngle;
 	char sIdentifier[128];
 	bool bGCFlag;
@@ -84,22 +84,22 @@ public int Native_Jump_GetOrigin(Handle hPlugin, int iArgC) {
 	_Jump eJump;
 	hJumps.GetArray(iThis, eJump, sizeof(_Jump));
 
-	SetNativeArray(2, eJump.fOrigin, sizeof(_Jump::fOrigin));
+	SetNativeArray(2, eJump.vecOrigin, sizeof(_Jump::vecOrigin));
 
 	return 0;
 }
 
 public int Native_Jump_SetOrigin(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
-	float fOrigin[3];
-	GetNativeArray(2, fOrigin, sizeof(fOrigin));
+	float vecOrigin[3];
+	GetNativeArray(2, vecOrigin, sizeof(vecOrigin));
 
 	_Jump eJump;
 	hJumps.GetArray(iThis, eJump, sizeof(_Jump));
 
-	eJump.fOrigin[0] = fOrigin[0];
-	eJump.fOrigin[1] = fOrigin[1];
-	eJump.fOrigin[2] = fOrigin[2];
+	eJump.vecOrigin[0] = vecOrigin[0];
+	eJump.vecOrigin[1] = vecOrigin[1];
+	eJump.vecOrigin[2] = vecOrigin[2];
 
 	hJumps.SetArray(iThis, eJump);
 
@@ -170,9 +170,9 @@ public int Native_Jump_Instance(Handle hPlugin, int iArgC) {
 
 public int Native_Jump_Destroy(Handle hPlugin, int iArgC) {
 	if (hJumps != null) {
-		int iJump = GetNativeCell(1);
+		int iJump = GetNativeCell(1)-1;
 
-		hJumps.Set(iJump-1, 1, _Jump::bGCFlag);
+		hJumps.Set(iJump, 1, _Jump::bGCFlag);
 	}
 
 	return 0;
@@ -182,7 +182,7 @@ public int Native_Jump_Destroy(Handle hPlugin, int iArgC) {
 
 enum struct _ControlPoint {
 	int iID;
-	float fOrigin[3];
+	float vecOrigin[3];
 	float fAngle;
 	char sIdentifier[128];
 	bool bGCFlag;
@@ -210,22 +210,22 @@ public int Native_ControlPoint_GetOrigin(Handle hPlugin, int iArgC) {
 	_ControlPoint eControlPoint;
 	hControlPoints.GetArray(iThis, eControlPoint, sizeof(_ControlPoint));
 
-	SetNativeArray(2, eControlPoint.fOrigin, sizeof(_ControlPoint::fOrigin));
+	SetNativeArray(2, eControlPoint.vecOrigin, sizeof(_ControlPoint::vecOrigin));
 
 	return 0;
 }
 
 public int Native_ControlPoint_SetOrigin(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
-	float fOrigin[3];
-	GetNativeArray(2, fOrigin, sizeof(fOrigin));
+	float vecOrigin[3];
+	GetNativeArray(2, vecOrigin, sizeof(vecOrigin));
 
 	_ControlPoint eControlPoint;
 	hControlPoints.GetArray(iThis, eControlPoint, sizeof(_ControlPoint));
 
-	eControlPoint.fOrigin[0] = fOrigin[0];
-	eControlPoint.fOrigin[1] = fOrigin[1];
-	eControlPoint.fOrigin[2] = fOrigin[2];
+	eControlPoint.vecOrigin[0] = vecOrigin[0];
+	eControlPoint.vecOrigin[1] = vecOrigin[1];
+	eControlPoint.vecOrigin[2] = vecOrigin[2];
 
 	hControlPoints.SetArray(iThis, eControlPoint);
 
@@ -298,9 +298,9 @@ public int Native_ControlPoint_Instance(Handle hPlugin, int iArgC) {
 
 public int Native_ControlPoint_Destroy(Handle hPlugin, int iArgC) {
 	if (hControlPoints != null) {
-		int iControlPoint = GetNativeCell(1);
+		int iControlPoint = GetNativeCell(1)-1;
 
-		hControlPoints.Set(iControlPoint-1, 1, _ControlPoint::bGCFlag);
+		hControlPoints.Set(iControlPoint, 1, _ControlPoint::bGCFlag);
 	}
 
 	return 0;
@@ -312,7 +312,7 @@ enum struct _Course {
 	int iID;
 	int iNumber;
 	ArrayList hJumps;
-	ControlPoint iControlPoint;
+	ControlPoint mControlPoint;
 	char sName[128];
 	bool bGCFlag;
 }
@@ -354,13 +354,13 @@ public int Native_Course_GetJumps(Handle hPlugin, int iArgC) {
 
 public int Native_Course_GetControlPoint(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
-	return hCourses.Get(iThis, _Course::iControlPoint);
+	return hCourses.Get(iThis, _Course::mControlPoint);
 }
 
 public int Native_Course_SetControlPoint(Handle hPlugin, int iArgC) {
 	int iThis = GetNativeCell(1)-1;
-	int iControlPoint = GetNativeCell(2);
-	hCourses.Set(iThis, iControlPoint, _Course::iControlPoint);
+	ControlPoint mControlPoint = GetNativeCell(2);
+	hCourses.Set(iThis, mControlPoint, _Course::mControlPoint);
 
 	return 0;
 }
@@ -401,7 +401,7 @@ public int Native_Course_Instance(Handle hPlugin, int iArgC) {
 
 	_Course eCourse;
 	eCourse.hJumps = new ArrayList(sizeof(_Jump));
-	eCourse.iControlPoint = NULL_CONTROLPOINT;
+	eCourse.mControlPoint = NULL_CONTROLPOINT;
 
 	for (int i=0; i<hCourses.Length; i++) {
 		if (hCourses.Get(i, _Course::bGCFlag)) {
@@ -418,10 +418,10 @@ public int Native_Course_Instance(Handle hPlugin, int iArgC) {
 
 public int Native_Course_Destroy(Handle hPlugin, int iArgC) {
 	if (hCourses != null) {
-		Course iCourse = GetNativeCell(1);
+		int iCourse = GetNativeCell(1)-1;
 
 		_Course eCourse;
-		hCourses.GetArray(view_as<int>(iCourse)-1, eCourse, sizeof(_Course));
+		hCourses.GetArray(iCourse, eCourse, sizeof(_Course));
 
 		ArrayList hJumpList = view_as<ArrayList>(eCourse.hJumps);
 		for (int i=0; i<hJumpList.Length; i++) {
@@ -429,11 +429,11 @@ public int Native_Course_Destroy(Handle hPlugin, int iArgC) {
 		}
 		delete hJumpList;
 
-		if (eCourse.iControlPoint) {
-			ControlPoint.Destroy(eCourse.iControlPoint);
+		if (eCourse.mControlPoint) {
+			ControlPoint.Destroy(eCourse.mControlPoint);
 		}
 
-		hCourses.Set(view_as<int>(iCourse)-1, 1, _Course::bGCFlag);
+		hCourses.Set(iCourse, 1, _Course::bGCFlag);
 	}
 
 	return 0;

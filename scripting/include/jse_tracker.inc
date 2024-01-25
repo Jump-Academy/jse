@@ -35,10 +35,10 @@ public void __pl_jse_tracker_SetNTVOptional()
 
 	MarkNativeAsOptional("ControlPoint.iID.get");
 	MarkNativeAsOptional("ControlPoint.iID.set");
-	MarkNativeAsOptional("ControlPoint.GetOrigin");
-	MarkNativeAsOptional("ControlPoint.SetOrigin");
 	MarkNativeAsOptional("ControlPoint.fAngle.get");
 	MarkNativeAsOptional("ControlPoint.fAngle.set");
+	MarkNativeAsOptional("ControlPoint.GetOrigin");
+	MarkNativeAsOptional("ControlPoint.SetOrigin");
 	MarkNativeAsOptional("ControlPoint.GetIdentifier");
 	MarkNativeAsOptional("ControlPoint.SetIdentifier");
 	MarkNativeAsOptional("ControlPoint.Instance");
@@ -48,9 +48,9 @@ public void __pl_jse_tracker_SetNTVOptional()
 	MarkNativeAsOptional("Course.iID.set");
 	MarkNativeAsOptional("Course.iNumber.get");
 	MarkNativeAsOptional("Course.iNumber.set");
-	MarkNativeAsOptional("Course.Jumps.get");
-	MarkNativeAsOptional("Course.ControlPoint.get");
-	MarkNativeAsOptional("Course.ControlPoint.set");
+	MarkNativeAsOptional("Course.hJumps.get");
+	MarkNativeAsOptional("Course.mControlPoint.get");
+	MarkNativeAsOptional("Course.mControlPoint.set");
 	MarkNativeAsOptional("Course.GetName");
 	MarkNativeAsOptional("Course.SetName");
 	MarkNativeAsOptional("Course.Instance");
@@ -93,13 +93,13 @@ methodmap Jump {
 		public native set(float fAngle);
 	}
 
-	public native void GetOrigin(float fOrigin[3]);
-	public native void SetOrigin(float fOrigin[3]);
+	public native void GetOrigin(float vecOrigin[3]);
+	public native void SetOrigin(float vecOrigin[3]);
 	public native void GetIdentifier(char[] sIdentifier, int iLength);
 	public native void SetIdentifier(char[] sIdentifier);
 
 	public static native Jump Instance();
-	public static native void Destroy(Jump iJump);
+	public static native void Destroy(Jump mJump);
 }
 
 methodmap ControlPoint {
@@ -113,13 +113,13 @@ methodmap ControlPoint {
 		public native set(float fAngle);
 	}
 
-	public native void GetOrigin(float fOrigin[3]);
-	public native void SetOrigin(float fOrigin[3]);
+	public native void GetOrigin(float vecOrigin[3]);
+	public native void SetOrigin(float vecOrigin[3]);
 	public native void GetIdentifier(char[] sIdentifier, int iLength);
 	public native void SetIdentifier(char[] sIdentifier);
 
 	public static native ControlPoint Instance();
-	public static native void Destroy(ControlPoint iControlPoint);
+	public static native void Destroy(ControlPoint mControlPoint);
 }
 
 methodmap Course {
@@ -137,16 +137,16 @@ methodmap Course {
 		public native get();
 	}
 
-	property ControlPoint iControlPoint {
+	property ControlPoint mControlPoint {
 		public native get();
-		public native set(ControlPoint iControlPoint);
+		public native set(ControlPoint mControlPoint);
 	}
 
 	public native void GetName(char[] sName, int iLength);
 	public native void SetName(char[] sName);
 
 	public static native Course Instance();
-	public static native void Destroy(Course iCourse);
+	public static native void Destroy(Course mCourse);
 }
 
 /*
@@ -298,8 +298,8 @@ native void ResetPlayerProgress(int iClient, TFTeam iTeam=TFTeam_Unassigned, TFC
 typedef ProgressLookup = function void (int iClient, ArrayList hResult, int iResults, char[] sMapName, StringMap hCourseNames, StringMap hCourseLengths, any aData);
 
 native Course ResolveCourseNumber(int iCourseNumber);
-native Jump ResolveJumpNumber(Course iCourse, int iJumpNumber);
+native Jump ResolveJumpNumber(Course mCourse, int iJumpNumber);
 
-native bool GetCourseDisplayName(Course iCourse, char[] sBuffer, int iMaxLen);
-native bool GetCheckpointDisplayName(Course iCourse, int iJumpNumber, bool bControlPoint, char[] sBuffer, int iMaxLen);
-native void GetCourseCheckpointDisplayName(Course iCourse, int iJumpNumber, bool bControlPoint, char[] sBuffer, int iMaxLen);
+native bool GetCourseDisplayName(Course mCourse, char[] sBuffer, int iMaxLen);
+native bool GetCheckpointDisplayName(Course mCourse, int iJumpNumber, bool bControlPoint, char[] sBuffer, int iMaxLen);
+native void GetCourseCheckpointDisplayName(Course mCourse, int iJumpNumber, bool bControlPoint, char[] sBuffer, int iMaxLen);

@@ -3,7 +3,7 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.1.5"
+#define PLUGIN_VERSION "0.1.6"
 
 #include <sourcemod>
 #include <clientprefs>
@@ -203,18 +203,18 @@ bool CheckRespawnPopup(int iClient) {
 }
 
 void DrawCheckpointInfo(Panel hPanel, int iCourseNumber, int iJumpNumber, bool bControlPoint, int iTimestamp) {
-	Course iCourse = ResolveCourseNumber(iCourseNumber);
-	Jump iJump = ResolveJumpNumber(iCourse, iJumpNumber);
+	Course mCourse = ResolveCourseNumber(iCourseNumber);
+	Jump mJump = ResolveJumpNumber(mCourse, iJumpNumber);
 
 	char sBuffer[1024];
 
-	if (!GetCourseDisplayName(iCourse, sBuffer, sizeof(sBuffer))) {
+	if (!GetCourseDisplayName(mCourse, sBuffer, sizeof(sBuffer))) {
 		Format(sBuffer, sizeof(sBuffer), "Course: %s%s", sBuffer, bControlPoint ? " (END)" : NULL_STRING);
 		hPanel.DrawText(sBuffer);
 	}
 
-	if (iJump) {
-		Format(sBuffer, sizeof(sBuffer), "Jump:   %2d/%2d", iJump.iNumber, iCourse.hJumps.Length);
+	if (mJump) {
+		Format(sBuffer, sizeof(sBuffer), "Jump:   %2d/%2d", mJump.iNumber, mCourse.hJumps.Length);
 		hPanel.DrawText(sBuffer);
 	}
 
@@ -255,9 +255,9 @@ void SendToCheckpoint(int iClient) {
 	int iJumpNumber = eCheckpoint.GetJumpNumber();
 	bool bControlPoint = eCheckpoint.IsControlPoint();
 
-	Course iCourse = ResolveCourseNumber(iCourseNumber);
-	Jump iJump = ResolveJumpNumber(iCourse, iJumpNumber);
-	ControlPoint iControlPoint = iCourse.iControlPoint;
+	Course mCourse = ResolveCourseNumber(iCourseNumber);
+	Jump mJump = ResolveJumpNumber(mCourse, iJumpNumber);
+	ControlPoint mControlPoint = mCourse.mControlPoint;
 
 	Call_StartForward(g_hAutosaveLoadForward);
 	Call_PushCell(iClient);
@@ -272,37 +272,37 @@ void SendToCheckpoint(int iClient) {
 		return;
 	}
 
-	float fPos[3], fAng[3], fVel[3];
+	float vecPos[3], vecAng[3];
 	char sIdentifier[128];
-	if (iJump) {
-		iJump.GetIdentifier(sIdentifier, sizeof(sIdentifier));
+	if (mJump) {
+		mJump.GetIdentifier(sIdentifier, sizeof(sIdentifier));
 		if (sIdentifier[0]) {
 			int iEntity = Entity_FindByName(sIdentifier, "info_*");
 			if (iEntity != INVALID_ENT_REFERENCE) {
-				Entity_GetAbsOrigin(iEntity, fPos);
-				fPos[2] += 10.0; // In case buried in ground
+				Entity_GetAbsOrigin(iEntity, vecPos);
+				vecPos[2] += 10.0; // In case buried in ground
 
-				Entity_GetAbsAngles(iEntity, fAng);
+				Entity_GetAbsAngles(iEntity, vecAng);
 			}
 		} else {
-			iJump.GetOrigin(fPos);
+			mJump.GetOrigin(vecPos);
 		}
 	} else {
-		iControlPoint.GetIdentifier(sIdentifier, sizeof(sIdentifier));
+		mControlPoint.GetIdentifier(sIdentifier, sizeof(sIdentifier));
 		if (sIdentifier[0]) {
 			int iEntity = Entity_FindByName(sIdentifier, "team_control_point");
 			if (iEntity != INVALID_ENT_REFERENCE) {
-				Entity_GetAbsOrigin(iEntity, fPos);
-				fPos[2] += 10.0; // In case buried in ground
+				Entity_GetAbsOrigin(iEntity, vecPos);
+				vecPos[2] += 10.0; // In case buried in ground
 
-				Entity_GetAbsAngles(iEntity, fAng);
+				Entity_GetAbsAngles(iEntity, vecAng);
 			}
 		} else {
-			iControlPoint.GetOrigin(fPos);
+			mControlPoint.GetOrigin(vecPos);
 		}
 	}
 
-	TeleportEntity(iClient, fPos, fAng, fVel);
+	TeleportEntity(iClient, vecPos, vecAng, {0.0, 0.0, 0.0});
 
 	CPrintToChat(iClient, "{dodgerblue}[jse] {white}Autosave loaded");
 }
@@ -444,18 +444,18 @@ void SendCourseListPanel(int iClient) {
 	for (int i=0; i<hCheckpoint.Length; i++) {
 		hCheckpoint.GetArray(i, eCheckpoint);
 
-		Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
-		Jump iJump = ResolveJumpNumber(iCourse, eCheckpoint.GetJumpNumber());
+		Course mCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
+		Jump mJump = ResolveJumpNumber(mCourse, eCheckpoint.GetJumpNumber());
 
-		GetCourseDisplayName(iCourse, sBuffer, sizeof(sBuffer));
+		GetCourseDisplayName(mCourse, sBuffer, sizeof(sBuffer));
 
 		char sMark[3];
 		if (i == iLatestIdx) {
 			sMark = " *";
 		}
 
-		if (iJump) {
-			Format(sBuffer, sizeof(sBuffer), "(%2d/%2d)  %s%s", iJump.iNumber, iCourse.hJumps.Length, sBuffer, sMark);
+		if (mJump) {
+			Format(sBuffer, sizeof(sBuffer), "(%2d/%2d)  %s%s", mJump.iNumber, mCourse.hJumps.Length, sBuffer, sMark);
 		} else {
 			Format(sBuffer, sizeof(sBuffer), "(END)  %s%s", sBuffer, sMark);
 		}

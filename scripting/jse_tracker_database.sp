@@ -61,26 +61,26 @@ public void DB_Callback_LoadMapData(Database hDatabase, DBResultSet hResultSet, 
 	char sQuery[1024];
 
 	while (hResultSet.FetchRow()) {
-		Course iCourse = Course.Instance();
+		Course mCourse = Course.Instance();
 
 		int iCourseID = hResultSet.FetchInt(0);
-		iCourse.iID = iCourseID;
+		mCourse.iID = iCourseID;
 
 		int iCourseNumber = hResultSet.FetchInt(1);
-		iCourse.iNumber = iCourseNumber;
+		mCourse.iNumber = iCourseNumber;
 
 		char sCourseName[128];
 		hResultSet.FetchString(2, sCourseName, sizeof(sCourseName));
 
-		iCourse.SetName(sCourseName);
+		mCourse.SetName(sCourseName);
 
 		hDatabase.Format(sQuery, sizeof(sQuery), "SELECT `id`, `identifier`, `x`, `y`, `z`, `a` FROM `jse_map_controlpoints` WHERE `course_id`=%d", iCourseID);
-		hTxn.AddQuery(sQuery, iCourse);
+		hTxn.AddQuery(sQuery, mCourse);
 
 		hDatabase.Format(sQuery, sizeof(sQuery), "SELECT `id`, `jump`, `identifier`, `x`, `y`, `z`, `a` FROM `jse_map_jumps` WHERE `course_id`=%d", iCourseID);
-		hTxn.AddQuery(sQuery, iCourse);
+		hTxn.AddQuery(sQuery, mCourse);
 
-		g_hCourses.Push(iCourse);
+		g_hCourses.Push(mCourse);
 
 		if (iCourseNumber <= 0) {
 			g_iBonusCourses++;
@@ -127,8 +127,8 @@ public void DB_Callback_AddMapInfo_Txn_Failure(Database hDatabase, any aData, in
 
 public void DB_Callback_LoadMapInfo_Txn_Success(Database hDatabase, any aData, int iNumQueries, DBResultSet[] hResults, any[] aQueryData) {
 	char sIdentifier[128];
-	float fOrigin[3];
-	float fAngles[3];
+	float vecOrigin[3];
+	float vecAngles[3];
 
 	for (int i=0; i<iNumQueries; i+=2) {
 		DBResultSet hResultSet = hResults[i];
@@ -137,70 +137,70 @@ public void DB_Callback_LoadMapInfo_Txn_Success(Database hDatabase, any aData, i
 			continue;
 		}
 
-		Course iCourse = view_as<Course>(aQueryData[i]);
+		Course mCourse = view_as<Course>(aQueryData[i]);
 		char sCourseName[128];
-		iCourse.GetName(sCourseName, sizeof(sCourseName));
+		mCourse.GetName(sCourseName, sizeof(sCourseName));
 
-		ControlPoint iControlPoint = ControlPoint.Instance();
-		iControlPoint.iID = hResultSet.FetchInt(0);
+		ControlPoint mControlPoint = ControlPoint.Instance();
+		mControlPoint.iID = hResultSet.FetchInt(0);
 
-		iCourse.iControlPoint = iControlPoint;
+		mCourse.mControlPoint = mControlPoint;
 
 		if (hResults[i].IsFieldNull(1)) {
-			fOrigin[0] = float(hResultSet.FetchInt(2));
-			fOrigin[1] = float(hResultSet.FetchInt(3));
-			fOrigin[2] = float(hResultSet.FetchInt(4));
+			vecOrigin[0] = float(hResultSet.FetchInt(2));
+			vecOrigin[1] = float(hResultSet.FetchInt(3));
+			vecOrigin[2] = float(hResultSet.FetchInt(4));
 
-			iControlPoint.SetOrigin(fOrigin);
-			iControlPoint.fAngle = float(hResultSet.FetchInt(5));
+			mControlPoint.SetOrigin(vecOrigin);
+			mControlPoint.fAngle = float(hResultSet.FetchInt(5));
 		} else {
 			hResultSet.FetchString(1, sIdentifier, sizeof(sIdentifier));
-			iControlPoint.SetIdentifier(sIdentifier);
+			mControlPoint.SetIdentifier(sIdentifier);
 
 			int iEntity = Entity_FindByName(sIdentifier, "team_control_point");
 			if (iEntity != INVALID_ENT_REFERENCE) {
-				Entity_GetAbsOrigin(iEntity, fOrigin);
-				Entity_GetAbsAngles(iEntity, fAngles);
-				fOrigin[2] += 10.0; // In case buried in ground
-				iControlPoint.SetOrigin(fOrigin);
-				iControlPoint.fAngle = fAngles[1];
+				Entity_GetAbsOrigin(iEntity, vecOrigin);
+				Entity_GetAbsAngles(iEntity, vecAngles);
+				vecOrigin[2] += 10.0; // In case buried in ground
+				mControlPoint.SetOrigin(vecOrigin);
+				mControlPoint.fAngle = vecAngles[1];
 			}
 		}
 	}
 
 	for (int i=1; i<iNumQueries; i+=2) {
-		Course iCourse = view_as<Course>(aQueryData[i]);
+		Course mCourse = view_as<Course>(aQueryData[i]);
 		char sCourseName[128];
-		iCourse.GetName(sCourseName, sizeof(sCourseName));
+		mCourse.GetName(sCourseName, sizeof(sCourseName));
 
-		ArrayList hJumps = iCourse.hJumps;
+		ArrayList hJumps = mCourse.hJumps;
 		DBResultSet hResultSet = hResults[i];
 
 		while (hResultSet.FetchRow()) {
-			Jump iJump = Jump.Instance();
-			hJumps.Push(iJump);
+			Jump mJump = Jump.Instance();
+			hJumps.Push(mJump);
 
-			iJump.iID = hResultSet.FetchInt(0);
-			iJump.iNumber = hResultSet.FetchInt(1);
+			mJump.iID = hResultSet.FetchInt(0);
+			mJump.iNumber = hResultSet.FetchInt(1);
 
 			if (hResults[i].IsFieldNull(2)) {
-				fOrigin[0] = hResultSet.FetchFloat(3);
-				fOrigin[1] = hResultSet.FetchFloat(4);
-				fOrigin[2] = hResultSet.FetchFloat(5);
+				vecOrigin[0] = hResultSet.FetchFloat(3);
+				vecOrigin[1] = hResultSet.FetchFloat(4);
+				vecOrigin[2] = hResultSet.FetchFloat(5);
 
-				iJump.SetOrigin(fOrigin);
-				iJump.fAngle = hResultSet.FetchFloat(6);
+				mJump.SetOrigin(vecOrigin);
+				mJump.fAngle = hResultSet.FetchFloat(6);
 			} else {
 				hResultSet.FetchString(2, sIdentifier, sizeof(sIdentifier));
-				iJump.SetIdentifier(sIdentifier);
+				mJump.SetIdentifier(sIdentifier);
 
 				int iEntity = Entity_FindByName(sIdentifier, "info_*");
 				if (iEntity != INVALID_ENT_REFERENCE) {
-					Entity_GetAbsOrigin(iEntity, fOrigin);
-					Entity_GetAbsAngles(iEntity, fAngles);
-					fOrigin[2] += 10.0; // In case buried in ground
-					iJump.SetOrigin(fOrigin);
-					iJump.fAngle = fAngles[1];
+					Entity_GetAbsOrigin(iEntity, vecOrigin);
+					Entity_GetAbsAngles(iEntity, vecAngles);
+					vecOrigin[2] += 10.0; // In case buried in ground
+					mJump.SetOrigin(vecOrigin);
+					mJump.fAngle = vecAngles[1];
 				}
 			}
 		}
@@ -225,8 +225,8 @@ public void DB_Callback_LoadMapInfo_Txn_Success(Database hDatabase, any aData, i
 }
 
 public void DB_Callback_LoadMapInfo_Txn_Failure(Database hDatabase, any aData, int iNumQueries, const char[] sError, int iFailIndex, any[] aQueryData) {
-	Course iCourse = view_as<Course>(aQueryData[iFailIndex]);
-	LogError("Database error while loading info for course %d: %s", iCourse.iNumber, sError);
+	Course mCourse = view_as<Course>(aQueryData[iFailIndex]);
+	LogError("Database error while loading info for course %d: %s", mCourse.iNumber, sError);
 }
 
 public void DB_Callback_BackupProgress_Txn_Success(Database hDatabase, any aData, int iNumQueries, DBResultSet[] hResults, any[] aQueryData) {
@@ -712,22 +712,22 @@ int DB_BackupProgress_Client(Transaction hTxn, int iClient) {
 			continue;
 		}
 
-		Course iCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
+		Course mCourse = ResolveCourseNumber(eCheckpoint.GetCourseNumber());
 
 		if (eCheckpoint.IsControlPoint()) {
-			ControlPoint iControlPoint = iCourse.iControlPoint;
+			ControlPoint mControlPoint = mCourse.mControlPoint;
 
 			g_hDatabase.Format(sQuery, sizeof(sQuery), \
 				"INSERT IGNORE INTO `jse_progress_controlpoints`(`auth`, `map_id`, `team`, `class`, `course_id`, `controlpoint_id`)"
 			...	"VALUES (%s, %d, %d, %d, %d, %d)",
-			sAuthID, GetTrackerMapID(), eCheckpoint.GetTeam(), eCheckpoint.GetClass(), iCourse.iID, iControlPoint.iID);
+			sAuthID, GetTrackerMapID(), eCheckpoint.GetTeam(), eCheckpoint.GetClass(), mCourse.iID, mControlPoint.iID);
 		} else {
-			Jump iJump = ResolveJumpNumber(iCourse, eCheckpoint.GetJumpNumber());
+			Jump mJump = ResolveJumpNumber(mCourse, eCheckpoint.GetJumpNumber());
 
 			g_hDatabase.Format(sQuery, sizeof(sQuery), \
 				"INSERT IGNORE INTO `jse_progress_jumps`(`auth`, `map_id`, `team`, `class`, `course_id`, `jump_id`)"
 			...	"VALUES (%s, %d, %d, %d, %d, %d)",
-			sAuthID, GetTrackerMapID(), eCheckpoint.GetTeam(), eCheckpoint.GetClass(), iCourse.iID, iJump.iID);
+			sAuthID, GetTrackerMapID(), eCheckpoint.GetTeam(), eCheckpoint.GetClass(), mCourse.iID, mJump.iID);
 		}
 
 		hTxn.AddQuery(sQuery, GetClientSerial(iClient));
