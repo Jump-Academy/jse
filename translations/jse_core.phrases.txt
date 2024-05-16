@@ -1,0 +1,13 @@
+"Phrases"
+{
+	"Regen Toggle"
+	{
+		"#format"		"{1:t}"
+		"en"			"Ammo and clip regeneration {1}."
+	}
+
+	"Bazooka Projectile Spread"
+	{
+		"en"			"Bazooka Projectile Spread"
+	}
+}

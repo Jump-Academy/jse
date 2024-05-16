@@ -4,26 +4,33 @@
 #define DEBUG
 
 #define PLUGIN_AUTHOR "AI"
-#define PLUGIN_VERSION "0.3.5"
+#define PLUGIN_VERSION "0.3.6"
 
 #define DATA_FOLDER "data/jse"
 
 #define SND_REACH_CONTROL_POINT		"misc/freeze_cam.wav"
 
+#define BAZOOKA_ITEMDEF_INDEX	730
+#define BAZOOKA_SPREAD_ATTRIB	411
+#define BAZOOKA_DEFAULT_SPREAD	3.0
+
 #include <sourcemod>
+#include <clientprefs>
 #include <sdktools>
 #include <regex>
 #include <sdkhooks>
+#include <autoexecconfig>
 #include <smlib/arrays>
 #include <smlib/clients>
 #include <smlib/entities>
 #include <tf2>
 #include <tf2_stocks>
+// #include <tf2items>
 #include <multicolors>
-#include <tf2items>
 #include <jse_core>
 
 #undef REQUIRE_PLUGIN
+#include <tf2attributes>
 #include <updater>
 
 #define UPDATE_URL	"http://jumpacademy.tf/plugins/jse/core/updatefile.txt"
@@ -49,6 +56,9 @@ ConVar g_hCVSentryAmmo;
 ConVar g_hCVTeleporters;
 ConVar g_hCVResetScore;
 
+ConVar g_hCVBazookaSpreadDefault;
+ConVar g_hCVBazookaSpreadToggle;
+
 Handle g_hSDKResetScores;
 Handle g_hSDKGetMaxClip1;
 Handle g_hSDKFinishUpgrading;
@@ -60,16 +70,21 @@ ArrayList g_hBlockSounds;
 
 StringMap g_hControlPoints;
 
-bool g_bBlockEquip[MAXPLAYERS + 1];
-bool g_bBlockRegen[MAXPLAYERS + 1];
+bool g_bBlockEquip[MAXPLAYERS+1];
+bool g_bBlockRegen[MAXPLAYERS+1];
 
-bool g_bAmmoRegen[MAXPLAYERS + 1];
+bool g_bAmmoRegen[MAXPLAYERS+1];
 
-int g_iLastCapture[MAXPLAYERS + 1];
-int g_iLastRegen[MAXPLAYERS + 1];
-int g_iLastSpawn[MAXPLAYERS + 1];
+int g_iLastCapture[MAXPLAYERS+1];
+int g_iLastRegen[MAXPLAYERS+1];
+int g_iLastSpawn[MAXPLAYERS+1];
 
 int g_iObjectiveResource = INVALID_ENT_REFERENCE;
+
+Cookie g_hBazookaSpreadCookie;
+bool g_bBazookaSpread[MAXPLAYERS+1];
+
+bool g_bTF2AttributesAvailable;
 
 public Plugin myinfo = {
 	name = "Jump Server Essentials - Core",
@@ -80,29 +95,38 @@ public Plugin myinfo = {
 };
 
 public void OnPluginStart() {
-	CreateConVar("jse_core_version", PLUGIN_VERSION, "Jump Server Essentials core version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
+	AutoExecConfig_SetCreateFile(true);
+	AutoExecConfig_SetFile("jse_core");
 
-	g_hCVBlockSounds = CreateConVar("jse_core_block_sounds", "regenerate, ammo_pickup, Pain, fallpain, vo/announcer, stickybomblauncher_det, wpn_denyselect", "Sounds to block", FCVAR_NONE);
-	g_hCVBlockFXBlood = CreateConVar("jse_core_block_blood", "1", "Block blood effects", FCVAR_NONE, true, 0.0, true, 1.0);
-	g_hCVBlockFXExplosions = CreateConVar("jse_core_block_explosions", "1", "Block explosion effects", FCVAR_NONE, true, 0.0, true, 1.0);
-	g_hCVBlockFXShake = CreateConVar("jse_core_block_shake", "1", "Block screen shake effects", FCVAR_NONE, true, 0.0, true, 1.0);
-	g_hCVBlockFallDamage = CreateConVar("jse_core_block_falldamage", "1", "Block fall damage", FCVAR_NONE, true, 0.0, true, 1.0);
+	ConVar hPluginVersion = AutoExecConfig_CreateConVar("jse_core_version", PLUGIN_VERSION, "Jump Server Essentials core version -- Do not modify", FCVAR_NOTIFY | FCVAR_DONTRECORD);
+	hPluginVersion.SetString(PLUGIN_VERSION);
 
-	g_hCVRegenHP = CreateConVar("jse_core_regen_hp", "1", "Toggles per-tick health regen", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	g_hCVRegenAmmo = CreateConVar("jse_core_regen_ammo", "1", "Toggles global per-tick ammo regen", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	g_hCVRegenCaber = CreateConVar("jse_core_regen_caber", "1", "Toggles global Ullapool Caber regeneration", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	g_hCVRegenShield = CreateConVar("jse_core_regen_shield", "2.5", "Shield charge regeneration time interval (0 for disable))", FCVAR_NOTIFY, true, 0.0);
-	g_hCVRegenHype = CreateConVar("jse_core_regen_hype", "1", "Toggles scout hype regeneration", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_hCVBlockSounds = AutoExecConfig_CreateConVar("jse_core_block_sounds", "regenerate, ammo_pickup, Pain, fallpain, vo/announcer, stickybomblauncher_det, wpn_denyselect", "Sounds to block", FCVAR_NONE);
+	g_hCVBlockFXBlood = AutoExecConfig_CreateConVar("jse_core_block_blood", "1", "Block blood effects", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVBlockFXExplosions = AutoExecConfig_CreateConVar("jse_core_block_explosions", "1", "Block explosion effects", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVBlockFXShake = AutoExecConfig_CreateConVar("jse_core_block_shake", "1", "Block screen shake effects", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVBlockFallDamage = AutoExecConfig_CreateConVar("jse_core_block_falldamage", "1", "Block fall damage", FCVAR_NONE, true, 0.0, true, 1.0);
 
-	g_hCVInstantRespawn = CreateConVar("jse_core_instant_respawn", "3", "Minimum seconds between instant respawns (-1 to disable instant respawn)", FCVAR_NONE, true, -1.0, true, 30.0);
+	g_hCVRegenHP = AutoExecConfig_CreateConVar("jse_core_regen_hp", "1", "Toggles per-tick health regen", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_hCVRegenAmmo = AutoExecConfig_CreateConVar("jse_core_regen_ammo", "1", "Toggles global per-tick ammo regen", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_hCVRegenCaber = AutoExecConfig_CreateConVar("jse_core_regen_caber", "1", "Toggles global Ullapool Caber regeneration", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_hCVRegenShield = AutoExecConfig_CreateConVar("jse_core_regen_shield", "2.5", "Shield charge regeneration time interval (0 for disable))", FCVAR_NOTIFY, true, 0.0);
+	g_hCVRegenHype = AutoExecConfig_CreateConVar("jse_core_regen_hype", "1", "Toggles scout hype regeneration", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 
-	g_hCVCapInterval = CreateConVar("jse_core_cap_interval", "5", "Minimum time between control point captures in seconds", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	g_hCVCriticals = CreateConVar("jse_core_criticals", "0", "Toggles weapon criticals", FCVAR_NONE, true, 0.0, true, 1.0);
-	g_hCVEasyBuild = CreateConVar("jse_core_easybuild", "1", "Toggles engineer building fast and cheap build", FCVAR_NONE, true, 0.0, true, 1.0);
-	g_hCVSentryAmmo = CreateConVar("jse_core_sentryammo", "1", "Toggles engineer sentry ammo auto refill", FCVAR_NONE, true, 0.0, true, 1.0);
-	g_hCVTeleporters = CreateConVar("jse_core_teleporters", "0", "Toggles allowing engineers to build teleporters", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVInstantRespawn = AutoExecConfig_CreateConVar("jse_core_instant_respawn", "3", "Minimum seconds between instant respawns (-1 to disable instant respawn)", FCVAR_NONE, true, -1.0, true, 30.0);
 
-	g_hCVResetScore = CreateConVar("jse_core_reset_score", "1", "Toggles clearing player scoreboard points upon /restart", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVCapInterval = AutoExecConfig_CreateConVar("jse_core_cap_interval", "5", "Minimum time between control point captures in seconds", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_hCVCriticals = AutoExecConfig_CreateConVar("jse_core_criticals", "0", "Toggles weapon criticals", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVEasyBuild = AutoExecConfig_CreateConVar("jse_core_easybuild", "1", "Toggles engineer building fast and cheap build", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVSentryAmmo = AutoExecConfig_CreateConVar("jse_core_sentryammo", "1", "Toggles engineer sentry ammo auto refill", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVTeleporters = AutoExecConfig_CreateConVar("jse_core_teleporters", "0", "Toggles allowing engineers to build teleporters", FCVAR_NONE, true, 0.0, true, 1.0);
+
+	g_hCVBazookaSpreadDefault = AutoExecConfig_CreateConVar("jse_core_bazookaspread_default", "0", "Toggles bazooka projectile spread", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hCVBazookaSpreadToggle = AutoExecConfig_CreateConVar("jse_core_bazookaspread_toggle", "1", "Allows players to separately toggle bazooka projectile spread", FCVAR_NONE, true, 0.0, true, 1.0);
+
+	g_hCVResetScore = AutoExecConfig_CreateConVar("jse_core_reset_score", "1", "Toggles clearing player scoreboard points upon /restart", FCVAR_NONE, true, 0.0, true, 1.0);
+
+	AutoExecConfig_ExecuteFile();
 
 	RegConsoleCmd("sm_ammo", cmdAmmo, "Toggles ammo and weapon clip regeneration");
 	RegConsoleCmd("sm_regen", cmdAmmo, "Toggles ammo and weapon clip regeneration");
@@ -203,7 +227,18 @@ public void OnPluginStart() {
 
 	g_hCaptureForward = CreateGlobalForward("OnCapPointCapture", ET_Single, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_String);
 
+	g_hBazookaSpreadCookie = new Cookie("jse_core_bazookaspread", "Preference for bazooka projectile spread if allowed by server", CookieAccess_Private);
+	SetCookieMenuItem(CookieMenuHandler_BazookaSpread, 0, "Bazooka Projectile Spread");
+
 	LoadTranslations("common.phrases");
+	LoadTranslations("jse_core.phrases");
+
+	// Late load
+	for (int i=1; i<=MaxClients; i++) {
+		if (IsClientInGame(i) && !IsFakeClient(i) && AreClientCookiesCached(i)) {
+			OnClientCookiesCached(i);
+		}
+	}
 }
 
 public void OnPluginEnd() {
@@ -224,6 +259,18 @@ public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int sErr
 	CreateNative("ClearScore", Native_ClearScore);
 
 	return APLRes_Success;
+}
+
+public void OnLibraryAdded(const char[] sName) {
+	if (StrEqual(sName, "tf2attributes")) {
+		g_bTF2AttributesAvailable = true;
+	}
+}
+
+public void OnLibraryRemoved(const char[] sName) {
+	if (StrEqual(sName, "tf2attributes")) {
+		g_bTF2AttributesAvailable = false;
+	}
 }
 
 public void OnConfigsExecuted() {
@@ -301,6 +348,22 @@ public void OnMapEnd() {
 	g_hControlPoints.Clear();
 }
 
+public void OnClientCookiesCached(int iClient) {
+	if (IsFakeClient(iClient)) {
+		g_bBazookaSpread[iClient] = g_hCVBazookaSpreadDefault.BoolValue;
+		return;
+	}
+
+	char sBuffer[2];
+	g_hBazookaSpreadCookie.Get(iClient, sBuffer, sizeof(sBuffer));
+
+	g_bBazookaSpread[iClient] = sBuffer[0] ? StringToInt(sBuffer) != 0 : g_hCVBazookaSpreadDefault.BoolValue;
+
+	if (IsClientInGame(iClient)) {
+		UpdateEquippedBazookaAttribute(iClient);
+	}
+}
+
 public Action OnPlayerRunCmd(int iClient, int &iButtons, int &iImpulse, float fVel[3], float fAng[3], int &iWeapon) {
 	if (!IsClientInGame(iClient)) {
 		return Plugin_Continue;
@@ -371,6 +434,8 @@ public Action Event_EquipWeapon(Event hEvent, const char[] sName, bool bDontBroa
 			}
 		}
 	}
+
+	UpdateEquippedBazookaAttribute(iClient);
 
 	return Plugin_Continue;
 }
@@ -571,7 +636,7 @@ public Action Hook_TouchFuncRegenerate(int iEntity, int iClient) {
 
 		if (TF2_GetPlayerClass(iClient) == TFClass_Soldier) {
 			int iWeapon1 = GetPlayerWeaponSlot(iClient, TFWeaponSlot_Primary);
-			if (iWeapon1 != -1 && GetItemDefIndex(iWeapon1) == 730 && GetEntProp(iWeapon1, Prop_Send, "m_iClip1")) {
+			if (iWeapon1 != -1 && GetItemDefIndex(iWeapon1) == BAZOOKA_ITEMDEF_INDEX && GetEntProp(iWeapon1, Prop_Send, "m_iClip1")) {
 				if (g_bAmmoRegen[iClient] && GetEntProp(iWeapon1, Prop_Send, "m_iConsecutiveShots") == 1 && GetEntProp(iWeapon1, Prop_Send, "m_iReloadMode")) {
 					int iMaxClip1 = SDKCall(g_hSDKGetMaxClip1, iWeapon1);
 					SetEntProp(iWeapon1, Prop_Send, "m_iClip1", iMaxClip1);
@@ -637,6 +702,55 @@ public Action Timer_Respawn(Handle hTimer, any aData) {
 	}
 
 	return Plugin_Handled;
+}
+
+// Menus
+
+public void CookieMenuHandler_BazookaSpread(int iClient, CookieMenuAction iAction, any aInfo, char[] sBuffer, int iMaxLength) {
+	switch (iAction) {
+		case CookieMenuAction_DisplayOption: {
+			FormatEx(sBuffer, iMaxLength, "%T", "Bazooka Projectile Spread", iClient);
+		}
+		case CookieMenuAction_SelectOption: {
+			SendBazookaSpreadMenu(iClient);
+		}
+	}
+
+	if (iAction == CookieMenuAction_SelectOption) {
+		char sCookieValue[8];
+		g_hBazookaSpreadCookie.Get(iClient, sCookieValue, sizeof(sCookieValue));
+	}
+}
+
+public int MenuHandler_BazookaSpread(Menu hMenu, MenuAction iMenuAction, int iParam1, int iParam2) {
+	switch (iMenuAction) {
+		case MenuAction_Select: {
+			g_bBazookaSpread[iParam1] = iParam2 == 0; // Enable spread if set to On
+			g_hBazookaSpreadCookie.Set(iParam1, iParam2 == 0 ? "1" : "0");
+			UpdateEquippedBazookaAttribute(iParam1);
+		}
+		case MenuAction_End: {
+			delete hMenu;
+		}
+	}
+
+	return 0;
+}
+
+void SendBazookaSpreadMenu(int iClient) {
+	char sBuffer[256];
+	FormatEx(sBuffer, sizeof(sBuffer), "%T", "Bazooka Projectile Spread", iClient);
+	Menu hMenu = new Menu(MenuHandler_BazookaSpread);
+	hMenu.SetTitle(sBuffer);
+
+	int iMenuItemStyle = g_bTF2AttributesAvailable && g_hCVBazookaSpreadToggle.BoolValue ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED;
+
+	FormatEx(sBuffer, sizeof(sBuffer), "%T%s", "On", iClient, g_bBazookaSpread[iClient] ? " *" : "");
+	hMenu.AddItem("On", sBuffer, iMenuItemStyle);
+	FormatEx(sBuffer, sizeof(sBuffer), "%T%s", "Off", iClient, !g_bBazookaSpread[iClient] ? " *" : "");
+	hMenu.AddItem("Off", sBuffer, iMenuItemStyle);
+
+	hMenu.Display(iClient, 0);
 }
 
 // Natives
@@ -719,7 +833,7 @@ public Action cmdAmmo(int iClient, int iArgC) {
 
 	g_bAmmoRegen[iClient] = !g_bAmmoRegen[iClient];
 
-	CReplyToCommand(iClient, "{dodgerblue}[jse] {white}%s ammo and clip regeneration.", g_bAmmoRegen[iClient] ? "Enabled" : "Disabled");
+	CReplyToCommand(iClient, "{dodgerblue}[jse] {white}%t", "Regen Toggle", g_bAmmoRegen[iClient] ? "On" : "Off");
 
 	return Plugin_Handled;
 }
@@ -762,7 +876,7 @@ void RegenWeapons(int iClient, bool bForce=false) {
 		GivePlayerAmmo(iClient, 500, iAmmoType1, true);
 
 		// Ignore Beggar's Bazooka
-		if ((g_bAmmoRegen[iClient] || bForce) && GetItemDefIndex(iWeapon1) != 730) {
+		if ((g_bAmmoRegen[iClient] || bForce) && GetItemDefIndex(iWeapon1) != BAZOOKA_ITEMDEF_INDEX) {
 			int iMaxClip = SDKCall(g_hSDKGetMaxClip1, iWeapon1);
 			SetEntProp(iWeapon1, Prop_Send, "m_iClip1", iMaxClip);
 
@@ -825,6 +939,18 @@ void Setup() {
 		for (int i = 0; i < 8; i++) {
 			SetEntProp(g_iObjectiveResource, Prop_Data, "m_bCPIsVisible", 0, 4, i);
 		}
+	}
+}
+
+void UpdateEquippedBazookaAttribute(int iClient) {
+	if (!g_bTF2AttributesAvailable) {
+		return;
+	}
+
+	int iWeapon1 = GetPlayerWeaponSlot(iClient, TFWeaponSlot_Primary);
+	if (iWeapon1 != -1 && GetItemDefIndex(iWeapon1) == BAZOOKA_ITEMDEF_INDEX) {
+		bool bBazookaSpread = (g_hCVBazookaSpreadDefault.BoolValue && !g_hCVBazookaSpreadToggle.BoolValue) || (g_hCVBazookaSpreadToggle.BoolValue && g_bBazookaSpread[iClient]);
+		TF2Attrib_SetByDefIndex(iWeapon1, BAZOOKA_SPREAD_ATTRIB, bBazookaSpread ? BAZOOKA_DEFAULT_SPREAD : 0.0); // projectile spread angle penalty 
 	}
 }
 
